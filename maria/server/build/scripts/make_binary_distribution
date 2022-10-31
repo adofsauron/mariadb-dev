@@ -1,0 +1,1 @@
+cd /root/work/maria/server/build && '/usr/bin/cpack' -G TGZ --config CPackConfig.cmake
