@@ -1,7 +1,0 @@
-export CUTTER=""
-export RUBY=""
-export GROONGA="/root/work/maria/server/build/storage/mroonga/vendor/groonga/src/groonga"
-export GROONGA_HTTPD=""
-export GROONGA_SUGGEST_CREATE_DATASET="/root/work/maria/server/build/storage/mroonga/vendor/groonga/src/suggest/groonga-suggest-create-dataset"
-export GROONGA_BENCHMARK="/root/work/maria/server/build/storage/mroonga/vendor/groonga/src/groonga-benchmark"
-export GROONGA_MRUBY=""
