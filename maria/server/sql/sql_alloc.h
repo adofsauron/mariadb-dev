@@ -16,29 +16,22 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include <my_sys.h>                    /* alloc_root, MEM_ROOT, TRASH */
+#include <my_sys.h> /* alloc_root, MEM_ROOT, TRASH */
 
 /* MariaDB standard class memory allocator */
 
 class Sql_alloc
 {
-public:
-  static void *operator new(size_t size) throw ()
-  {
-    return thd_alloc(_current_thd(), size);
-  }
-  static void *operator new[](size_t size) throw ()
-  {
-    return thd_alloc(_current_thd(), size);
-  }
-  static void *operator new[](size_t size, MEM_ROOT *mem_root) throw ()
-  { return alloc_root(mem_root, size); }
-  static void *operator new(size_t size, MEM_ROOT *mem_root) throw()
-  { return alloc_root(mem_root, size); }
+ public:
+  static void *operator new(size_t size) throw() { return thd_alloc(_current_thd(), size); }
+  static void *operator new[](size_t size) throw() { return thd_alloc(_current_thd(), size); }
+  static void *operator new[](size_t size, MEM_ROOT *mem_root) throw() { return alloc_root(mem_root, size); }
+  static void *operator new(size_t size, MEM_ROOT *mem_root) throw() { return alloc_root(mem_root, size); }
   static void operator delete(void *ptr, size_t size) { TRASH_FREE(ptr, size); }
-  static void operator delete(void *, MEM_ROOT *){}
+  static void operator delete(void *, MEM_ROOT *) {}
   static void operator delete[](void *, MEM_ROOT *)
-  { /* never called */ }
+  { /* never called */
+  }
   static void operator delete[](void *ptr, size_t size) { TRASH_FREE(ptr, size); }
 };
 #endif /* SQL_ALLOC_INCLUDED */

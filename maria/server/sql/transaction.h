@@ -17,7 +17,7 @@
 #define TRANSACTION_H
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface                      /* gcc class implementation */
+#pragma interface /* gcc class implementation */
 #endif
 
 #include <m_string.h>
@@ -26,7 +26,7 @@ class THD;
 
 void trans_track_end_trx(THD *thd);
 
-bool trans_begin(THD *thd, uint flags= 0);
+bool trans_begin(THD *thd, uint flags = 0);
 bool trans_commit(THD *thd);
 bool trans_commit_implicit(THD *thd);
 bool trans_rollback(THD *thd);

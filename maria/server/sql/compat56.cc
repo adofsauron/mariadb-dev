@@ -20,18 +20,7 @@
 #include "myisampack.h"
 #include "my_time.h"
 
-
-static const int my_max_usec_value[7]
-{
-  0,
-  900000,
-  990000,
-  999000,
-  999900,
-  999990,
-  999999
-};
-
+static const int my_max_usec_value[7]{0, 900000, 990000, 999000, 999900, 999990, 999999};
 
 /*** MySQL56 TIME low-level memory and disk representation routines ***/
 
@@ -49,10 +38,9 @@ static const int my_max_usec_value[7]
    Suhhhhhh.hhhhmmmm.mmssssss.ffffffff.ffffffff.ffffffff
 */
 
-
 /**
   Convert time value to MySQL56 numeric packed representation.
-  
+
   @param    ltime   The value to convert.
   @return           Numeric packed representation.
 */
@@ -61,13 +49,10 @@ longlong TIME_to_longlong_time_packed(const MYSQL_TIME *ltime)
   DBUG_ASSERT(ltime->year == 0);
   DBUG_ASSERT(ltime->month == 0);
   // Mix days with hours: "1 00:10:10" -> "24:10:10"
-  long hms= ((ltime->day * 24 + ltime->hour) << 12) |
-            (ltime->minute << 6) | ltime->second;
-  longlong tmp= MY_PACKED_TIME_MAKE(hms, ltime->second_part);
+  long hms = ((ltime->day * 24 + ltime->hour) << 12) | (ltime->minute << 6) | ltime->second;
+  longlong tmp = MY_PACKED_TIME_MAKE(hms, ltime->second_part);
   return ltime->neg ? -tmp : tmp;
 }
-
-
 
 /**
   Convert MySQL56 time packed numeric representation to time.
@@ -78,23 +63,22 @@ longlong TIME_to_longlong_time_packed(const MYSQL_TIME *ltime)
 void TIME_from_longlong_time_packed(MYSQL_TIME *ltime, longlong tmp)
 {
   long hms;
-  if ((ltime->neg= (tmp < 0)))
-    tmp= -tmp;
-  hms= (long) MY_PACKED_TIME_GET_INT_PART(tmp);
-  ltime->year=   (uint) 0;
-  ltime->month=  (uint) 0;
-  ltime->day=    (uint) 0;
-  ltime->hour=   (uint) (hms >> 12) % (1 << 10); /* 10 bits starting at 12th */
-  ltime->minute= (uint) (hms >> 6)  % (1 << 6);  /* 6 bits starting at 6th   */
-  ltime->second= (uint)  hms        % (1 << 6);  /* 6 bits starting at 0th   */
-  ltime->second_part= MY_PACKED_TIME_GET_FRAC_PART(tmp);
-  ltime->time_type= MYSQL_TIMESTAMP_TIME;
+  if ((ltime->neg = (tmp < 0)))
+    tmp = -tmp;
+  hms = (long)MY_PACKED_TIME_GET_INT_PART(tmp);
+  ltime->year = (uint)0;
+  ltime->month = (uint)0;
+  ltime->day = (uint)0;
+  ltime->hour = (uint)(hms >> 12) % (1 << 10); /* 10 bits starting at 12th */
+  ltime->minute = (uint)(hms >> 6) % (1 << 6); /* 6 bits starting at 6th   */
+  ltime->second = (uint)hms % (1 << 6);        /* 6 bits starting at 0th   */
+  ltime->second_part = MY_PACKED_TIME_GET_FRAC_PART(tmp);
+  ltime->time_type = MYSQL_TIMESTAMP_TIME;
 }
-
 
 /**
   Calculate binary size of MySQL56 packed numeric time representation.
-  
+
   @param   dec   Precision.
 */
 uint my_time_binary_length(uint dec)
@@ -103,7 +87,6 @@ uint my_time_binary_length(uint dec)
   return 3 + (dec + 1) / 2;
 }
 
-
 /*
   On disk we convert from signed representation to unsigned
   representation using TIMEF_OFS, so all values become binary comparable.
@@ -111,10 +94,9 @@ uint my_time_binary_length(uint dec)
 #define TIMEF_OFS 0x800000000000LL
 #define TIMEF_INT_OFS 0x800000LL
 
-
 /**
   Convert MySQL56 in-memory numeric time representation to on-disk representation
-  
+
   @param       nr   Value in packed numeric time format.
   @param   OUT ptr  The buffer to put value at.
   @param       dec  Precision.
@@ -123,40 +105,38 @@ void my_time_packed_to_binary(longlong nr, uchar *ptr, uint dec)
 {
   DBUG_ASSERT(dec <= TIME_SECOND_PART_DIGITS);
   /* Make sure the stored value was previously properly rounded or truncated */
-  DBUG_ASSERT((MY_PACKED_TIME_GET_FRAC_PART(nr) % 
-              (int) log_10_int[TIME_SECOND_PART_DIGITS - dec]) == 0);
+  DBUG_ASSERT((MY_PACKED_TIME_GET_FRAC_PART(nr) % (int)log_10_int[TIME_SECOND_PART_DIGITS - dec]) == 0);
 
   switch (dec)
   {
-  case 0:
-  default:
-    mi_int3store(ptr, TIMEF_INT_OFS + MY_PACKED_TIME_GET_INT_PART(nr));
-    break;
+    case 0:
+    default:
+      mi_int3store(ptr, TIMEF_INT_OFS + MY_PACKED_TIME_GET_INT_PART(nr));
+      break;
 
-  case 1:
-  case 2:
-    mi_int3store(ptr, TIMEF_INT_OFS + MY_PACKED_TIME_GET_INT_PART(nr));
-    ptr[3]= (unsigned char) (char) (MY_PACKED_TIME_GET_FRAC_PART(nr) / 10000);
-    break;
+    case 1:
+    case 2:
+      mi_int3store(ptr, TIMEF_INT_OFS + MY_PACKED_TIME_GET_INT_PART(nr));
+      ptr[3] = (unsigned char)(char)(MY_PACKED_TIME_GET_FRAC_PART(nr) / 10000);
+      break;
 
-  case 4:
-  case 3:
-    mi_int3store(ptr, TIMEF_INT_OFS + MY_PACKED_TIME_GET_INT_PART(nr));
-    mi_int2store(ptr + 3, MY_PACKED_TIME_GET_FRAC_PART(nr) / 100);
-    break;
+    case 4:
+    case 3:
+      mi_int3store(ptr, TIMEF_INT_OFS + MY_PACKED_TIME_GET_INT_PART(nr));
+      mi_int2store(ptr + 3, MY_PACKED_TIME_GET_FRAC_PART(nr) / 100);
+      break;
 
-  case 5:
-  case 6:
-    mi_int6store(ptr, nr + TIMEF_OFS);
-    break;
+    case 5:
+    case 6:
+      mi_int6store(ptr, nr + TIMEF_OFS);
+      break;
   }
 }
 
-
 /**
-  Convert MySQL56 on-disk time representation to in-memory packed numeric 
+  Convert MySQL56 on-disk time representation to in-memory packed numeric
   representation.
-  
+
   @param   ptr  The pointer to read the value at.
   @param   dec  Precision.
   @return       Packed numeric time representation.
@@ -167,17 +147,17 @@ longlong my_time_packed_from_binary(const uchar *ptr, uint dec)
 
   switch (dec)
   {
-  case 0:
-  default:
+    case 0:
+    default:
     {
-      longlong intpart= mi_uint3korr(ptr) - TIMEF_INT_OFS;
+      longlong intpart = mi_uint3korr(ptr) - TIMEF_INT_OFS;
       return MY_PACKED_TIME_MAKE_INT(intpart);
     }
-  case 1:
-  case 2:
+    case 1:
+    case 2:
     {
-      longlong intpart= mi_uint3korr(ptr) - TIMEF_INT_OFS;
-      int frac= (uint) ptr[3];
+      longlong intpart = mi_uint3korr(ptr) - TIMEF_INT_OFS;
+      int frac = (uint)ptr[3];
       if (intpart < 0 && frac)
       {
         /*
@@ -197,35 +177,34 @@ longlong my_time_packed_from_binary(const uchar *ptr, uint dec)
             To reconstruct in-memory value, we shift
             to the next integer value and then substruct fractional part.
         */
-        intpart++;    /* Shift to the next integer value */
-        frac-= 0x100; /* -(0x100 - frac) */
+        intpart++;     /* Shift to the next integer value */
+        frac -= 0x100; /* -(0x100 - frac) */
       }
       return MY_PACKED_TIME_MAKE(intpart, frac * 10000);
     }
 
-  case 3:
-  case 4:
+    case 3:
+    case 4:
     {
-      longlong intpart= mi_uint3korr(ptr) - TIMEF_INT_OFS;
-      int frac= mi_uint2korr(ptr + 3);
+      longlong intpart = mi_uint3korr(ptr) - TIMEF_INT_OFS;
+      int frac = mi_uint2korr(ptr + 3);
       if (intpart < 0 && frac)
       {
         /*
           Fix reverse fractional part order: "0x10000 - frac".
           See comments for FSP=1 and FSP=2 above.
         */
-        intpart++;      /* Shift to the next integer value */
-        frac-= 0x10000; /* -(0x10000-frac) */
+        intpart++;       /* Shift to the next integer value */
+        frac -= 0x10000; /* -(0x10000-frac) */
       }
       return MY_PACKED_TIME_MAKE(intpart, frac * 100);
     }
 
-  case 5:
-  case 6:
-    return ((longlong) mi_uint6korr(ptr)) - TIMEF_OFS;
+    case 5:
+    case 6:
+      return ((longlong)mi_uint6korr(ptr)) - TIMEF_OFS;
   }
 }
-
 
 /*** MySQL56 DATETIME low-level memory and disk representation routines ***/
 
@@ -250,13 +229,12 @@ longlong my_time_packed_from_binary(const uchar *ptr, uint dec)
 */
 longlong TIME_to_longlong_datetime_packed(const MYSQL_TIME *ltime)
 {
-  longlong ymd= ((ltime->year * 13 + ltime->month) << 5) | ltime->day;
-  longlong hms= (ltime->hour << 12) | (ltime->minute << 6) | ltime->second;
-  longlong tmp= MY_PACKED_TIME_MAKE(((ymd << 17) | hms), ltime->second_part);
+  longlong ymd = ((ltime->year * 13 + ltime->month) << 5) | ltime->day;
+  longlong hms = (ltime->hour << 12) | (ltime->minute << 6) | ltime->second;
+  longlong tmp = MY_PACKED_TIME_MAKE(((ymd << 17) | hms), ltime->second_part);
   DBUG_ASSERT(!check_datetime_range(ltime)); /* Make sure no overflow */
   return ltime->neg ? -tmp : tmp;
 }
-
 
 /**
   Convert MySQL56 packed numeric datetime representation to MYSQL_TIME.
@@ -270,27 +248,26 @@ void TIME_from_longlong_datetime_packed(MYSQL_TIME *ltime, longlong tmp)
 
   DBUG_ASSERT(tmp != LONGLONG_MIN);
 
-  if ((ltime->neg= (tmp < 0)))
-    tmp= -tmp;
+  if ((ltime->neg = (tmp < 0)))
+    tmp = -tmp;
 
-  ltime->second_part= MY_PACKED_TIME_GET_FRAC_PART(tmp);
-  ymdhms= MY_PACKED_TIME_GET_INT_PART(tmp);
+  ltime->second_part = MY_PACKED_TIME_GET_FRAC_PART(tmp);
+  ymdhms = MY_PACKED_TIME_GET_INT_PART(tmp);
 
-  ymd= ymdhms >> 17;
-  ym= ymd >> 5;
-  hms= ymdhms % (1 << 17);
+  ymd = ymdhms >> 17;
+  ym = ymd >> 5;
+  hms = ymdhms % (1 << 17);
 
-  ltime->day= ymd % (1 << 5);
-  ltime->month= ym % 13;
-  ltime->year= (uint) (ym / 13);
+  ltime->day = ymd % (1 << 5);
+  ltime->month = ym % 13;
+  ltime->year = (uint)(ym / 13);
 
-  ltime->second= hms % (1 << 6);
-  ltime->minute= (hms >> 6) % (1 << 6);
-  ltime->hour= (uint) (hms >> 12);
-  
-  ltime->time_type= MYSQL_TIMESTAMP_DATETIME;
+  ltime->second = hms % (1 << 6);
+  ltime->minute = (hms >> 6) % (1 << 6);
+  ltime->hour = (uint)(hms >> 12);
+
+  ltime->time_type = MYSQL_TIMESTAMP_DATETIME;
 }
-
 
 /**
   Calculate binary size of MySQL56 packed datetime representation.
@@ -302,13 +279,11 @@ uint my_datetime_binary_length(uint dec)
   return 5 + (dec + 1) / 2;
 }
 
-
 /*
   On disk we store as unsigned number with DATETIMEF_INT_OFS offset,
   for HA_KETYPE_BINARY compatibility purposes.
 */
 #define DATETIMEF_INT_OFS 0x8000000000LL
-
 
 /**
   Convert MySQL56 on-disk datetime representation
@@ -320,30 +295,29 @@ uint my_datetime_binary_length(uint dec)
 */
 longlong my_datetime_packed_from_binary(const uchar *ptr, uint dec)
 {
-  longlong intpart= mi_uint5korr(ptr) - DATETIMEF_INT_OFS;
+  longlong intpart = mi_uint5korr(ptr) - DATETIMEF_INT_OFS;
   int frac;
   DBUG_ASSERT(dec <= TIME_SECOND_PART_DIGITS);
   switch (dec)
   {
-  case 0:
-  default:
-    return MY_PACKED_TIME_MAKE_INT(intpart);
-  case 1:
-  case 2:
-    frac= ((int) (signed char) ptr[5]) * 10000;
-    break;
-  case 3:
-  case 4:
-    frac= mi_sint2korr(ptr + 5) * 100;
-    break;
-  case 5:
-  case 6:
-    frac= mi_sint3korr(ptr + 5);
-    break;
+    case 0:
+    default:
+      return MY_PACKED_TIME_MAKE_INT(intpart);
+    case 1:
+    case 2:
+      frac = ((int)(signed char)ptr[5]) * 10000;
+      break;
+    case 3:
+    case 4:
+      frac = mi_sint2korr(ptr + 5) * 100;
+      break;
+    case 5:
+    case 6:
+      frac = mi_sint3korr(ptr + 5);
+      break;
   }
   return MY_PACKED_TIME_MAKE(intpart, frac);
 }
-
 
 /**
   Store MySQL56 in-memory numeric packed datetime representation to disk.
@@ -356,29 +330,27 @@ void my_datetime_packed_to_binary(longlong nr, uchar *ptr, uint dec)
 {
   DBUG_ASSERT(dec <= TIME_SECOND_PART_DIGITS);
   /* The value being stored must have been properly rounded or truncated */
-  DBUG_ASSERT((MY_PACKED_TIME_GET_FRAC_PART(nr) %
-              (int) log_10_int[TIME_SECOND_PART_DIGITS - dec]) == 0);
+  DBUG_ASSERT((MY_PACKED_TIME_GET_FRAC_PART(nr) % (int)log_10_int[TIME_SECOND_PART_DIGITS - dec]) == 0);
 
   mi_int5store(ptr, MY_PACKED_TIME_GET_INT_PART(nr) + DATETIMEF_INT_OFS);
   switch (dec)
   {
-  case 0:
-  default:
-    break;
-  case 1:
-  case 2:
-    ptr[5]= (unsigned char) (char) (MY_PACKED_TIME_GET_FRAC_PART(nr) / 10000);
-    break;
-  case 3:
-  case 4:
-    mi_int2store(ptr + 5, MY_PACKED_TIME_GET_FRAC_PART(nr) / 100);
-    break;
-  case 5:
-  case 6:
-    mi_int3store(ptr + 5, MY_PACKED_TIME_GET_FRAC_PART(nr));
+    case 0:
+    default:
+      break;
+    case 1:
+    case 2:
+      ptr[5] = (unsigned char)(char)(MY_PACKED_TIME_GET_FRAC_PART(nr) / 10000);
+      break;
+    case 3:
+    case 4:
+      mi_int2store(ptr + 5, MY_PACKED_TIME_GET_FRAC_PART(nr) / 100);
+      break;
+    case 5:
+    case 6:
+      mi_int3store(ptr + 5, MY_PACKED_TIME_GET_FRAC_PART(nr));
   }
 }
-
 
 /*** MySQL56 TIMESTAMP low-level memory and disk representation routines ***/
 
@@ -393,7 +365,6 @@ uint my_timestamp_binary_length(uint dec)
   return 4 + (dec + 1) / 2;
 }
 
-
 /**
   Convert MySQL56 binary timestamp representation to in-memory representation.
 
@@ -404,29 +375,28 @@ uint my_timestamp_binary_length(uint dec)
 void my_timestamp_from_binary(struct timeval *tm, const uchar *ptr, uint dec)
 {
   DBUG_ASSERT(dec <= TIME_SECOND_PART_DIGITS);
-  tm->tv_sec= mi_uint4korr(ptr);
+  tm->tv_sec = mi_uint4korr(ptr);
   switch (dec)
   {
     case 0:
     default:
-      tm->tv_usec= 0;
+      tm->tv_usec = 0;
       return;
     case 1:
     case 2:
-      tm->tv_usec= ((int) ptr[4]) * 10000;
+      tm->tv_usec = ((int)ptr[4]) * 10000;
       break;
     case 3:
     case 4:
-      tm->tv_usec= (uint) mi_uint2korr(ptr + 4) * 100;
+      tm->tv_usec = (uint)mi_uint2korr(ptr + 4) * 100;
       break;
     case 5:
     case 6:
-      tm->tv_usec= (uint) mi_uint3korr(ptr + 4);
+      tm->tv_usec = (uint)mi_uint3korr(ptr + 4);
   }
   // The binary data my be corrupt. Cut fractional seconds to the valid range.
   set_if_smaller(tm->tv_usec, my_max_usec_value[dec]);
 }
-
 
 /**
   Convert MySQL56 in-memory timestamp representation to on-disk representation.
@@ -439,8 +409,7 @@ void my_timestamp_to_binary(const struct timeval *tm, uchar *ptr, uint dec)
 {
   DBUG_ASSERT(dec <= TIME_SECOND_PART_DIGITS);
   /* Stored value must have been previously properly rounded or truncated */
-  DBUG_ASSERT((tm->tv_usec %
-               (int) log_10_int[TIME_SECOND_PART_DIGITS - dec]) == 0);
+  DBUG_ASSERT((tm->tv_usec % (int)log_10_int[TIME_SECOND_PART_DIGITS - dec]) == 0);
   mi_int4store(ptr, tm->tv_sec);
   switch (dec)
   {
@@ -449,7 +418,7 @@ void my_timestamp_to_binary(const struct timeval *tm, uchar *ptr, uint dec)
       break;
     case 1:
     case 2:
-      ptr[4]= (unsigned char) (char) (tm->tv_usec / 10000);
+      ptr[4] = (unsigned char)(char)(tm->tv_usec / 10000);
       break;
     case 3:
     case 4:

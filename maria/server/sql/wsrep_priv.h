@@ -22,24 +22,18 @@
 #include "wsrep_api.h"
 #include "wsrep/server_state.hpp"
 
-my_bool wsrep_ready_set (my_bool x);
+my_bool wsrep_ready_set(my_bool x);
 
-ssize_t wsrep_sst_prepare   (void** msg);
-wsrep_cb_status wsrep_sst_donate_cb (void* app_ctx,
-                                     void* recv_ctx,
-                                     const wsrep_buf_t* msg,
-                                     const wsrep_gtid_t* state_id,
-                                     const wsrep_buf_t* state,
-                                     bool bypass);
+ssize_t wsrep_sst_prepare(void **msg);
+wsrep_cb_status wsrep_sst_donate_cb(void *app_ctx, void *recv_ctx, const wsrep_buf_t *msg, const wsrep_gtid_t *state_id,
+                                    const wsrep_buf_t *state, bool bypass);
 
-extern wsrep_uuid_t  local_uuid;
+extern wsrep_uuid_t local_uuid;
 extern wsrep_seqno_t local_seqno;
 
 // a helper function
-bool wsrep_sst_received(THD*, const wsrep_uuid_t&, wsrep_seqno_t,
-                        const void*, size_t);
+bool wsrep_sst_received(THD *, const wsrep_uuid_t &, wsrep_seqno_t, const void *, size_t);
 
-void wsrep_notify_status(enum wsrep::server_state::state status,
-                         const wsrep::view* view= 0);
+void wsrep_notify_status(enum wsrep::server_state::state status, const wsrep::view *view = 0);
 
 #endif /* WSREP_PRIV_H */

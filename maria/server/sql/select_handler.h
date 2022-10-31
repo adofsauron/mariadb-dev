@@ -58,7 +58,7 @@ class select_handler
 
   static TABLE *create_tmp_table(THD *thd, SELECT_LEX *sel);
 
-protected:
+ protected:
   /*
     Functions to scan the select result set.
     All these returns 0 if ok, error code in case of error.

@@ -23,7 +23,7 @@
 */
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface                      /* gcc class implementation */
+#pragma interface /* gcc class implementation */
 #endif
 
 class THD;
@@ -37,7 +37,7 @@ extern MYSQL_PLUGIN_IMPORT uint opt_debug_sync_timeout;
 #define DEBUG_SYNC_DEFAULT_WAIT_TIMEOUT 300
 
 /* Debug Sync prototypes. See debug_sync.cc. */
-extern int  debug_sync_init(void);
+extern int debug_sync_init(void);
 extern void debug_sync_end(void);
 extern void debug_sync_init_thread(THD *thd);
 extern void debug_sync_end_thread(THD *thd);
@@ -49,7 +49,6 @@ extern uchar *debug_sync_value_ptr(THD *thd);
 static inline void debug_sync_init_thread(THD *thd) {}
 static inline void debug_sync_end_thread(THD *thd) {}
 static inline void debug_sync_reset_thread(THD *thd) {}
-static inline bool debug_sync_set_action(THD *, const char *, size_t)
-{ return false; }
+static inline bool debug_sync_set_action(THD *, const char *, size_t) { return false; }
 #endif /* defined(ENABLED_DEBUG_SYNC) */
 #endif /* DEBUG_SYNC_INCLUDED */

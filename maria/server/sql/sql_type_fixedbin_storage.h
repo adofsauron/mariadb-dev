@@ -57,24 +57,23 @@
 
 /***********************************************************************/
 
-template<size_t NATIVE_LEN, size_t MAX_CHAR_LEN>
+template <size_t NATIVE_LEN, size_t MAX_CHAR_LEN>
 class FixedBinTypeStorage
 {
-protected:
+ protected:
   // The buffer that stores the in-memory binary representation
   char m_buffer[NATIVE_LEN];
 
   // Non-initializing constructor
-  FixedBinTypeStorage()
-  { }
+  FixedBinTypeStorage() {}
 
-  FixedBinTypeStorage & set_zero()
+  FixedBinTypeStorage &set_zero()
   {
     bzero(&m_buffer, sizeof(m_buffer));
     return *this;
   }
-public:
 
+ public:
   // Initialize from the in-memory binary representation
   FixedBinTypeStorage(const char *str, size_t length)
   {
@@ -85,10 +84,7 @@ public:
   }
 
   // Return the buffer with the in-memory representation
-  Lex_cstring to_lex_cstring() const
-  {
-    return Lex_cstring(m_buffer, sizeof(m_buffer));
-  }
+  Lex_cstring to_lex_cstring() const { return Lex_cstring(m_buffer, sizeof(m_buffer)); }
 
   static constexpr uint binary_length() { return NATIVE_LEN; }
   static constexpr uint max_char_length() { return MAX_CHAR_LEN; }
@@ -105,18 +101,12 @@ public:
     Convert from the in-memory to the in-record representation.
     Used in Field::store_native().
   */
-  static void memory_to_record(char *to, const char *from)
-  {
-    memcpy(to, from, NATIVE_LEN);
-  }
+  static void memory_to_record(char *to, const char *from) { memcpy(to, from, NATIVE_LEN); }
   /*
     Convert from the in-record to the in-memory representation
     Used in Field::val_native().
   */
-  static void record_to_memory(char *to, const char *from)
-  {
-    memcpy(to, from, NATIVE_LEN);
-  }
+  static void record_to_memory(char *to, const char *from) { memcpy(to, from, NATIVE_LEN); }
 
   /*
     Hash the in-record representation
@@ -129,7 +119,7 @@ public:
 
   static bool only_zero_bytes(const char *ptr, size_t length)
   {
-    for (uint i= 0 ; i < length; i++)
+    for (uint i = 0; i < length; i++)
     {
       if (ptr[i] != 0)
         return false;
@@ -162,12 +152,9 @@ public:
     Used in Field::unpack().
     By default, do what BINARY(N) does.
   */
-  static const uchar *unpack(uchar *to, const uchar *from, const uchar *from_end,
-                             uint param_data)
+  static const uchar *unpack(uchar *to, const uchar *from, const uchar *from_end, uint param_data)
   {
-    return StringPack(&my_charset_bin, binary_length()).unpack(to, from, from_end,
-                                                               param_data);
+    return StringPack(&my_charset_bin, binary_length()).unpack(to, from, from_end, param_data);
   }
-
 };
 #endif /* SQL_TYPE_FIXEDBIN_STORAGE */

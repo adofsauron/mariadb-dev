@@ -14,7 +14,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
-
 #ifndef SEMISYNC_SLAVE_H
 #define SEMISYNC_SLAVE_H
 
@@ -30,40 +29,28 @@ class Master_info;
 /**
    The extension class for the slave of semi-synchronous replication
 */
-class Repl_semi_sync_slave
-  :public Repl_semi_sync_base {
-public:
- Repl_semi_sync_slave() :m_slave_enabled(false) {}
+class Repl_semi_sync_slave : public Repl_semi_sync_base
+{
+ public:
+  Repl_semi_sync_slave() : m_slave_enabled(false) {}
   ~Repl_semi_sync_slave() {}
 
-  void set_trace_level(unsigned long trace_level) {
-    m_trace_level = trace_level;
-  }
+  void set_trace_level(unsigned long trace_level) { m_trace_level = trace_level; }
 
   /* Initialize this class after MySQL parameters are initialized. this
    * function should be called once at bootstrap time.
    */
   int init_object();
 
-  bool get_slave_enabled() {
-    return m_slave_enabled;
-  }
+  bool get_slave_enabled() { return m_slave_enabled; }
 
-  void set_slave_enabled(bool enabled) {
-    m_slave_enabled = enabled;
-  }
+  void set_slave_enabled(bool enabled) { m_slave_enabled = enabled; }
 
-  bool is_delay_master(){
-    return m_delay_master;
-  }
+  bool is_delay_master() { return m_delay_master; }
 
-  void set_delay_master(bool enabled) {
-    m_delay_master = enabled;
-  }
+  void set_delay_master(bool enabled) { m_delay_master = enabled; }
 
-  void set_kill_conn_timeout(unsigned int timeout) {
-    m_kill_conn_timeout = timeout;
-  }
+  void set_kill_conn_timeout(unsigned int timeout) { m_kill_conn_timeout = timeout; }
 
   /* A slave reads the semi-sync packet header and separate the metadata
    * from the payload data.
@@ -79,29 +66,27 @@ public:
    * Return:
    *  0: success;  non-zero: error
    */
-  int slave_read_sync_header(const uchar *header, unsigned long total_len,
-                             int *semi_flags,
-                             const uchar **payload, unsigned long *payload_len);
+  int slave_read_sync_header(const uchar *header, unsigned long total_len, int *semi_flags, const uchar **payload,
+                             unsigned long *payload_len);
 
   /* A slave replies to the master indicating its replication process.  It
    * indicates that the slave has received all events before the specified
    * binlog position.
    */
-  int slave_reply(Master_info* mi);
+  int slave_reply(Master_info *mi);
   int slave_start(Master_info *mi);
   int slave_stop(Master_info *mi);
-  int request_transmit(Master_info*);
+  int request_transmit(Master_info *);
   void kill_connection(MYSQL *mysql);
   int reset_slave(Master_info *mi);
 
-private:
+ private:
   /* True when init_object has been called */
   bool m_init_done;
-  bool m_slave_enabled;        /* semi-sycn is enabled on the slave */
+  bool m_slave_enabled; /* semi-sycn is enabled on the slave */
   bool m_delay_master;
   unsigned int m_kill_conn_timeout;
 };
-
 
 /* System and status variables for the slave component */
 extern my_bool rpl_semi_sync_slave_enabled;

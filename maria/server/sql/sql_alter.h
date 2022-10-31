@@ -30,9 +30,13 @@ class Key;
 
 class Alter_info
 {
-public:
-
-  enum enum_enable_or_disable { LEAVE_AS_IS, ENABLE, DISABLE };
+ public:
+  enum enum_enable_or_disable
+  {
+    LEAVE_AS_IS,
+    ENABLE,
+    DISABLE
+  };
 
   bool vers_prohibited(THD *thd) const;
 
@@ -42,11 +46,11 @@ public:
   */
   enum enum_alter_table_algorithm
   {
-/*
-  Use thd->variables.alter_algorithm for alter method. If this is also
-  default then use the fastest possible ALTER TABLE method
-  (INSTANT, NOCOPY, INPLACE, COPY)
-*/
+    /*
+      Use thd->variables.alter_algorithm for alter method. If this is also
+      default then use the fastest possible ALTER TABLE method
+      (INSTANT, NOCOPY, INPLACE, COPY)
+    */
     ALTER_TABLE_ALGORITHM_DEFAULT,
 
     // Copy if supported, error otherwise.
@@ -64,7 +68,6 @@ public:
     // When there is no specification of algorithm during alter table.
     ALTER_TABLE_ALGORITHM_NONE
   };
-
 
   /**
      The different values of the LOCK clause.
@@ -85,45 +88,46 @@ public:
     ALTER_TABLE_LOCK_EXCLUSIVE
   };
 
-
   // Columns and keys to be dropped.
-  List<Alter_drop>              drop_list;
+  List<Alter_drop> drop_list;
   // Columns for ALTER_CHANGE_COLUMN_DEFAULT.
-  List<Alter_column>            alter_list;
+  List<Alter_column> alter_list;
   // List of keys, used by both CREATE and ALTER TABLE.
-  List<Key>                     key_list;
+  List<Key> key_list;
   // List of keys to be renamed.
-  List<Alter_rename_key>        alter_rename_key_list;
+  List<Alter_rename_key> alter_rename_key_list;
   // List of columns, used by both CREATE and ALTER TABLE.
-  List<Create_field>            create_list;
+  List<Create_field> create_list;
   // Indexes whose ignorability needs to be changed.
-  List<Alter_index_ignorability>  alter_index_ignorability_list;
-  List<Virtual_column_info>     check_constraint_list;
+  List<Alter_index_ignorability> alter_index_ignorability_list;
+  List<Virtual_column_info> check_constraint_list;
   // Type of ALTER TABLE operation.
-  alter_table_operations        flags;
-  ulong                         partition_flags;
+  alter_table_operations flags;
+  ulong partition_flags;
   // Enable or disable keys.
-  enum_enable_or_disable        keys_onoff;
+  enum_enable_or_disable keys_onoff;
   // List of partitions.
-  List<const char>              partition_names;
+  List<const char> partition_names;
   // Number of partitions.
-  uint                          num_parts;
-private:
+  uint num_parts;
+
+ private:
   // Type of ALTER TABLE algorithm.
-  enum_alter_table_algorithm    requested_algorithm;
+  enum_alter_table_algorithm requested_algorithm;
 
-public:
+ public:
   // Type of ALTER TABLE lock.
-  enum_alter_table_lock         requested_lock;
+  enum_alter_table_lock requested_lock;
 
-
-  Alter_info() :
-  flags(0), partition_flags(0),
-    keys_onoff(LEAVE_AS_IS),
-    num_parts(0),
-    requested_algorithm(ALTER_TABLE_ALGORITHM_NONE),
-    requested_lock(ALTER_TABLE_LOCK_DEFAULT)
-  {}
+  Alter_info()
+      : flags(0),
+        partition_flags(0),
+        keys_onoff(LEAVE_AS_IS),
+        num_parts(0),
+        requested_algorithm(ALTER_TABLE_ALGORITHM_NONE),
+        requested_lock(ALTER_TABLE_LOCK_DEFAULT)
+  {
+  }
 
   void reset()
   {
@@ -134,15 +138,14 @@ public:
     create_list.empty();
     alter_index_ignorability_list.empty();
     check_constraint_list.empty();
-    flags= 0;
-    partition_flags= 0;
-    keys_onoff= LEAVE_AS_IS;
-    num_parts= 0;
+    flags = 0;
+    partition_flags = 0;
+    keys_onoff = LEAVE_AS_IS;
+    num_parts = 0;
     partition_names.empty();
-    requested_algorithm= ALTER_TABLE_ALGORITHM_NONE;
-    requested_lock= ALTER_TABLE_LOCK_DEFAULT;
+    requested_algorithm = ALTER_TABLE_ALGORITHM_NONE;
+    requested_lock = ALTER_TABLE_LOCK_DEFAULT;
   }
-
 
   /**
     Construct a copy of this object to be used for mysql_alter_table
@@ -161,7 +164,6 @@ public:
   */
   Alter_info(const Alter_info &rhs, MEM_ROOT *mem_root);
 
-
   /**
      Parses the given string and sets requested_algorithm
      if the string value matches a supported value.
@@ -172,7 +174,6 @@ public:
      @retval true   Not supported value, no changes made
   */
   bool set_requested_algorithm(const LEX_CSTRING *str);
-
 
   /**
      Parses the given string and sets requested_lock
@@ -195,12 +196,12 @@ public:
   /**
      Returns the algorithm value in the format "algorithm=value"
   */
-  const char* algorithm_clause(THD *thd) const;
+  const char *algorithm_clause(THD *thd) const;
 
   /**
      Returns the lock value in the format "lock=value"
   */
-  const char* lock() const;
+  const char *lock() const;
 
   /**
      Check whether the given result can be supported
@@ -213,8 +214,7 @@ public:
      @retval false  Supported operation
      @retval true   Not supported value
   */
-  bool supports_algorithm(THD *thd,
-                          const Alter_inplace_info *ha_alter_info);
+  bool supports_algorithm(THD *thd, const Alter_inplace_info *ha_alter_info);
 
   /**
      Check whether the given result can be supported
@@ -234,34 +234,31 @@ public:
    */
   enum_alter_table_algorithm algorithm(const THD *thd) const;
 
-private:
-  Alter_info &operator=(const Alter_info &rhs); // not implemented
-  Alter_info(const Alter_info &rhs);            // not implemented
+ private:
+  Alter_info &operator=(const Alter_info &rhs);  // not implemented
+  Alter_info(const Alter_info &rhs);             // not implemented
 };
-
 
 /** Runtime context for ALTER TABLE. */
 class Alter_table_ctx
 {
-public:
+ public:
   Alter_table_ctx();
 
-  Alter_table_ctx(THD *thd, TABLE_LIST *table_list, uint tables_opened_arg,
-                  const LEX_CSTRING *new_db_arg, const LEX_CSTRING *new_name_arg);
+  Alter_table_ctx(THD *thd, TABLE_LIST *table_list, uint tables_opened_arg, const LEX_CSTRING *new_db_arg,
+                  const LEX_CSTRING *new_name_arg);
 
   /**
      @return true if the table is moved to another database or a new table
      created by ALTER_PARTITION_CONVERT_OUT, false otherwise.
   */
-  bool is_database_changed() const
-  { return (new_db.str != db.str); };
+  bool is_database_changed() const { return (new_db.str != db.str); };
 
   /**
      @return true if the table is renamed or a new table created by
      ALTER_PARTITION_CONVERT_OUT, false otherwise.
   */
-  bool is_table_renamed() const
-  { return (is_database_changed() || new_name.str != table_name.str); };
+  bool is_table_renamed() const { return (is_database_changed() || new_name.str != table_name.str); };
 
   /**
      @return filename (including .frm) for the new table.
@@ -293,12 +290,11 @@ public:
   /**
      @return path to the temporary table created during ALTER TABLE.
   */
-  const char *get_tmp_path() const
-  { return tmp_path; }
+  const char *get_tmp_path() const { return tmp_path; }
 
   const LEX_CSTRING get_tmp_cstring_path() const
   {
-    LEX_CSTRING tmp= { tmp_path, strlen(tmp_path) };
+    LEX_CSTRING tmp = {tmp_path, strlen(tmp_path)};
     return tmp;
   };
 
@@ -308,47 +304,48 @@ public:
   */
   void set_fk_error_if_delete_row(FOREIGN_KEY_INFO *fk)
   {
-    fk_error_if_delete_row= true;
-    fk_error_id= fk->foreign_id->str;
-    fk_error_table= fk->foreign_table->str;
+    fk_error_if_delete_row = true;
+    fk_error_id = fk->foreign_id->str;
+    fk_error_table = fk->foreign_table->str;
   }
 
   void report_implicit_default_value_error(THD *thd, const TABLE_SHARE *) const;
-public:
-  Create_field *implicit_default_value_error_field= nullptr;
-  bool         error_if_not_empty= false;
-  uint         tables_opened= 0;
-  LEX_CSTRING  db;
-  LEX_CSTRING  table_name;
-  LEX_CSTRING  storage_engine_name;
-  LEX_CSTRING  alias;
-  LEX_CSTRING  new_db;
-  LEX_CSTRING  new_name;
-  LEX_CSTRING  new_alias;
-  LEX_CSTRING  tmp_name;
-  LEX_CSTRING  tmp_storage_engine_name;
+
+ public:
+  Create_field *implicit_default_value_error_field = nullptr;
+  bool error_if_not_empty = false;
+  uint tables_opened = 0;
+  LEX_CSTRING db;
+  LEX_CSTRING table_name;
+  LEX_CSTRING storage_engine_name;
+  LEX_CSTRING alias;
+  LEX_CSTRING new_db;
+  LEX_CSTRING new_name;
+  LEX_CSTRING new_alias;
+  LEX_CSTRING tmp_name;
+  LEX_CSTRING tmp_storage_engine_name;
   LEX_CUSTRING tmp_id, id;
-  char         tmp_buff[80];
-  uchar        id_buff[MY_UUID_SIZE];
-  char         storage_engine_buff[NAME_LEN], tmp_storage_engine_buff[NAME_LEN];
-  bool         storage_engine_partitioned;
-  bool         tmp_storage_engine_name_partitioned;
+  char tmp_buff[80];
+  uchar id_buff[MY_UUID_SIZE];
+  char storage_engine_buff[NAME_LEN], tmp_storage_engine_buff[NAME_LEN];
+  bool storage_engine_partitioned;
+  bool tmp_storage_engine_name_partitioned;
 
   /**
     Indicates that if a row is deleted during copying of data from old version
     of table to the new version ER_FK_CANNOT_DELETE_PARENT error should be
     emitted.
   */
-  bool fk_error_if_delete_row= false;
+  bool fk_error_if_delete_row = false;
   /** Name of foreign key for the above error. */
-  const char *fk_error_id= nullptr;
+  const char *fk_error_id = nullptr;
   /** Name of table for the above error. */
-  const char *fk_error_table= nullptr;
-  bool modified_primary_key= false;
+  const char *fk_error_table = nullptr;
+  bool modified_primary_key = false;
   /** Indicates that we are altering temporary table */
-  bool tmp_table= false;
+  bool tmp_table = false;
 
-private:
+ private:
   char new_filename[FN_REFLEN + 1];
   char new_alias_buff[NAME_LEN + 1];
   char tmp_name_buff[NAME_LEN + 1];
@@ -356,10 +353,9 @@ private:
   char new_path[FN_REFLEN + 1];
   char tmp_path[FN_REFLEN + 1];
 
-  Alter_table_ctx &operator=(const Alter_table_ctx &rhs); // not implemented
-  Alter_table_ctx(const Alter_table_ctx &rhs);            // not implemented
+  Alter_table_ctx &operator=(const Alter_table_ctx &rhs);  // not implemented
+  Alter_table_ctx(const Alter_table_ctx &rhs);             // not implemented
 };
-
 
 /**
   Sql_cmd_common_alter_table represents the common properties of the ALTER TABLE
@@ -368,69 +364,52 @@ private:
 */
 class Sql_cmd_common_alter_table : public Sql_cmd
 {
-protected:
+ protected:
   /**
     Constructor.
   */
-  Sql_cmd_common_alter_table()
-  {}
+  Sql_cmd_common_alter_table() {}
 
-  virtual ~Sql_cmd_common_alter_table()
-  {}
+  virtual ~Sql_cmd_common_alter_table() {}
 
-  virtual enum_sql_command sql_command_code() const
-  {
-    return SQLCOM_ALTER_TABLE;
-  }
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_ALTER_TABLE; }
 };
 
 /**
   Sql_cmd_alter_table represents the generic ALTER TABLE statement.
   @todo move Alter_info and other ALTER specific structures from Lex here.
 */
-class Sql_cmd_alter_table : public Sql_cmd_common_alter_table,
-                            public Storage_engine_name
+class Sql_cmd_alter_table : public Sql_cmd_common_alter_table, public Storage_engine_name
 {
-public:
+ public:
   /**
     Constructor, used to represent a ALTER TABLE statement.
   */
-  Sql_cmd_alter_table()
-  {}
+  Sql_cmd_alter_table() {}
 
-  ~Sql_cmd_alter_table()
-  {}
+  ~Sql_cmd_alter_table() {}
 
   Storage_engine_name *option_storage_engine_name() { return this; }
 
   bool execute(THD *thd);
 };
 
-
 /**
   Sql_cmd_alter_sequence represents the ALTER SEQUENCE statement.
 */
-class Sql_cmd_alter_sequence : public Sql_cmd,
-                               public DDL_options
+class Sql_cmd_alter_sequence : public Sql_cmd, public DDL_options
 {
-public:
+ public:
   /**
     Constructor, used to represent a ALTER TABLE statement.
   */
-  Sql_cmd_alter_sequence(const DDL_options &options)
-   :DDL_options(options)
-  {}
+  Sql_cmd_alter_sequence(const DDL_options &options) : DDL_options(options) {}
 
-  ~Sql_cmd_alter_sequence()
-  {}
+  ~Sql_cmd_alter_sequence() {}
 
-  enum_sql_command sql_command_code() const
-  {
-    return SQLCOM_ALTER_SEQUENCE;
-  }
+  enum_sql_command sql_command_code() const { return SQLCOM_ALTER_SEQUENCE; }
   bool execute(THD *thd);
 };
-
 
 /**
   Sql_cmd_alter_table_tablespace represents ALTER TABLE
@@ -438,19 +417,18 @@ public:
 */
 class Sql_cmd_discard_import_tablespace : public Sql_cmd_common_alter_table
 {
-public:
+ public:
   enum enum_tablespace_op_type
   {
-    DISCARD_TABLESPACE, IMPORT_TABLESPACE
+    DISCARD_TABLESPACE,
+    IMPORT_TABLESPACE
   };
 
-  Sql_cmd_discard_import_tablespace(enum_tablespace_op_type tablespace_op_arg)
-    : m_tablespace_op(tablespace_op_arg)
-  {}
+  Sql_cmd_discard_import_tablespace(enum_tablespace_op_type tablespace_op_arg) : m_tablespace_op(tablespace_op_arg) {}
 
   bool execute(THD *thd);
 
-private:
+ private:
   const enum_tablespace_op_type m_tablespace_op;
 };
 

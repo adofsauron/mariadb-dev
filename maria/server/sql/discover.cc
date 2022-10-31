@@ -14,7 +14,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /**
   @file
 
@@ -49,36 +48,33 @@
 
 int readfrm(const char *name, const uchar **frmdata, size_t *len)
 {
-  int    error;
-  char	 index_file[FN_REFLEN];
-  File	 file;
+  int error;
+  char index_file[FN_REFLEN];
+  File file;
   size_t read_len;
   uchar *read_data;
-  MY_STAT state;  
+  MY_STAT state;
   DBUG_ENTER("readfrm");
-  DBUG_PRINT("enter",("name: '%s'",name));
-  
-  *frmdata= NULL;      // In case of errors
-  *len= 0;
-  error= 1;
-  if ((file= mysql_file_open(key_file_frm,
-                             fn_format(index_file, name, "", reg_ext,
-                               MY_UNPACK_FILENAME|MY_APPEND_EXT),
-                             O_RDONLY | O_SHARE,
-                             MYF(0))) < 0)
-    goto err_end; 
-  
+  DBUG_PRINT("enter", ("name: '%s'", name));
+
+  *frmdata = NULL;  // In case of errors
+  *len = 0;
+  error = 1;
+  if ((file =
+           mysql_file_open(key_file_frm, fn_format(index_file, name, "", reg_ext, MY_UNPACK_FILENAME | MY_APPEND_EXT),
+                           O_RDONLY | O_SHARE, MYF(0))) < 0)
+    goto err_end;
+
   // Get length of file
-  error= 2;
+  error = 2;
   if (mysql_file_fstat(file, &state, MYF(0)))
     goto err;
   MSAN_STAT_WORKAROUND(&state);
-  read_len= (size_t)MY_MIN(FRM_MAX_SIZE, state.st_size); // safety
+  read_len = (size_t)MY_MIN(FRM_MAX_SIZE, state.st_size);  // safety
 
   // Read whole frm file
-  error= 3;
-  if (!(read_data= (uchar*)my_malloc(key_memory_frm_string, read_len,
-                                     MYF(MY_WME))))
+  error = 3;
+  if (!(read_data = (uchar *)my_malloc(key_memory_frm_string, read_len, MYF(MY_WME))))
     goto err;
   if (mysql_file_read(file, read_data, read_len, MYF(MY_NABP)))
   {
@@ -87,17 +83,16 @@ int readfrm(const char *name, const uchar **frmdata, size_t *len)
   }
 
   // Setup return data
-  *frmdata= (uchar*) read_data;
-  *len= read_len;
-  error= 0;
-  
- err:
-  (void) mysql_file_close(file, MYF(MY_WME));
-  
- err_end:		      /* Here when no file */
-  DBUG_RETURN (error);
-} /* readfrm */
+  *frmdata = (uchar *)read_data;
+  *len = read_len;
+  error = 0;
 
+err:
+  (void)mysql_file_close(file, MYF(MY_WME));
+
+err_end: /* Here when no file */
+  DBUG_RETURN(error);
+} /* readfrm */
 
 /*
   Write the content of a frm data pointer to a frm or par file.
@@ -114,21 +109,19 @@ int readfrm(const char *name, const uchar **frmdata, size_t *len)
     <> 0    Could not write file. In this case the file is not created
 */
 
-int writefile(const char *path, const char *db, const char *table,
-              bool tmp_table, const uchar *data, size_t len)
+int writefile(const char *path, const char *db, const char *table, bool tmp_table, const uchar *data, size_t len)
 {
   int error;
-  int create_flags= O_RDWR | O_TRUNC;
+  int create_flags = O_RDWR | O_TRUNC;
   DBUG_ENTER("writefile");
-  DBUG_PRINT("enter",("name: '%s' len: %lu ",path, (ulong) len));
+  DBUG_PRINT("enter", ("name: '%s' len: %lu ", path, (ulong)len));
 
   if (tmp_table)
-    create_flags|= O_EXCL | O_NOFOLLOW;
+    create_flags |= O_EXCL | O_NOFOLLOW;
 
-  File file= mysql_file_create(key_file_frm, path,
-                               CREATE_MODE, create_flags, MYF(0));
+  File file = mysql_file_create(key_file_frm, path, CREATE_MODE, create_flags, MYF(0));
 
-  if (unlikely((error= file < 0)))
+  if (unlikely((error = file < 0)))
   {
     if (my_errno == ENOENT)
       my_error(ER_BAD_DB_ERROR, MYF(0), db);
@@ -137,32 +130,29 @@ int writefile(const char *path, const char *db, const char *table,
   }
   else
   {
-    error= (int)mysql_file_write(file, data, len, MYF(MY_WME | MY_NABP));
+    error = (int)mysql_file_write(file, data, len, MYF(MY_WME | MY_NABP));
 
     if (!error && !tmp_table && opt_sync_frm)
-        error= mysql_file_sync(file, MYF(MY_WME)) ||
-             my_sync_dir_by_file(path, MYF(MY_WME));
+      error = mysql_file_sync(file, MYF(MY_WME)) || my_sync_dir_by_file(path, MYF(MY_WME));
 
-    error|= mysql_file_close(file, MYF(MY_WME));
+    error |= mysql_file_close(file, MYF(MY_WME));
     if (error)
       my_delete(path, MYF(0));
   }
   DBUG_RETURN(error);
 } /* writefile */
 
-
-static inline void advance(FILEINFO* &from, FILEINFO* &to,
-                           FILEINFO* cur, bool &skip)
+static inline void advance(FILEINFO *&from, FILEINFO *&to, FILEINFO *cur, bool &skip)
 {
-  if (skip)                   // if not copying
-    from= cur;                //   just advance the start pointer
-  else                        // if copying
-    if (to == from)           //   but to the same place, not shifting the data
-      from= to= cur;          //     advance both pointers
-    else                      //   otherwise
-      while (from < cur)      //     have to copy [from...cur) to [to...)
+  if (skip)               // if not copying
+    from = cur;           //   just advance the start pointer
+  else                    // if copying
+    if (to == from)       //   but to the same place, not shifting the data
+      from = to = cur;    //     advance both pointers
+    else                  //   otherwise
+      while (from < cur)  //     have to copy [from...cur) to [to...)
         *to++ = *from++;
-  skip= false;
+  skip = false;
 }
 
 /**
@@ -190,38 +180,34 @@ static inline void advance(FILEINFO* &from, FILEINFO* &to,
   That means we need to compare file names only up to the first '#' or '.'
   whichever comes first.
 */
-int extension_based_table_discovery(MY_DIR *dirp, const char *ext_meta,
-                                    handlerton::discovered_list *result)
+int extension_based_table_discovery(MY_DIR *dirp, const char *ext_meta, handlerton::discovered_list *result)
 {
-  CHARSET_INFO *cs= character_set_filesystem;
-  size_t ext_meta_len= strlen(ext_meta);
+  CHARSET_INFO *cs = character_set_filesystem;
+  size_t ext_meta_len = strlen(ext_meta);
   FILEINFO *from, *to, *cur, *end;
-  bool skip= false;
-  
-  from= to= cur= dirp->dir_entry;
-  end= cur + dirp->number_of_files;
+  bool skip = false;
+
+  from = to = cur = dirp->dir_entry;
+  end = cur + dirp->number_of_files;
   while (cur < end)
   {
-    char *octothorp= strchr(cur->name + 1, '#');
-    char *ext= strchr(octothorp ? octothorp : cur->name, FN_EXTCHAR);
+    char *octothorp = strchr(cur->name + 1, '#');
+    char *ext = strchr(octothorp ? octothorp : cur->name, FN_EXTCHAR);
 
     if (ext)
     {
-      size_t len= (octothorp ? octothorp : ext) - cur->name;
-      if (from != cur &&
-          (strlen(from->name) <= len ||
-           cs->strnncoll(from->name, len, cur->name, len) ||
-           (from->name[len] != FN_EXTCHAR && from->name[len] != '#')))
+      size_t len = (octothorp ? octothorp : ext) - cur->name;
+      if (from != cur && (strlen(from->name) <= len || cs->strnncoll(from->name, len, cur->name, len) ||
+                          (from->name[len] != FN_EXTCHAR && from->name[len] != '#')))
         advance(from, to, cur, skip);
 
-      if (cs->strnncoll(ext, strlen(ext),
-                        ext_meta, ext_meta_len) == 0)
+      if (cs->strnncoll(ext, strlen(ext), ext_meta, ext_meta_len) == 0)
       {
         *ext = 0;
         if (result->add_file(cur->name))
           return 1;
         *ext = FN_EXTCHAR;
-        skip= true; // table discovered, skip all files with the same name
+        skip = true;  // table discovered, skip all files with the same name
       }
     }
     else
@@ -233,7 +219,7 @@ int extension_based_table_discovery(MY_DIR *dirp, const char *ext_meta,
     cur++;
   }
   advance(from, to, cur, skip);
-  dirp->number_of_files= to - dirp->dir_entry;
+  dirp->number_of_files = to - dirp->dir_entry;
   return 0;
 }
 
@@ -245,22 +231,20 @@ int extension_based_table_discovery(MY_DIR *dirp, const char *ext_meta,
   modify the list of files. It cannot be called many times for the same
   directory listing, otherwise it'll produce duplicate results.
 */
-int ext_table_discovery_simple(MY_DIR *dirp,
-                               handlerton::discovered_list *result)
+int ext_table_discovery_simple(MY_DIR *dirp, handlerton::discovered_list *result)
 {
-  CHARSET_INFO *cs= character_set_filesystem;
+  CHARSET_INFO *cs = character_set_filesystem;
   FILEINFO *cur, *end;
-  
-  cur= dirp->dir_entry;
-  end= cur + dirp->number_of_files;
+
+  cur = dirp->dir_entry;
+  end = cur + dirp->number_of_files;
   while (cur < end)
   {
-    char *ext= strrchr(cur->name, FN_EXTCHAR);
+    char *ext = strrchr(cur->name, FN_EXTCHAR);
 
     if (ext)
     {
-      if (cs->strnncoll(ext, strlen(ext),
-                        reg_ext, reg_ext_length) == 0)
+      if (cs->strnncoll(ext, strlen(ext), reg_ext, reg_ext_length) == 0)
       {
         *ext = 0;
         if (result->add_file(cur->name))
@@ -271,4 +255,3 @@ int ext_table_discovery_simple(MY_DIR *dirp,
   }
   return 0;
 }
-

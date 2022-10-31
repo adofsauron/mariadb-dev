@@ -42,79 +42,73 @@ static int parse_v1_header(char *hdr, size_t len, proxy_peer_info *peer_info)
   int client_port;
   int server_port;
 
-  int ret = sscanf(hdr, "PROXY %s %s %s %d %d",
-    address_family, client_address, server_address,
-    &client_port, &server_port);
+  int ret =
+      sscanf(hdr, "PROXY %s %s %s %d %d", address_family, client_address, server_address, &client_port, &server_port);
 
   if (ret != 5)
   {
     if (ret >= 1 && !strcmp(address_family, "UNKNOWN"))
     {
-      peer_info->is_local_command= true;
+      peer_info->is_local_command = true;
       return 0;
     }
     return -1;
   }
 
-  if (client_port < 0 || client_port > 0xffff
-    || server_port < 0 || server_port > 0xffff)
+  if (client_port < 0 || client_port > 0xffff || server_port < 0 || server_port > 0xffff)
     return -1;
 
   if (!strcmp(address_family, "UNKNOWN"))
   {
-    peer_info->is_local_command= true;
+    peer_info->is_local_command = true;
     return 0;
   }
   else if (!strcmp(address_family, "TCP4"))
   {
     /* Initialize IPv4 peer address.*/
-    peer_info->peer_addr.ss_family= AF_INET;
-    if (!inet_pton(AF_INET, client_address,
-      &((struct sockaddr_in *)(&peer_info->peer_addr))->sin_addr))
+    peer_info->peer_addr.ss_family = AF_INET;
+    if (!inet_pton(AF_INET, client_address, &((struct sockaddr_in *)(&peer_info->peer_addr))->sin_addr))
       return -1;
   }
   else if (!strcmp(address_family, "TCP6"))
   {
     /* Initialize IPv6 peer address.*/
-    peer_info->peer_addr.ss_family= AF_INET6;
-    if (!inet_pton(AF_INET6, client_address,
-      &((struct sockaddr_in6 *)(&peer_info->peer_addr))->sin6_addr))
+    peer_info->peer_addr.ss_family = AF_INET6;
+    if (!inet_pton(AF_INET6, client_address, &((struct sockaddr_in6 *)(&peer_info->peer_addr))->sin6_addr))
       return -1;
   }
-  peer_info->port= client_port;
+  peer_info->port = client_port;
   /* Check if server address is legal.*/
   char addr_bin[16];
-  if (!inet_pton(peer_info->peer_addr.ss_family,
-    server_address, addr_bin))
+  if (!inet_pton(peer_info->peer_addr.ss_family, server_address, addr_bin))
     return -1;
 
   return 0;
 }
 
-
 /*
   Parse proxy protocol V2 (binary) header
 */
-static int parse_v2_header(uchar *hdr, size_t len,proxy_peer_info *peer_info)
+static int parse_v2_header(uchar *hdr, size_t len, proxy_peer_info *peer_info)
 {
   /* V2 Signature */
   if (memcmp(hdr, PROXY_PROTOCOL_V2_SIGNATURE, 12))
     return -1;
 
   /* version  + command */
-  uint8 ver= (hdr[12] & 0xF0);
+  uint8 ver = (hdr[12] & 0xF0);
   if (ver != 0x20)
     return -1; /* Wrong version*/
 
-  uint cmd= (hdr[12] & 0xF);
+  uint cmd = (hdr[12] & 0xF);
 
   /* Address family */
-  uchar fam= hdr[13];
+  uchar fam = hdr[13];
 
   if (cmd == 0)
   {
     /* LOCAL command*/
-    peer_info->is_local_command= true;
+    peer_info->is_local_command = true;
     return 0;
   }
 
@@ -124,22 +118,22 @@ static int parse_v2_header(uchar *hdr, size_t len,proxy_peer_info *peer_info)
     return -1;
   }
 
-  struct sockaddr_in *sin= (struct sockaddr_in *)(&peer_info->peer_addr);
-  struct sockaddr_in6 *sin6= (struct sockaddr_in6 *)(&peer_info->peer_addr);
+  struct sockaddr_in *sin = (struct sockaddr_in *)(&peer_info->peer_addr);
+  struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)(&peer_info->peer_addr);
   switch (fam)
   {
-    case 0x11:  /* TCPv4 */
-      sin->sin_family= AF_INET;
+    case 0x11: /* TCPv4 */
+      sin->sin_family = AF_INET;
       memcpy(&(sin->sin_addr), hdr + 16, 4);
-      peer_info->port= (hdr[24] << 8) + hdr[25];
+      peer_info->port = (hdr[24] << 8) + hdr[25];
       break;
-    case 0x21:  /* TCPv6 */
-      sin6->sin6_family= AF_INET6;
+    case 0x21: /* TCPv6 */
+      sin6->sin6_family = AF_INET6;
       memcpy(&(sin6->sin6_addr), hdr + 16, 16);
-      peer_info->port= (hdr[48] << 8) + hdr[49];
+      peer_info->port = (hdr[48] << 8) + hdr[49];
       break;
     case 0x31: /* AF_UNIX, stream */
-      peer_info->peer_addr.ss_family= AF_UNIX;
+      peer_info->peer_addr.ss_family = AF_UNIX;
       break;
     default:
       return -1;
@@ -147,17 +141,15 @@ static int parse_v2_header(uchar *hdr, size_t len,proxy_peer_info *peer_info)
   return 0;
 }
 
-
 bool has_proxy_protocol_header(NET *net)
 {
   compile_time_assert(NET_HEADER_SIZE < sizeof(PROXY_PROTOCOL_V1_SIGNATURE));
   compile_time_assert(NET_HEADER_SIZE < sizeof(PROXY_PROTOCOL_V2_SIGNATURE));
 
-  const uchar *preread_bytes= net->buff + net->where_b;
-  return !memcmp(preread_bytes, PROXY_PROTOCOL_V1_SIGNATURE, NET_HEADER_SIZE)||
-      !memcmp(preread_bytes, PROXY_PROTOCOL_V2_SIGNATURE, NET_HEADER_SIZE);
+  const uchar *preread_bytes = net->buff + net->where_b;
+  return !memcmp(preread_bytes, PROXY_PROTOCOL_V1_SIGNATURE, NET_HEADER_SIZE) ||
+         !memcmp(preread_bytes, PROXY_PROTOCOL_V2_SIGNATURE, NET_HEADER_SIZE);
 }
-
 
 /**
   Try to parse proxy header.
@@ -175,58 +167,57 @@ bool has_proxy_protocol_header(NET *net)
 int parse_proxy_protocol_header(NET *net, proxy_peer_info *peer_info)
 {
   uchar hdr[MAX_PROXY_HEADER_LEN];
-  size_t pos= 0;
+  size_t pos = 0;
 
   DBUG_ASSERT(!net->compress);
-  const uchar *preread_bytes= net->buff + net->where_b;
-  bool have_v1_header= !memcmp(preread_bytes, PROXY_PROTOCOL_V1_SIGNATURE, NET_HEADER_SIZE);
-  bool have_v2_header=
-    !have_v1_header && !memcmp(preread_bytes, PROXY_PROTOCOL_V2_SIGNATURE, NET_HEADER_SIZE);
+  const uchar *preread_bytes = net->buff + net->where_b;
+  bool have_v1_header = !memcmp(preread_bytes, PROXY_PROTOCOL_V1_SIGNATURE, NET_HEADER_SIZE);
+  bool have_v2_header = !have_v1_header && !memcmp(preread_bytes, PROXY_PROTOCOL_V2_SIGNATURE, NET_HEADER_SIZE);
   if (!have_v1_header && !have_v2_header)
-  { 
+  {
     // not a proxy protocol header
     return -1;
   }
   memcpy(hdr, preread_bytes, NET_HEADER_SIZE);
-  pos= NET_HEADER_SIZE;
-  Vio *vio= net->vio;
-  memset(peer_info, 0, sizeof (*peer_info));
+  pos = NET_HEADER_SIZE;
+  Vio *vio = net->vio;
+  memset(peer_info, 0, sizeof(*peer_info));
 
   if (have_v1_header)
   {
     /* Read until end of header (newline character)*/
-    while(pos < sizeof(hdr))
+    while (pos < sizeof(hdr))
     {
-      long len= (long)vio_read(vio, hdr + pos, 1);
+      long len = (long)vio_read(vio, hdr + pos, 1);
       if (len < 0)
         return -1;
       pos++;
-      if (hdr[pos-1] == '\n')
+      if (hdr[pos - 1] == '\n')
         break;
     }
-    hdr[pos]= 0;
+    hdr[pos] = 0;
 
     if (parse_v1_header((char *)hdr, pos, peer_info))
       return -1;
   }
-  else // if (have_v2_header)
+  else  // if (have_v2_header)
   {
 #define PROXY_V2_HEADER_LEN 16
     /* read off 16 bytes of the header.*/
-    ssize_t len= vio_read(vio, hdr + pos, PROXY_V2_HEADER_LEN - pos);
+    ssize_t len = vio_read(vio, hdr + pos, PROXY_V2_HEADER_LEN - pos);
     if (len < 0)
       return -1;
     // 2 last bytes are the length in network byte order of the part following header
-    ushort trail_len= ((ushort)hdr[PROXY_V2_HEADER_LEN-2] >> 8) + hdr[PROXY_V2_HEADER_LEN-1];
+    ushort trail_len = ((ushort)hdr[PROXY_V2_HEADER_LEN - 2] >> 8) + hdr[PROXY_V2_HEADER_LEN - 1];
     if (trail_len > sizeof(hdr) - PROXY_V2_HEADER_LEN)
       return -1;
     if (trail_len > 0)
     {
-      len= vio_read(vio,  hdr + PROXY_V2_HEADER_LEN, trail_len);
+      len = vio_read(vio, hdr + PROXY_V2_HEADER_LEN, trail_len);
       if (len < 0)
         return -1;
     }
-    pos= PROXY_V2_HEADER_LEN + trail_len;
+    pos = PROXY_V2_HEADER_LEN + trail_len;
     if (parse_v2_header(hdr, pos, peer_info))
       return -1;
   }
@@ -239,13 +230,12 @@ int parse_proxy_protocol_header(NET *net, proxy_peer_info *peer_info)
     */
     sockaddr_storage tmp;
     memset(&tmp, 0, sizeof(tmp));
-    vio_get_normalized_ip((const struct sockaddr *)&peer_info->peer_addr,
-      sizeof(sockaddr_storage), (struct sockaddr *)&tmp);
+    vio_get_normalized_ip((const struct sockaddr *)&peer_info->peer_addr, sizeof(sockaddr_storage),
+                          (struct sockaddr *)&tmp);
     memcpy(&peer_info->peer_addr, &tmp, sizeof(tmp));
   }
   return 0;
 }
-
 
 /**
  CIDR address matching etc (for the proxy_protocol_networks parameter)
@@ -257,31 +247,30 @@ int parse_proxy_protocol_header(NET *net, proxy_peer_info *peer_info)
 */
 struct subnet
 {
-  char addr[16]; /* Binary representation of the address, big endian*/
+  char addr[16];         /* Binary representation of the address, big endian*/
   unsigned short family; /* Address family, AF_INET or AF_INET6 */
-  unsigned short bits; /* subnetwork size */
+  unsigned short bits;   /* subnetwork size */
 };
 
-static  subnet* proxy_protocol_subnets;
-size_t  proxy_protocol_subnet_count;
+static subnet *proxy_protocol_subnets;
+size_t proxy_protocol_subnet_count;
 
 #define MAX_MASK_BITS(family) (family == AF_INET ? 32 : 128)
-
 
 /** Convert IPv4 that are compat or mapped IPv4 to "normal" IPv4 */
 static int normalize_subnet(struct subnet *subnet)
 {
-  unsigned char *addr= (unsigned char*)subnet->addr;
+  unsigned char *addr = (unsigned char *)subnet->addr;
   if (subnet->family == AF_INET6)
   {
-    const struct in6_addr *src_ip6=(in6_addr *)addr;
+    const struct in6_addr *src_ip6 = (in6_addr *)addr;
     if (IN6_IS_ADDR_V4MAPPED(src_ip6) || IN6_IS_ADDR_V4COMPAT(src_ip6))
     {
       /* Copy the actual IPv4 address (4 last bytes) */
       if (subnet->bits < 96)
         return -1;
-      subnet->family= AF_INET;
-      memcpy(addr, addr+12, 4);
+      subnet->family = AF_INET;
+      memcpy(addr, addr + 12, 4);
       subnet->bits -= 96;
     }
   }
@@ -294,39 +283,38 @@ static int normalize_subnet(struct subnet *subnet)
 static int parse_subnet(char *addr_str, struct subnet *subnet)
 {
   if (strchr(addr_str, ':'))
-    subnet->family= AF_INET6;
+    subnet->family = AF_INET6;
   else if (strchr(addr_str, '.'))
-    subnet->family= AF_INET;
+    subnet->family = AF_INET;
   else if (!strcmp(addr_str, "localhost"))
   {
-    subnet->family= AF_UNIX;
-    subnet->bits= 0;
+    subnet->family = AF_UNIX;
+    subnet->bits = 0;
     return 0;
   }
 
-  char *pmask= strchr(addr_str, '/');
+  char *pmask = strchr(addr_str, '/');
   if (!pmask)
   {
-    subnet->bits= MAX_MASK_BITS(subnet->family);
+    subnet->bits = MAX_MASK_BITS(subnet->family);
   }
   else
   {
-    *pmask= 0;
+    *pmask = 0;
     pmask++;
-    int b= 0;
+    int b = 0;
 
     do
     {
       if (*pmask < '0' || *pmask > '9')
         return -1;
-      b= 10 * b + *pmask - '0';
+      b = 10 * b + *pmask - '0';
       if (b > MAX_MASK_BITS(subnet->family))
         return -1;
       pmask++;
-    }
-    while (*pmask);
+    } while (*pmask);
 
-    subnet->bits= (unsigned short)b;
+    subnet->bits = (unsigned short)b;
   }
 
   if (!inet_pton(subnet->family, addr_str, subnet->addr))
@@ -351,52 +339,49 @@ static int parse_subnet(char *addr_str, struct subnet *subnet)
 */
 static int parse_networks(const char *subnets_str, subnet **out_subnets, size_t *out_count)
 {
-  int ret= -1;
-  subnet *subnets= 0;
-  size_t count= 0;
-  const char *p= subnets_str;
+  int ret = -1;
+  subnet *subnets = 0;
+  size_t count = 0;
+  const char *p = subnets_str;
   size_t max_subnets;
 
   if (!subnets_str || !*subnets_str)
   {
-    ret= 0;
+    ret = 0;
     goto end;
   }
 
-  max_subnets= MY_MAX(3,strlen(subnets_str)/2);
-  subnets= (subnet *)my_malloc(PSI_INSTRUMENT_ME,
-                               max_subnets * sizeof(subnet), MY_ZEROFILL);
+  max_subnets = MY_MAX(3, strlen(subnets_str) / 2);
+  subnets = (subnet *)my_malloc(PSI_INSTRUMENT_ME, max_subnets * sizeof(subnet), MY_ZEROFILL);
 
   /* Check for special case '*'. */
   if (strcmp(subnets_str, "*") == 0)
   {
-    subnets[0].family= AF_INET;
-    subnets[1].family= AF_INET6;
-    subnets[2].family= AF_UNIX;
-    count= 3;
-    ret= 0;
+    subnets[0].family = AF_INET;
+    subnets[1].family = AF_INET6;
+    subnets[2].family = AF_UNIX;
+    count = 3;
+    ret = 0;
     goto end;
   }
 
   char token[256];
-  for(count= 0;; count++)
+  for (count = 0;; count++)
   {
-    while(*p && (*p ==',' || *p == ' '))
-      p++;
+    while (*p && (*p == ',' || *p == ' ')) p++;
     if (!*p)
       break;
 
-    size_t cnt= 0;
-    while(*p && *p != ',' && *p != ' ' && cnt < sizeof(token)-1)
-      token[cnt++]= *p++;
+    size_t cnt = 0;
+    while (*p && *p != ',' && *p != ' ' && cnt < sizeof(token) - 1) token[cnt++] = *p++;
 
-    token[cnt++]=0;
+    token[cnt++] = 0;
     if (cnt == sizeof(token))
       goto end;
 
     if (parse_subnet(token, &subnets[count]))
     {
-      my_printf_error(ER_PARSE_ERROR,"Error parsing proxy_protocol_networks parameter, near '%s'",MYF(0),token);
+      my_printf_error(ER_PARSE_ERROR, "Error parsing proxy_protocol_networks parameter, near '%s'", MYF(0), token);
       goto end;
     }
   }
@@ -407,12 +392,12 @@ end:
   if (ret)
   {
     my_free(subnets);
-    *out_subnets= NULL;
-    *out_count= 0;
+    *out_subnets = NULL;
+    *out_count = 0;
     return ret;
   }
   *out_subnets = subnets;
-  *out_count= count;
+  *out_count = count;
   return 0;
 }
 
@@ -426,11 +411,10 @@ bool proxy_protocol_networks_valid(const char *in)
 {
   subnet *new_subnets;
   size_t new_count;
-  int ret= parse_networks(in, &new_subnets, &new_count);
+  int ret = parse_networks(in, &new_subnets, &new_count);
   my_free(new_subnets);
   return !ret;
 }
-
 
 /**
   Set 'proxy_protocol_networks' parameter.
@@ -446,7 +430,7 @@ int set_proxy_protocol_networks(const char *spec)
   subnet *old_subnet = 0;
   size_t new_count;
 
-  int ret= parse_networks(spec, &new_subnets, &new_count);
+  int ret = parse_networks(spec, &new_subnets, &new_count);
   if (ret)
     return ret;
 
@@ -459,7 +443,6 @@ int set_proxy_protocol_networks(const char *spec)
   return ret;
 }
 
-
 /**
    Compare memory areas, in memcmp().similar fashion.
    The difference to memcmp() is that size parameter is the
@@ -467,16 +450,16 @@ int set_proxy_protocol_networks(const char *spec)
 */
 static int compare_bits(const void *s1, const void *s2, int bit_count)
 {
-  int result= 0;
-  int byte_count= bit_count / 8;
-  if (byte_count && (result= memcmp(s1, s2, byte_count)))
+  int result = 0;
+  int byte_count = bit_count / 8;
+  if (byte_count && (result = memcmp(s1, s2, byte_count)))
     return result;
-  int rem= bit_count % 8;
+  int rem = bit_count % 8;
   if (rem)
   {
     // compare remaining bits i.e partial bytes.
-    unsigned char s1_bits= (((char *)s1)[byte_count]) >> (8 - rem);
-    unsigned char s2_bits= (((char *)s2)[byte_count]) >> (8 - rem);
+    unsigned char s1_bits = (((char *)s1)[byte_count]) >> (8 - rem);
+    unsigned char s2_bits = (((char *)s2)[byte_count]) >> (8 - rem);
     if (s1_bits > s2_bits)
       return 1;
     if (s1_bits < s2_bits)
@@ -490,9 +473,7 @@ static int compare_bits(const void *s1, const void *s2, int bit_count)
 */
 bool addr_matches_subnet(const sockaddr *sock_addr, const subnet *subnet)
 {
-  DBUG_ASSERT(subnet->family == AF_UNIX ||
-    subnet->family == AF_INET ||
-    subnet->family == AF_INET6);
+  DBUG_ASSERT(subnet->family == AF_UNIX || subnet->family == AF_INET || subnet->family == AF_INET6);
 
   if (sock_addr->sa_family != subnet->family)
     return false;
@@ -500,13 +481,11 @@ bool addr_matches_subnet(const sockaddr *sock_addr, const subnet *subnet)
   if (subnet->family == AF_UNIX)
     return true;
 
-  void *addr= (subnet->family == AF_INET) ?
-    (void *)&((struct sockaddr_in *)sock_addr)->sin_addr :
-    (void *)&((struct sockaddr_in6 *)sock_addr)->sin6_addr;
+  void *addr = (subnet->family == AF_INET) ? (void *)&((struct sockaddr_in *)sock_addr)->sin_addr
+                                           : (void *)&((struct sockaddr_in6 *)sock_addr)->sin6_addr;
 
   return (compare_bits(subnet->addr, addr, subnet->bits) == 0);
 }
-
 
 /**
   Check whether proxy header from client is allowed, as per
@@ -521,7 +500,7 @@ bool is_proxy_protocol_allowed(const sockaddr *addr)
     return false;
 
   sockaddr_storage addr_storage;
-  struct sockaddr *normalized_addr= (struct sockaddr *)&addr_storage;
+  struct sockaddr *normalized_addr = (struct sockaddr *)&addr_storage;
 
   /*
    Non-TCP addresses (unix domain socket, windows pipe and shared memory
@@ -530,31 +509,30 @@ bool is_proxy_protocol_allowed(const sockaddr *addr)
    Note, that vio remote addresses are initialized with binary zeros
    for these protocols (which is AF_UNSPEC everywhere).
   */
-  switch(addr->sa_family)
+  switch (addr->sa_family)
   {
     case AF_UNSPEC:
     case AF_UNIX:
-      normalized_addr->sa_family= AF_UNIX;
+      normalized_addr->sa_family = AF_UNIX;
       break;
     case AF_INET:
     case AF_INET6:
-      {
-      size_t len=
-        (addr->sa_family == AF_INET)?sizeof(sockaddr_in):sizeof (sockaddr_in6);
-      vio_get_normalized_ip(addr, len,normalized_addr);
-      }
-      break;
+    {
+      size_t len = (addr->sa_family == AF_INET) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+      vio_get_normalized_ip(addr, len, normalized_addr);
+    }
+    break;
     default:
       DBUG_ASSERT(0);
   }
 
-  bool ret= false;
+  bool ret = false;
   mysql_rwlock_rdlock(&lock);
-  for (size_t i= 0; i < proxy_protocol_subnet_count; i++)
+  for (size_t i = 0; i < proxy_protocol_subnet_count; i++)
   {
     if (addr_matches_subnet(normalized_addr, &proxy_protocol_subnets[i]))
     {
-      ret= true;
+      ret = true;
       break;
     }
   }
@@ -563,19 +541,17 @@ bool is_proxy_protocol_allowed(const sockaddr *addr)
   return ret;
 }
 
-
 int init_proxy_protocol_networks(const char *spec)
 {
 #ifdef HAVE_PSI_INTERFACE
   static PSI_rwlock_key psi_rwlock_key;
-  static PSI_rwlock_info psi_rwlock_info={ &psi_rwlock_key, "rwlock", 0 };
+  static PSI_rwlock_info psi_rwlock_info = {&psi_rwlock_key, "rwlock", 0};
   mysql_rwlock_register("proxy_proto", &psi_rwlock_info, 1);
 #endif
 
   mysql_rwlock_init(psi_rwlock_key, &lock);
   return set_proxy_protocol_networks(spec);
 }
-
 
 void destroy_proxy_protocol_networks()
 {

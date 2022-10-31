@@ -24,31 +24,22 @@
 
 class Wsrep_condition_variable : public wsrep::condition_variable
 {
-public:
+ public:
+  Wsrep_condition_variable(mysql_cond_t *cond) : m_cond(cond) {}
+  ~Wsrep_condition_variable() {}
 
-  Wsrep_condition_variable(mysql_cond_t* cond)
-    : m_cond(cond)
-  { }
-  ~Wsrep_condition_variable()
-  { }
+  void notify_one() { mysql_cond_signal(m_cond); }
 
-  void notify_one()
+  void notify_all() { mysql_cond_broadcast(m_cond); }
+
+  void wait(wsrep::unique_lock<wsrep::mutex> &lock)
   {
-    mysql_cond_signal(m_cond);
-  }
-
-  void notify_all()
-  {
-    mysql_cond_broadcast(m_cond);
-  }
-
-  void wait(wsrep::unique_lock<wsrep::mutex>& lock)
-  {
-    mysql_mutex_t* mutex= static_cast<mysql_mutex_t*>(lock.mutex()->native());
+    mysql_mutex_t *mutex = static_cast<mysql_mutex_t *>(lock.mutex()->native());
     mysql_cond_wait(m_cond, mutex);
   }
-private:
-  mysql_cond_t* m_cond;
+
+ private:
+  mysql_cond_t *m_cond;
 };
 
 #endif /* WSREP_CONDITION_VARIABLE_H */

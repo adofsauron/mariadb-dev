@@ -38,16 +38,17 @@
 class THD;
 
 /*
-  Target for asynchronous procedure calls (APCs). 
-   - A target is running in some particular thread, 
+  Target for asynchronous procedure calls (APCs).
+   - A target is running in some particular thread,
    - One can make calls to it from other threads.
 */
 class Apc_target
 {
   mysql_mutex_t *LOCK_thd_kill_ptr;
-public:
-  Apc_target() : enabled(0), apc_calls(NULL) {} 
-  ~Apc_target() { DBUG_ASSERT(!enabled && !apc_calls);}
+
+ public:
+  Apc_target() : enabled(0), apc_calls(NULL) {}
+  ~Apc_target() { DBUG_ASSERT(!enabled && !apc_calls); }
 
   void init(mysql_mutex_t *target_mutex);
 
@@ -67,65 +68,62 @@ public:
   {
     DBUG_ASSERT(enabled);
     mysql_mutex_lock(LOCK_thd_kill_ptr);
-    bool process= !--enabled && have_apc_requests();
+    bool process = !--enabled && have_apc_requests();
     mysql_mutex_unlock(LOCK_thd_kill_ptr);
     if (unlikely(process))
       process_apc_requests();
   }
 
   void process_apc_requests();
-  /* 
+  /*
     A lightweight function, intended to be used in frequent checks like this:
 
       if (apc_target.have_requests()) apc_target.process_apc_requests()
   */
-  inline bool have_apc_requests()
-  {
-    return MY_TEST(apc_calls);
-  }
+  inline bool have_apc_requests() { return MY_TEST(apc_calls); }
 
   inline bool is_enabled() { return enabled; }
-  
+
   /* Functor class for calls you can schedule */
   class Apc_call
   {
-  public:
+   public:
     /* This function will be called in the target thread */
-    virtual void call_in_target_thread()= 0;
+    virtual void call_in_target_thread() = 0;
     virtual ~Apc_call() {}
   };
-  
+
   /* Make a call in the target thread (see function definition for details) */
   bool make_apc_call(THD *caller_thd, Apc_call *call, int timeout_sec, bool *timed_out);
 
 #ifndef DBUG_OFF
   int n_calls_processed; /* Number of calls served by this target */
 #endif
-private:
+ private:
   class Call_request;
 
-  /* 
+  /*
     Non-zero value means we're enabled. It's an int, not bool, because one can
-    call enable() N times (and then needs to call disable() N times before the 
+    call enable() N times (and then needs to call disable() N times before the
     target is really disabled)
   */
   int enabled;
 
-  /* 
-    Circular, double-linked list of all enqueued call requests. 
-    We use this structure, because we 
-     - process requests sequentially: requests are added at the end of the 
+  /*
+    Circular, double-linked list of all enqueued call requests.
+    We use this structure, because we
+     - process requests sequentially: requests are added at the end of the
        list and removed from the front. With circular list, we can keep one
        pointer, and access both front an back of the list with it.
-     - a thread that has posted a request may time out (or be KILLed) and 
+     - a thread that has posted a request may time out (or be KILLed) and
        cancel the request, which means we need a fast request-removal
        operation.
   */
   Call_request *apc_calls;
- 
+
   class Call_request
   {
-  public:
+   public:
     Apc_call *call; /* Functor to be called */
 
     /* The caller will actually wait for "processed==TRUE" */
@@ -133,11 +131,11 @@ private:
 
     /* Condition that will be signalled when the request has been served */
     mysql_cond_t COND_request;
-    
+
     /* Double linked-list linkage */
     Call_request *next;
     Call_request *prev;
-    
+
     const char *what; /* (debug) state of the request */
   };
 
@@ -145,10 +143,7 @@ private:
   void dequeue_request(Call_request *qe);
 
   /* return the first call request in queue, or NULL if there are none enqueued */
-  Call_request *get_first_in_queue()
-  {
-    return apc_calls;
-  }
+  Call_request *get_first_in_queue() { return apc_calls; }
 };
 
 #ifdef HAVE_PSI_INTERFACE
@@ -157,5 +152,4 @@ void init_show_explain_psi_keys(void);
 #define init_show_explain_psi_keys() /* no-op */
 #endif
 
-#endif //SQL_MY_APC_INCLUDED
-
+#endif  // SQL_MY_APC_INCLUDED

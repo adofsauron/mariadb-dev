@@ -28,14 +28,11 @@
   @endverbatim
 */
 
-
 /**
    Item which stores (x,y,...) and ROW(x,y,...).
    Note that this can be recursive: ((x,y),(z,t)) is a ROW of ROWs.
 */
-class Item_row: public Item_fixed_hybrid,
-                private Item_args,
-                private Used_tables_and_const_cache
+class Item_row : public Item_fixed_hybrid, private Item_args, private Used_tables_and_const_cache
 {
   table_map not_null_tables_cache;
   /**
@@ -43,61 +40,59 @@ class Item_row: public Item_fixed_hybrid,
     NULL. For example, this item is (1,2,NULL), or ( (1,NULL), (2,3) ).
   */
   bool with_null;
-public:
+
+ public:
   Item_row(THD *thd, List<Item> &list)
-   :Item_fixed_hybrid(thd), Item_args(thd, list),
-    not_null_tables_cache(0), with_null(0)
-  { }
+      : Item_fixed_hybrid(thd), Item_args(thd, list), not_null_tables_cache(0), with_null(0)
+  {
+  }
   Item_row(THD *thd, Item_row *row)
-   :Item_fixed_hybrid(thd), Item_args(thd, static_cast<Item_args*>(row)),
-    Used_tables_and_const_cache(),
-    not_null_tables_cache(0), with_null(0)
-  { }
+      : Item_fixed_hybrid(thd),
+        Item_args(thd, static_cast<Item_args *>(row)),
+        Used_tables_and_const_cache(),
+        not_null_tables_cache(0),
+        with_null(0)
+  {
+  }
 
   enum Type type() const override { return ROW_ITEM; };
   const Type_handler *type_handler() const override { return &type_handler_row; }
-  Field *create_tmp_field_ex(MEM_ROOT *root, TABLE *table, Tmp_field_src *src,
-                             const Tmp_field_param *param) override
+  Field *create_tmp_field_ex(MEM_ROOT *root, TABLE *table, Tmp_field_src *src, const Tmp_field_param *param) override
   {
-    return NULL; // Check with Vicentiu why it's called for Item_row
+    return NULL;  // Check with Vicentiu why it's called for Item_row
   }
   void illegal_method_call(const char *);
   bool is_null() override { return null_value; }
-  void make_send_field(THD *thd, Send_field *) override
-  {
-    illegal_method_call((const char*)"make_send_field");
-  };
+  void make_send_field(THD *thd, Send_field *) override { illegal_method_call((const char *)"make_send_field"); };
   double val_real() override
   {
-    illegal_method_call((const char*)"val");
+    illegal_method_call((const char *)"val");
     return 0;
   };
   longlong val_int() override
   {
-    illegal_method_call((const char*)"val_int");
+    illegal_method_call((const char *)"val_int");
     return 0;
   };
   String *val_str(String *) override
   {
-    illegal_method_call((const char*)"val_str");
+    illegal_method_call((const char *)"val_str");
     return 0;
   };
   my_decimal *val_decimal(my_decimal *) override
   {
-    illegal_method_call((const char*)"val_decimal");
+    illegal_method_call((const char *)"val_decimal");
     return 0;
   };
   bool get_date(THD *thd, MYSQL_TIME *ltime, date_mode_t fuzzydate) override
   {
-    illegal_method_call((const char*)"get_date");
+    illegal_method_call((const char *)"get_date");
     return true;
   }
   bool fix_fields(THD *thd, Item **ref) override;
-  void fix_after_pullout(st_select_lex *new_parent, Item **ref, bool merge)
-    override;
+  void fix_after_pullout(st_select_lex *new_parent, Item **ref, bool merge) override;
   void cleanup() override;
-  void split_sum_func(THD *thd, Ref_ptr_array ref_pointer_array,
-                      List<Item> &fields, uint flags) override;
+  void split_sum_func(THD *thd, Ref_ptr_array ref_pointer_array, List<Item> &fields, uint flags) override;
   table_map used_tables() const override { return used_tables_cache; };
   bool const_item() const override { return const_item_cache; };
   void update_used_tables() override
@@ -119,37 +114,29 @@ public:
   bool find_not_null_fields(table_map allowed) override;
 
   uint cols() const override { return arg_count; }
-  Item* element_index(uint i) override { return args[i]; }
-  Item** addr(uint i) override { return args + i; }
+  Item *element_index(uint i) override { return args[i]; }
+  Item **addr(uint i) override { return args + i; }
   bool check_cols(uint c) override;
   bool null_inside() override { return with_null; };
   void bring_value() override;
 
-  Item* propagate_equal_fields(THD *thd, const Context &ctx, COND_EQUAL *cond)
-    override
+  Item *propagate_equal_fields(THD *thd, const Context &ctx, COND_EQUAL *cond) override
   {
     Item_args::propagate_equal_fields(thd, Context_identity(), cond);
     return this;
   }
 
-  bool excl_dep_on_table(table_map tab_map) override
-  {
-    return Item_args::excl_dep_on_table(tab_map);
-  }
+  bool excl_dep_on_table(table_map tab_map) override { return Item_args::excl_dep_on_table(tab_map); }
 
-  bool excl_dep_on_grouping_fields(st_select_lex *sel) override
-  {
-    return Item_args::excl_dep_on_grouping_fields(sel);
-  }
+  bool excl_dep_on_grouping_fields(st_select_lex *sel) override { return Item_args::excl_dep_on_grouping_fields(sel); }
 
   bool excl_dep_on_in_subq_left_part(Item_in_subselect *subq_pred) override
   {
     return Item_args::excl_dep_on_in_subq_left_part(subq_pred);
   }
 
-  bool check_vcol_func_processor(void *arg) override {return FALSE; }
-  Item *get_copy(THD *thd) override
-  { return get_item_copy<Item_row>(thd, this); }
+  bool check_vcol_func_processor(void *arg) override { return FALSE; }
+  Item *get_copy(THD *thd) override { return get_item_copy<Item_row>(thd, this); }
   Item *build_clone(THD *thd) override;
 };
 

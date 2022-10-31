@@ -71,18 +71,13 @@ struct Opt_trace_info
   @param  charset      charset which was used to encode this query
 */
 
-
 class Opt_trace_start
 {
  public:
-  Opt_trace_start(THD *thd_arg): ctx(&thd_arg->opt_trace), traceable(false) {}
+  Opt_trace_start(THD *thd_arg) : ctx(&thd_arg->opt_trace), traceable(false) {}
 
-  void init(THD *thd, TABLE_LIST *tbl,
-            enum enum_sql_command sql_command,
-            List<set_var_base> *set_vars,
-            const char *query,
-            size_t query_length,
-            const CHARSET_INFO *query_charset);
+  void init(THD *thd, TABLE_LIST *tbl, enum enum_sql_command sql_command, List<set_var_base> *set_vars,
+            const char *query, size_t query_length, const CHARSET_INFO *query_charset);
 
   ~Opt_trace_start();
 
@@ -103,18 +98,15 @@ class Opt_trace_start
    @param  select_lex  query's parse tree
    @param  trace_object  Json_writer object to which the query will be added
 */
-void opt_trace_print_expanded_query(THD *thd, SELECT_LEX *select_lex,
-                                    Json_writer_object *trace_object);
+void opt_trace_print_expanded_query(THD *thd, SELECT_LEX *select_lex, Json_writer_object *trace_object);
 
 void add_table_scan_values_to_trace(THD *thd, JOIN_TAB *tab);
 void trace_plan_prefix(JOIN *join, uint idx, table_map join_tables);
 void print_final_join_order(JOIN *join);
-void print_best_access_for_table(THD *thd, POSITION *pos,
-                                 enum join_type type);
+void print_best_access_for_table(THD *thd, POSITION *pos, enum join_type type);
 
-void trace_condition(THD * thd, const char *name, const char *transform_type,
-                    Item *item, const char *table_name= nullptr);
-
+void trace_condition(THD *thd, const char *name, const char *transform_type, Item *item,
+                     const char *table_name = nullptr);
 
 /*
   Security related (need to add a proper comment here)
@@ -175,8 +167,7 @@ void opt_trace_disable_if_no_tables_access(THD *thd, TABLE_LIST *tbl);
    @param underlying_tables underlying tables/views of 'view'
  */
 
-void opt_trace_disable_if_no_view_access(THD *thd, TABLE_LIST *view,
-                                         TABLE_LIST *underlying_tables);
+void opt_trace_disable_if_no_view_access(THD *thd, TABLE_LIST *view, TABLE_LIST *underlying_tables);
 
 /**
   If tracing is on, checks additional privileges on a stored routine, to make
@@ -203,16 +194,13 @@ void opt_trace_disable_if_no_stored_proc_func_access(THD *thd, sp_head *sp);
 */
 int fill_optimizer_trace_info(THD *thd, TABLE_LIST *tables, Item *);
 
-#define OPT_TRACE_TRANSFORM(thd, object_level0, object_level1, \
-                            select_number, from, to)             \
-  Json_writer_object object_level0(thd);                         \
-  Json_writer_object object_level1(thd, "transformation");       \
+#define OPT_TRACE_TRANSFORM(thd, object_level0, object_level1, select_number, from, to) \
+  Json_writer_object object_level0(thd);                                                \
+  Json_writer_object object_level1(thd, "transformation");                              \
   object_level1.add_select_number(select_number).add("from", from).add("to", to);
 
-#define OPT_TRACE_VIEWS_TRANSFORM(thd, object_level0, object_level1, \
-                                  derived, name, select_number, algorithm) \
-    Json_writer_object trace_wrapper(thd);              \
-    Json_writer_object trace_derived(thd, derived);     \
-    trace_derived.add("table", name).add_select_number(select_number)  \
-                 .add("algorithm", algorithm);
+#define OPT_TRACE_VIEWS_TRANSFORM(thd, object_level0, object_level1, derived, name, select_number, algorithm) \
+  Json_writer_object trace_wrapper(thd);                                                                      \
+  Json_writer_object trace_derived(thd, derived);                                                             \
+  trace_derived.add("table", name).add_select_number(select_number).add("algorithm", algorithm);
 #endif

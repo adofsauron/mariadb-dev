@@ -59,7 +59,7 @@
   first value.
 
   start/end can be replaced with start_hex/end_hex. In _hex variant, the
-  constant is encoded in hex. This encoding is used to handle so called 
+  constant is encoded in hex. This encoding is used to handle so called
   "unassigned characters": some non-UTF8 charsets have byte combinations that
   are not mapped to any UTF8 character.
 */
@@ -89,60 +89,43 @@ class Histogram_json_hb : public Histogram_base
 
   std::string last_bucket_end_endp;
 
-public:
-  static constexpr const char* JSON_NAME="histogram_hb";
+ public:
+  static constexpr const char *JSON_NAME = "histogram_hb";
 
-  bool parse(MEM_ROOT *mem_root, const char *db_name, const char *table_name,
-             Field *field, Histogram_type type_arg,
+  bool parse(MEM_ROOT *mem_root, const char *db_name, const char *table_name, Field *field, Histogram_type type_arg,
              const char *hist_data, size_t hist_data_len) override;
 
   void serialize(Field *field) override;
 
-  Histogram_builder *create_builder(Field *col, uint col_len,
-                                    ha_rows rows) override;
+  Histogram_builder *create_builder(Field *col, uint col_len, ha_rows rows) override;
 
   // returns number of buckets in the histogram
-  uint get_width() override
-  {
-    return (uint)size;
-  }
+  uint get_width() override { return (uint)size; }
 
-  Histogram_type get_type() override
-  {
-    return JSON_HB;
-  }
+  Histogram_type get_type() override { return JSON_HB; }
 
   /*
     @brief
       This used to be the size of the histogram on disk, which was redundant
       (one can check the size directly). Return the number of buckets instead.
   */
-  uint get_size() override
+  uint get_size() override { return (uint)size; }
+
+  void init_for_collection(MEM_ROOT *mem_root, Histogram_type htype_arg, ulonglong size) override;
+
+  double point_selectivity(Field *field, key_range *endpoint, double avg_sel) override;
+  double range_selectivity(Field *field, key_range *min_endp, key_range *max_endp, double avg_sel) override;
+
+  void set_json_text(ulonglong sz, const char *json_text_arg, size_t json_text_len)
   {
-    return (uint)size;
-  }
-
-  void init_for_collection(MEM_ROOT *mem_root, Histogram_type htype_arg,
-                           ulonglong size) override;
-
-  double point_selectivity(Field *field, key_range *endpoint,
-                           double avg_sel) override;
-  double range_selectivity(Field *field, key_range *min_endp,
-                           key_range *max_endp, double avg_sel) override;
-
-  void set_json_text(ulonglong sz, const char *json_text_arg,
-                     size_t json_text_len)
-  {
-    size= (size_t) sz;
+    size = (size_t)sz;
     json_text.assign(json_text_arg, json_text_len);
   }
 
-private:
-  int parse_bucket(json_engine_t *je, Field *field, double *cumulative_size,
-                   bool *assigned_last_end, const char **err);
+ private:
+  int parse_bucket(json_engine_t *je, Field *field, double *cumulative_size, bool *assigned_last_end, const char **err);
 
   double get_left_fract(int idx);
-  std::string& get_end_value(int idx);
+  std::string &get_end_value(int idx);
   int find_bucket(const Field *field, const uchar *lookup_val, int *cmp);
 };
-

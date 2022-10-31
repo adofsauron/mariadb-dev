@@ -18,15 +18,14 @@
 #include "sql_class.h"
 #include "sql_lex.h"
 #include "sql_cte.h"
-#include "sql_view.h"    // for make_valid_column_names
+#include "sql_view.h"  // for make_valid_column_names
 #include "sql_parse.h"
 #include "sql_select.h"
-#include "sql_show.h"                // append_definer, append_identifier
-
+#include "sql_show.h"  // append_definer, append_identifier
 
 /**
   @brief
-    Add a new element to this with clause 
+    Add a new element to this with clause
 
   @param elem  The with element to add to this with clause
 
@@ -37,38 +36,36 @@
     of the constant max_number_of_elements_in_with_clause.
 
   @retval
-    true    if an error is reported 
+    true    if an error is reported
     false   otherwise
 */
-  
+
 bool With_clause::add_with_element(With_element *elem)
-{ 
+{
   if (with_list.elements == max_number_of_elements_in_with_clause)
   {
     my_error(ER_TOO_MANY_DEFINITIONS_IN_WITH_CLAUSE, MYF(0));
     return true;
   }
-  elem->owner= this;
-  elem->number= with_list.elements;
-  elem->spec->with_element= elem;
+  elem->owner = this;
+  elem->number = with_list.elements;
+  elem->spec->with_element = elem;
   with_list.link_in_list(elem, &elem->next);
   return false;
 }
 
-
-void  st_select_lex_unit::set_with_clause(With_clause *with_cl)
-{ 
-  with_clause= with_cl;
+void st_select_lex_unit::set_with_clause(With_clause *with_cl)
+{
+  with_clause = with_cl;
   if (with_clause)
     with_clause->set_owner(this);
 }
 
-
 /**
   @brief
     Check dependencies between tables defined in a list of with clauses
- 
-  @param 
+
+  @param
     with_clauses_list  Pointer to the first clause in the list
 
   @details
@@ -86,9 +83,7 @@ void  st_select_lex_unit::set_with_clause(With_clause *with_cl)
 
 bool LEX::check_dependencies_in_with_clauses()
 {
-  for (With_clause *with_clause= with_clauses_list;
-       with_clause;
-       with_clause= with_clause->next_with_clause)
+  for (With_clause *with_clause = with_clauses_list; with_clause; with_clause = with_clause->next_with_clause)
   {
     if (with_clause->check_dependencies())
       return true;
@@ -98,7 +93,6 @@ bool LEX::check_dependencies_in_with_clauses()
   }
   return false;
 }
-
 
 /**
   @brief
@@ -120,20 +114,16 @@ bool LEX::check_dependencies_in_with_clauses()
     true    on failure
 */
 
-bool
-LEX::resolve_references_to_cte_in_hanging_cte()
+bool LEX::resolve_references_to_cte_in_hanging_cte()
 {
-  for (With_clause *with_clause= with_clauses_list;
-       with_clause; with_clause= with_clause->next_with_clause)
+  for (With_clause *with_clause = with_clauses_list; with_clause; with_clause = with_clause->next_with_clause)
   {
-    for (With_element *with_elem= with_clause->with_list.first;
-         with_elem; with_elem= with_elem->next)
+    for (With_element *with_elem = with_clause->with_list.first; with_elem; with_elem = with_elem->next)
     {
       if (!with_elem->is_referenced())
       {
-        TABLE_LIST *first_tbl=
-                     with_elem->spec->first_select()->table_list.first;
-        TABLE_LIST **with_elem_end_pos= with_elem->head->tables_pos.end_pos;
+        TABLE_LIST *first_tbl = with_elem->spec->first_select()->table_list.first;
+        TABLE_LIST **with_elem_end_pos = with_elem->head->tables_pos.end_pos;
         if (first_tbl && resolve_references_to_cte(first_tbl, with_elem_end_pos))
           return true;
       }
@@ -141,7 +131,6 @@ LEX::resolve_references_to_cte_in_hanging_cte()
   }
   return false;
 }
-
 
 /**
   @brief
@@ -189,24 +178,23 @@ LEX::resolve_references_to_cte_in_hanging_cte()
   @retval true   Otherwise
 */
 
-bool LEX::resolve_references_to_cte(TABLE_LIST *tables,
-                                    TABLE_LIST **tables_last)
+bool LEX::resolve_references_to_cte(TABLE_LIST *tables, TABLE_LIST **tables_last)
 {
-  With_element *with_elem= 0;
+  With_element *with_elem = 0;
 
-  for (TABLE_LIST *tbl= tables; tbl != *tables_last; tbl= tbl->next_global)
+  for (TABLE_LIST *tbl = tables; tbl != *tables_last; tbl = tbl->next_global)
   {
     if (tbl->derived)
       continue;
     if (!tbl->db.str && !tbl->with)
-      tbl->with= tbl->select_lex->find_table_def_in_with_clauses(tbl);
-    if (!tbl->with)    // no CTE matches table reference tbl
+      tbl->with = tbl->select_lex->find_table_def_in_with_clauses(tbl);
+    if (!tbl->with)  // no CTE matches table reference tbl
     {
       if (only_cte_resolution)
         continue;
-      if (!tbl->db.str)   // no database specified in table reference tbl
+      if (!tbl->db.str)  // no database specified in table reference tbl
       {
-        if (!thd->db.str) // no default database is set
+        if (!thd->db.str)  // no default database is set
         {
           my_message(ER_NO_DB_ERROR, ER(ER_NO_DB_ERROR), MYF(0));
           return true;
@@ -214,42 +202,36 @@ bool LEX::resolve_references_to_cte(TABLE_LIST *tables,
         if (copy_db_to(&tbl->db))
           return true;
         if (!(tbl->table_options & TL_OPTION_ALIAS))
-          MDL_REQUEST_INIT(&tbl->mdl_request, MDL_key::TABLE,
-                           tbl->db.str, tbl->table_name.str,
-                           tbl->mdl_type, MDL_TRANSACTION);
-        tbl->mdl_request.set_type((tbl->lock_type >= TL_WRITE_ALLOW_WRITE) ?
-                                   MDL_SHARED_WRITE : MDL_SHARED_READ);
+          MDL_REQUEST_INIT(&tbl->mdl_request, MDL_key::TABLE, tbl->db.str, tbl->table_name.str, tbl->mdl_type,
+                           MDL_TRANSACTION);
+        tbl->mdl_request.set_type((tbl->lock_type >= TL_WRITE_ALLOW_WRITE) ? MDL_SHARED_WRITE : MDL_SHARED_READ);
       }
       continue;
     }
-    with_elem= tbl->with;
-    if (tbl->is_recursive_with_table() &&
-        !tbl->is_with_table_recursive_reference())
+    with_elem = tbl->with;
+    if (tbl->is_recursive_with_table() && !tbl->is_with_table_recursive_reference())
     {
       tbl->with->rec_outer_references++;
-      while ((with_elem= with_elem->get_next_mutually_recursive()) !=
-             tbl->with)
-	with_elem->rec_outer_references++;
+      while ((with_elem = with_elem->get_next_mutually_recursive()) != tbl->with) with_elem->rec_outer_references++;
     }
     if (!with_elem->is_used_in_query || with_elem->is_recursive)
     {
-      tbl->derived= with_elem->spec;
-      if (tbl->derived != tbl->select_lex->master_unit() &&
-          !with_elem->is_recursive &&
+      tbl->derived = with_elem->spec;
+      if (tbl->derived != tbl->select_lex->master_unit() && !with_elem->is_recursive &&
           !tbl->is_with_table_recursive_reference())
       {
         tbl->derived->move_as_slave(tbl->select_lex);
       }
-      with_elem->is_used_in_query= true;
+      with_elem->is_used_in_query = true;
     }
     else
     {
-      if (!(tbl->derived= tbl->with->clone_parsed_spec(thd->lex, tbl)))
+      if (!(tbl->derived = tbl->with->clone_parsed_spec(thd->lex, tbl)))
         return true;
     }
-    tbl->db.str= empty_c_string;
-    tbl->db.length= 0;
-    tbl->schema_table= 0;
+    tbl->db.str = empty_c_string;
+    tbl->db.length = 0;
+    tbl->schema_table = 0;
     if (tbl->derived)
     {
       tbl->derived->first_select()->set_linkage(DERIVED_TABLE_TYPE);
@@ -261,7 +243,6 @@ bool LEX::resolve_references_to_cte(TABLE_LIST *tables,
   }
   return false;
 }
-
 
 /**
   @brief
@@ -280,8 +261,7 @@ bool LEX::resolve_references_to_cte(TABLE_LIST *tables,
     false  on success
 */
 
-bool
-LEX::check_cte_dependencies_and_resolve_references()
+bool LEX::check_cte_dependencies_and_resolve_references()
 {
   if (check_dependencies_in_with_clauses())
     return true;
@@ -294,7 +274,6 @@ LEX::check_cte_dependencies_and_resolve_references()
   return false;
 }
 
-
 /**
   @brief
     Check dependencies between tables defined in this with clause
@@ -304,12 +283,12 @@ LEX::check_cte_dependencies_and_resolve_references()
     - checks that there are no definitions of the tables with the same name
     - for each table T defined in this with clause looks for the tables
       from the same with clause that are used in the query that specifies T
-      and set the dependencies of T on these tables in a bitmap. 
+      and set the dependencies of T on these tables in a bitmap.
     - builds the transitive closure of the above direct dependencies
       to find out all recursive definitions.
 
   @retval
-    true    if an error is reported 
+    true    if an error is reported
     false   otherwise
 */
 
@@ -317,7 +296,7 @@ bool With_clause::check_dependencies()
 {
   if (dependencies_are_checked)
     return false;
-  /* 
+  /*
     Look for for definitions with the same query name.
     When found report an error and return true immediately.
     For each table T defined in this with clause look for all other tables
@@ -325,58 +304,45 @@ bool With_clause::check_dependencies()
     For each such table set the dependency bit in the dependency map of
     the with element for T.
   */
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
-    for (With_element *elem= with_list.first;
-         elem != with_elem;
-         elem= elem->next)
+    for (With_element *elem = with_list.first; elem != with_elem; elem = elem->next)
     {
-      if (lex_string_cmp(system_charset_info, with_elem->get_name(),
-                         elem->get_name()) == 0)
+      if (lex_string_cmp(system_charset_info, with_elem->get_name(), elem->get_name()) == 0)
       {
-        my_error(ER_DUP_QUERY_NAME, MYF(0),
-                 with_elem->get_name_str());
-	return true;
+        my_error(ER_DUP_QUERY_NAME, MYF(0), with_elem->get_name_str());
+        return true;
       }
     }
     if (with_elem->check_dependencies_in_spec())
       return true;
   }
   /* Build the transitive closure of the direct dependencies found above */
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
-    with_elem->derived_dep_map= with_elem->base_dep_map;
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
+    with_elem->derived_dep_map = with_elem->base_dep_map;
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
-    table_map with_elem_map=  with_elem->get_elem_map();
-    for (With_element *elem= with_list.first; elem; elem= elem->next)
+    table_map with_elem_map = with_elem->get_elem_map();
+    for (With_element *elem = with_list.first; elem; elem = elem->next)
     {
       if (elem->derived_dep_map & with_elem_map)
         elem->derived_dep_map |= with_elem->derived_dep_map;
-    }   
+    }
   }
 
   /*
     Mark those elements where tables are defined with direct or indirect
     recursion.
-  */ 
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  */
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
     if (with_elem->derived_dep_map & with_elem->get_elem_map())
-      with_elem->is_recursive= true;
-  }   
-	
-  dependencies_are_checked= true;
+      with_elem->is_recursive = true;
+  }
+
+  dependencies_are_checked = true;
   return false;
 }
-
 
 /*
   This structure describes an element of the stack of embedded units.
@@ -384,53 +350,51 @@ bool With_clause::check_dependencies()
   with clauses. The definition can be found only in the scopes
   of the with clauses attached to the units from the stack.
   The with clauses are looked through from starting from the top
-  element of the stack. 
+  element of the stack.
 */
 
 struct st_unit_ctxt_elem
 {
-  st_unit_ctxt_elem *prev;   // the previous element of the stack
-  st_select_lex_unit *unit;   
+  st_unit_ctxt_elem *prev;  // the previous element of the stack
+  st_select_lex_unit *unit;
 };
-
 
 /**
   @brief
     Find the dependencies of this element on its siblings in its specification
 
   @details
-    For each table reference ref(T) from the FROM list of every select sl 
+    For each table reference ref(T) from the FROM list of every select sl
     immediately contained in the specification query of this element this
     method searches for the definition of T in the the with clause which
     this element belongs to. If such definition is found then the dependency
-    on it is set in sl->with_dep and in this->base_dep_map.  
+    on it is set in sl->with_dep and in this->base_dep_map.
 */
 
 bool With_element::check_dependencies_in_spec()
-{ 
-  for (st_select_lex *sl=  spec->first_select(); sl; sl= sl->next_select())
+{
+  for (st_select_lex *sl = spec->first_select(); sl; sl = sl->next_select())
   {
     if (owner->with_recursive)
     {
-      st_unit_ctxt_elem ctxt0= {NULL, owner->owner};
-      st_unit_ctxt_elem ctxt1= {&ctxt0, spec};
+      st_unit_ctxt_elem ctxt0 = {NULL, owner->owner};
+      st_unit_ctxt_elem ctxt1 = {&ctxt0, spec};
       check_dependencies_in_select(sl, &ctxt1, false, &sl->with_dep);
     }
     else
     {
-      st_unit_ctxt_elem ctxt= {NULL, spec};
+      st_unit_ctxt_elem ctxt = {NULL, spec};
       check_dependencies_in_select(sl, &ctxt, false, &sl->with_dep);
     }
-    base_dep_map|= sl->with_dep;
+    base_dep_map |= sl->with_dep;
   }
   return false;
 }
 
-
 /**
   @brief
     Search for the definition of a table among the elements of this with clause
- 
+
   @param table    The reference to the table that is looked for
   @param barrier  The barrier with element for the search
 
@@ -443,32 +407,26 @@ bool With_element::check_dependencies_in_spec()
   @retval
     found with element if the search succeeded
     NULL - otherwise
-*/    
+*/
 
-With_element *With_clause::find_table_def(TABLE_LIST *table,
-                                          With_element *barrier)
+With_element *With_clause::find_table_def(TABLE_LIST *table, With_element *barrier)
 {
-  for (With_element *with_elem= with_list.first; 
-       with_elem != barrier;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem != barrier; with_elem = with_elem->next)
   {
-    if (my_strcasecmp(system_charset_info, with_elem->get_name_str(),
-                      table->table_name.str) == 0 &&
-        !table->is_fqtn)
+    if (my_strcasecmp(system_charset_info, with_elem->get_name_str(), table->table_name.str) == 0 && !table->is_fqtn)
     {
       table->set_derived();
-      with_elem->referenced= true;
+      with_elem->referenced = true;
       return with_elem;
     }
   }
   return NULL;
 }
 
-
 /**
   @brief
     Search for the definition of a table in with clauses
- 
+
   @param tbl     The reference to the table that is looked for
   @param ctxt    The context describing in what with clauses of the upper
                  levels the table has to be searched for.
@@ -483,25 +441,22 @@ With_element *With_clause::find_table_def(TABLE_LIST *table,
   @retval
     found with element if the search succeeded
     NULL - otherwise
-*/    
+*/
 
-With_element *find_table_def_in_with_clauses(TABLE_LIST *tbl,
-                                             st_unit_ctxt_elem *ctxt)
+With_element *find_table_def_in_with_clauses(TABLE_LIST *tbl, st_unit_ctxt_elem *ctxt)
 {
-  With_element *found= 0;
-  for (st_unit_ctxt_elem *unit_ctxt_elem= ctxt;
-       unit_ctxt_elem;
-       unit_ctxt_elem= unit_ctxt_elem->prev)
+  With_element *found = 0;
+  for (st_unit_ctxt_elem *unit_ctxt_elem = ctxt; unit_ctxt_elem; unit_ctxt_elem = unit_ctxt_elem->prev)
   {
-    st_select_lex_unit *unit= unit_ctxt_elem->unit;
-    With_clause *with_clause= unit->with_clause;
+    st_select_lex_unit *unit = unit_ctxt_elem->unit;
+    With_clause *with_clause = unit->with_clause;
     /*
       First look for the table definition in the with clause attached to 'unit'
       if there is any such clause.
     */
     if (with_clause)
     {
-      found= with_clause->find_table_def(tbl, NULL);
+      found = with_clause->find_table_def(tbl, NULL);
       if (found)
         break;
     }
@@ -509,14 +464,14 @@ With_element *find_table_def_in_with_clauses(TABLE_LIST *tbl,
       If 'unit' is the unit that defines a with element then reset 'unit'
       to the unit whose attached with clause contains this with element.
     */
-    With_element *with_elem= unit->with_element;
+    With_element *with_elem = unit->with_element;
     if (with_elem)
     {
-      if (!(unit_ctxt_elem= unit_ctxt_elem->prev))
+      if (!(unit_ctxt_elem = unit_ctxt_elem->prev))
         break;
-      unit= unit_ctxt_elem->unit;
+      unit = unit_ctxt_elem->unit;
     }
-    with_clause= unit->with_clause;
+    with_clause = unit->with_clause;
     /*
       Now look for the table definition in this with clause. If the with clause
       contains RECURSIVE the search is performed through all CTE definitions in
@@ -524,25 +479,22 @@ With_element *find_table_def_in_with_clauses(TABLE_LIST *tbl,
     */
     if (with_clause)
     {
-      found= with_clause->find_table_def(tbl,
-                                         with_clause->with_recursive ?
-			                 NULL : with_elem);
+      found = with_clause->find_table_def(tbl, with_clause->with_recursive ? NULL : with_elem);
       if (found)
-	break;
+        break;
     }
   }
   return found;
 }
 
-
 /**
   @brief
     Find the dependencies of this element on its siblings in a select
- 
+
   @param  sl       The select where to look for the dependencies
   @param  ctxt     The structure specifying the scope of the definitions
                    of the with elements of the upper levels
-  @param  in_sbq   if true mark dependencies found in subqueries in 
+  @param  in_sbq   if true mark dependencies found in subqueries in
                    this->sq_dep_map
   @param  dep_map  IN/OUT The bit where to mark the found dependencies
 
@@ -552,22 +504,20 @@ With_element *find_table_def_in_with_clauses(TABLE_LIST *tbl,
     If the found definition belongs to the same with clause as this with
     element then the method set dependency on T in the in/out parameter
     dep_map, add if required - in this->sq_dep_map.
-    The parameter ctxt describes the proper context for the search 
-    of the definition of T.      
+    The parameter ctxt describes the proper context for the search
+    of the definition of T.
 */
 
-void With_element::check_dependencies_in_select(st_select_lex *sl,
-                                                st_unit_ctxt_elem *ctxt,
-                                                bool in_subq,
+void With_element::check_dependencies_in_select(st_select_lex *sl, st_unit_ctxt_elem *ctxt, bool in_subq,
                                                 table_map *dep_map)
 {
-  bool is_spec_select= sl->get_with_element() == this;
+  bool is_spec_select = sl->get_with_element() == this;
 
-  for (TABLE_LIST *tbl= sl->table_list.first; tbl; tbl= tbl->next_local)
+  for (TABLE_LIST *tbl = sl->table_list.first; tbl; tbl = tbl->next_local)
   {
     if (tbl->with || tbl->derived || tbl->nested_join)
       continue;
-    tbl->with_internal_reference_map= 0;
+    tbl->with_internal_reference_map = 0;
     /*
       Look first for the definition of tbl in the with clause to which
       this with element belongs. If such definition is not found there
@@ -578,48 +528,46 @@ void With_element::check_dependencies_in_select(st_select_lex *sl,
     */
     if (is_spec_select)
     {
-      With_clause *with_clause= sl->master_unit()->with_clause;
+      With_clause *with_clause = sl->master_unit()->with_clause;
       if (with_clause)
-        tbl->with= with_clause->find_table_def(tbl, NULL);
+        tbl->with = with_clause->find_table_def(tbl, NULL);
       if (!tbl->with)
-        tbl->with= owner->find_table_def(tbl,
-                                         owner->with_recursive ? NULL : this);
+        tbl->with = owner->find_table_def(tbl, owner->with_recursive ? NULL : this);
     }
     if (!tbl->with)
-      tbl->with= find_table_def_in_with_clauses(tbl, ctxt);
+      tbl->with = find_table_def_in_with_clauses(tbl, ctxt);
 
-    if (tbl->with && tbl->with->owner== this->owner)
-    {   
-      /* 
+    if (tbl->with && tbl->with->owner == this->owner)
+    {
+      /*
         The found definition T of tbl belongs to the same
         with clause as this with element. In this case:
         - set the dependence on T in the bitmap dep_map
         - set tbl->with_internal_reference_map with
           the bitmap for this definition
         - set the dependence on T in the bitmap this->sq_dep_map
-          if needed 
-      */     
-      *dep_map|= tbl->with->get_elem_map();
-      tbl->with_internal_reference_map= get_elem_map();
+          if needed
+      */
+      *dep_map |= tbl->with->get_elem_map();
+      tbl->with_internal_reference_map = get_elem_map();
       if (in_subq)
-        sq_dep_map|= tbl->with->get_elem_map();
+        sq_dep_map |= tbl->with->get_elem_map();
       else
-        top_level_dep_map|= tbl->with->get_elem_map();
+        top_level_dep_map |= tbl->with->get_elem_map();
     }
   }
   /* Now look for the dependencies in the subqueries of sl */
-  st_select_lex_unit *inner_unit= sl->first_inner_unit();
-  for (; inner_unit; inner_unit= inner_unit->next_unit())
+  st_select_lex_unit *inner_unit = sl->first_inner_unit();
+  for (; inner_unit; inner_unit = inner_unit->next_unit())
   {
     check_dependencies_in_unit(inner_unit, ctxt, in_subq, dep_map);
   }
 }
 
-
 /**
   @brief
     Find a recursive reference to this with element in subqueries of a select
- 
+
   @param  sel      The select in whose subqueries the reference
                    to be looked for
 
@@ -632,45 +580,43 @@ void With_element::check_dependencies_in_select(st_select_lex *sl,
 
   @retval
     Pointer to the found recursive reference if the search succeeded
-    NULL - otherwise 
+    NULL - otherwise
 */
 
 TABLE_LIST *With_element::find_first_sq_rec_ref_in_select(st_select_lex *sel)
 {
-  TABLE_LIST *rec_ref= NULL;
-  st_select_lex_unit *inner_unit= sel->first_inner_unit();
-  for (; inner_unit; inner_unit= inner_unit->next_unit())
+  TABLE_LIST *rec_ref = NULL;
+  st_select_lex_unit *inner_unit = sel->first_inner_unit();
+  for (; inner_unit; inner_unit = inner_unit->next_unit())
   {
-    st_select_lex *sl= inner_unit->first_select();
-    for (; sl; sl= sl->next_select())
+    st_select_lex *sl = inner_unit->first_select();
+    for (; sl; sl = sl->next_select())
     {
-      for (TABLE_LIST *tbl= sl->table_list.first; tbl; tbl= tbl->next_local)
+      for (TABLE_LIST *tbl = sl->table_list.first; tbl; tbl = tbl->next_local)
       {
         if (tbl->derived || tbl->nested_join)
           continue;
-        if (tbl->with && tbl->with->owner== this->owner &&
-            (tbl->with_internal_reference_map & mutually_recursive))
-	{
-	  rec_ref= tbl;
+        if (tbl->with && tbl->with->owner == this->owner && (tbl->with_internal_reference_map & mutually_recursive))
+        {
+          rec_ref = tbl;
           return rec_ref;
         }
       }
-      if ((rec_ref= find_first_sq_rec_ref_in_select(sl)))
+      if ((rec_ref = find_first_sq_rec_ref_in_select(sl)))
         return rec_ref;
-    } 
+    }
   }
   return 0;
 }
 
-
 /**
   @brief
     Find the dependencies of this element on its siblings in a unit
- 
+
   @param  unit     The unit where to look for the dependencies
   @param  ctxt     The structure specifying the scope of the definitions
                    of the with elements of the upper levels
-  @param  in_sbq   if true mark dependencies found in subqueries in 
+  @param  in_sbq   if true mark dependencies found in subqueries in
                    this->sq_dep_map
   @param  dep_map  IN/OUT The bit where to mark the found dependencies
 
@@ -680,39 +626,35 @@ TABLE_LIST *With_element::find_first_sq_rec_ref_in_select(st_select_lex *sel)
     attached to this unit that refer to definitions of tables from the
     same with clause as this element.
     If such definitions are found then the dependencies on them are
-    set in the in/out parameter dep_map and optionally in this->sq_dep_map.  
-    The parameter ctxt describes the proper context for the search.      
+    set in the in/out parameter dep_map and optionally in this->sq_dep_map.
+    The parameter ctxt describes the proper context for the search.
 */
 
-void With_element::check_dependencies_in_unit(st_select_lex_unit *unit,
-                                              st_unit_ctxt_elem *ctxt,
-                                              bool in_subq,
+void With_element::check_dependencies_in_unit(st_select_lex_unit *unit, st_unit_ctxt_elem *ctxt, bool in_subq,
                                               table_map *dep_map)
 {
-  st_unit_ctxt_elem unit_ctxt_elem= {ctxt, unit};
+  st_unit_ctxt_elem unit_ctxt_elem = {ctxt, unit};
   if (unit->with_clause)
   {
-    (void) unit->with_clause->check_dependencies();
-    check_dependencies_in_with_clause(unit->with_clause, &unit_ctxt_elem,
-                                      in_subq, dep_map);
+    (void)unit->with_clause->check_dependencies();
+    check_dependencies_in_with_clause(unit->with_clause, &unit_ctxt_elem, in_subq, dep_map);
   }
   in_subq |= unit->item != NULL;
-  st_select_lex *sl= unit->first_select();
-  for (; sl; sl= sl->next_select())
+  st_select_lex *sl = unit->first_select();
+  for (; sl; sl = sl->next_select())
   {
     check_dependencies_in_select(sl, &unit_ctxt_elem, in_subq, dep_map);
   }
 }
 
-
 /**
   @brief
     Find the dependencies of this element on its siblings in a with clause
- 
+
   @param  witt_clause  The with clause where to look for the dependencies
   @param  ctxt         The structure specifying the scope of the definitions
                        of the with elements of the upper levels
-  @param  in_sbq       if true mark dependencies found in subqueries in 
+  @param  in_sbq       if true mark dependencies found in subqueries in
                        this->sq_dep_map
   @param  dep_map      IN/OUT The bit where to mark the found dependencies
 
@@ -722,29 +664,23 @@ void With_element::check_dependencies_in_unit(st_select_lex_unit *unit,
     from this with_clause that refer to definitions of tables from the
     same with clause as this element.
     If such definitions are found then the dependencies on them are
-    set in the in/out parameter dep_map and optionally in this->sq_dep_map.  
-    The parameter ctxt describes the proper context for the search.      
+    set in the in/out parameter dep_map and optionally in this->sq_dep_map.
+    The parameter ctxt describes the proper context for the search.
 */
 
-void 
-With_element::check_dependencies_in_with_clause(With_clause *with_clause,
-                                                st_unit_ctxt_elem *ctxt,
-                                                bool in_subq,
-                                                table_map *dep_map)
+void With_element::check_dependencies_in_with_clause(With_clause *with_clause, st_unit_ctxt_elem *ctxt, bool in_subq,
+                                                     table_map *dep_map)
 {
-  for (With_element *with_elem= with_clause->with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_clause->with_list.first; with_elem; with_elem = with_elem->next)
   {
     check_dependencies_in_unit(with_elem->spec, ctxt, in_subq, dep_map);
   }
 }
 
-
 /**
   @brief
     Find mutually recursive with elements and check that they have ancors
- 
+
   @details
     This method performs the following:
     - for each recursive with element finds all mutually recursive with it
@@ -756,132 +692,121 @@ With_element::check_dependencies_in_with_clause(With_clause *with_clause,
       anymore
 
   @retval
-    true    if an error is reported 
+    true    if an error is reported
     false   otherwise
 */
 
 bool With_clause::check_anchors()
 {
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
     if (!with_elem->is_recursive)
       continue;
 
-  /* 
-    It with_elem is recursive with element find all elements mutually recursive
-    with it (any recursive element is mutually recursive with itself). Mark all
-    these elements in the bitmap->mutually_recursive. Also link all these 
-    elements into a ring chain.
-  */
+    /*
+      It with_elem is recursive with element find all elements mutually recursive
+      with it (any recursive element is mutually recursive with itself). Mark all
+      these elements in the bitmap->mutually_recursive. Also link all these
+      elements into a ring chain.
+    */
     if (!with_elem->next_mutually_recursive)
     {
-      With_element *last_mutually_recursive= with_elem;
-      table_map with_elem_dep= with_elem->derived_dep_map;
-      table_map with_elem_map= with_elem->get_elem_map();
-      for (With_element *elem= with_elem; elem; elem= elem->next)
+      With_element *last_mutually_recursive = with_elem;
+      table_map with_elem_dep = with_elem->derived_dep_map;
+      table_map with_elem_map = with_elem->get_elem_map();
+      for (With_element *elem = with_elem; elem; elem = elem->next)
       {
         if (!elem->is_recursive)
           continue;
 
-        if (elem == with_elem ||
-	    ((elem->derived_dep_map & with_elem_map) &&
-	     (with_elem_dep & elem->get_elem_map())))
-	{        
-          elem->next_mutually_recursive= with_elem;
-          last_mutually_recursive->next_mutually_recursive= elem;
-          last_mutually_recursive= elem;
-	  with_elem->mutually_recursive|= elem->get_elem_map();
-	}
+        if (elem == with_elem || ((elem->derived_dep_map & with_elem_map) && (with_elem_dep & elem->get_elem_map())))
+        {
+          elem->next_mutually_recursive = with_elem;
+          last_mutually_recursive->next_mutually_recursive = elem;
+          last_mutually_recursive = elem;
+          with_elem->mutually_recursive |= elem->get_elem_map();
+        }
       }
-      for (With_element *elem= with_elem->next_mutually_recursive;
-           elem != with_elem; 
-           elem=  elem->next_mutually_recursive)
-	elem->mutually_recursive= with_elem->mutually_recursive;
+      for (With_element *elem = with_elem->next_mutually_recursive; elem != with_elem;
+           elem = elem->next_mutually_recursive)
+        elem->mutually_recursive = with_elem->mutually_recursive;
     }
- 
+
     /*
       For each select from the specification of 'with_elem' check whether
       it is an anchor i.e. does not depend on any with elements mutually
       recursive with 'with_elem".
     */
-    for (st_select_lex *sl= with_elem->spec->first_select();
-         sl;
-         sl= sl->next_select())
+    for (st_select_lex *sl = with_elem->spec->first_select(); sl; sl = sl->next_select())
     {
       if (with_elem->is_anchor(sl))
       {
-        with_elem->with_anchor= true;
+        with_elem->with_anchor = true;
         break;
       }
     }
   }
 
-  /* 
+  /*
     Check that for any group of mutually recursive with elements
     - there is at least one anchor
     - after removing any with element with anchor the remaining with elements
       mutually recursive with the removed one are not recursive anymore
-  */ 
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  */
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
     if (!with_elem->is_recursive)
       continue;
-    
+
     if (!with_elem->with_anchor)
     {
-      /* 
-        Check that the other with elements mutually recursive with 'with_elem' 
+      /*
+        Check that the other with elements mutually recursive with 'with_elem'
         contain at least one anchor.
       */
-      With_element *elem= with_elem;
-      while ((elem= elem->get_next_mutually_recursive()) != with_elem)
+      With_element *elem = with_elem;
+      while ((elem = elem->get_next_mutually_recursive()) != with_elem)
       {
         if (elem->with_anchor)
           break;
       }
       if (elem == with_elem)
       {
-        my_error(ER_RECURSIVE_WITHOUT_ANCHORS, MYF(0),
-        with_elem->get_name_str());
+        my_error(ER_RECURSIVE_WITHOUT_ANCHORS, MYF(0), with_elem->get_name_str());
         return true;
       }
     }
     else
     {
       /* 'with_elem' is a with element with an anchor */
-      With_element *elem= with_elem;
-      /* 
+      With_element *elem = with_elem;
+      /*
         For the other with elements mutually recursive with 'with_elem'
         set dependency bits between those elements in the field work_dep_map
         and build transitive closure of these dependencies
-      */         
-      while ((elem= elem->get_next_mutually_recursive()) != with_elem)
-	elem->work_dep_map= elem->base_dep_map & elem->mutually_recursive;
-      elem= with_elem;
-      while ((elem= elem->get_next_mutually_recursive()) != with_elem)
+      */
+      while ((elem = elem->get_next_mutually_recursive()) != with_elem)
+        elem->work_dep_map = elem->base_dep_map & elem->mutually_recursive;
+      elem = with_elem;
+      while ((elem = elem->get_next_mutually_recursive()) != with_elem)
       {
-        table_map elem_map= elem->get_elem_map();
-        With_element *el= with_elem;
-        while ((el= el->get_next_mutually_recursive()) != with_elem)
-	{
+        table_map elem_map = elem->get_elem_map();
+        With_element *el = with_elem;
+        while ((el = el->get_next_mutually_recursive()) != with_elem)
+        {
           if (el->work_dep_map & elem_map)
-	    el->work_dep_map|= elem->work_dep_map;          
+            el->work_dep_map |= elem->work_dep_map;
         }
       }
       /* If the transitive closure displays any cycle report an arror */
-      elem= with_elem;
-      while ((elem= elem->get_next_mutually_recursive()) != with_elem)
+      elem = with_elem;
+      while ((elem = elem->get_next_mutually_recursive()) != with_elem)
       {
         if (elem->work_dep_map & elem->get_elem_map())
-	{
-          my_error(ER_UNACCEPTABLE_MUTUAL_RECURSION, MYF(0),
-          with_elem->get_name_str());
+        {
+          my_error(ER_UNACCEPTABLE_MUTUAL_RECURSION, MYF(0), with_elem->get_name_str());
           return true;
-	}
+        }
       }
     }
   }
@@ -889,11 +814,10 @@ bool With_clause::check_anchors()
   return false;
 }
 
-
 /**
   @brief
     Move anchors at the beginning of the specifications for with elements
- 
+
   @details
     This method moves anchors at the beginning of the specifications for
     all recursive with elements.
@@ -901,60 +825,56 @@ bool With_clause::check_anchors()
 
 void With_clause::move_anchors_ahead()
 {
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
     if (with_elem->is_recursive)
-     with_elem->move_anchors_ahead();
+      with_elem->move_anchors_ahead();
   }
 }
-	
 
 /**
   @brief
     Move anchors at the beginning of the specification of this with element
- 
+
   @details
     If the specification of this with element contains anchors the method
     moves them at the very beginning of the specification.
     Additionally for the other selects of the specification if none of them
     contains a recursive reference to this with element or a mutually recursive
-    one the method looks for the first such reference in the first recursive 
-    select and set a pointer to it in this->sq_rec_ref.   
+    one the method looks for the first such reference in the first recursive
+    select and set a pointer to it in this->sq_rec_ref.
 */
 
 void With_element::move_anchors_ahead()
 {
   st_select_lex *next_sl;
-  st_select_lex *new_pos= spec->first_select();
+  st_select_lex *new_pos = spec->first_select();
   new_pos->set_linkage(UNION_TYPE);
-  for (st_select_lex *sl= new_pos; sl; sl= next_sl)
+  for (st_select_lex *sl = new_pos; sl; sl = next_sl)
   {
-    next_sl= sl->next_select(); 
+    next_sl = sl->next_select();
     if (is_anchor(sl))
     {
       sl->move_node(new_pos);
       if (new_pos == spec->first_select())
       {
-        enum sub_select_type type= new_pos->get_linkage();
+        enum sub_select_type type = new_pos->get_linkage();
         new_pos->set_linkage(sl->get_linkage());
         sl->set_linkage(type);
-        new_pos->with_all_modifier= sl->with_all_modifier;
-        sl->with_all_modifier= false;
+        new_pos->with_all_modifier = sl->with_all_modifier;
+        sl->with_all_modifier = false;
       }
-      new_pos= sl->next_select();
+      new_pos = sl->next_select();
     }
     else if (!sq_rec_ref && no_rec_ref_on_top_level())
     {
-      sq_rec_ref= find_first_sq_rec_ref_in_select(sl);
+      sq_rec_ref = find_first_sq_rec_ref_in_select(sl);
       DBUG_ASSERT(sq_rec_ref != NULL);
     }
   }
-  first_recursive= new_pos;
+  first_recursive = new_pos;
   spec->first_select()->set_linkage(DERIVED_TABLE_TYPE);
 }
-
 
 /**
   @brief
@@ -974,18 +894,14 @@ void With_element::move_anchors_ahead()
 
 bool With_clause::prepare_unreferenced_elements(THD *thd)
 {
-  for (With_element *with_elem= with_list.first; 
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
-    if ((with_elem->is_hanging_recursive() || !with_elem->is_referenced()) &&
-        with_elem->prepare_unreferenced(thd))
+    if ((with_elem->is_hanging_recursive() || !with_elem->is_referenced()) && with_elem->prepare_unreferenced(thd))
       return true;
   }
 
   return false;
 }
-
 
 /**
   @brief
@@ -1005,35 +921,30 @@ bool With_clause::prepare_unreferenced_elements(THD *thd)
     false   on success
     true    on failure
 */
-  
-bool With_element::set_unparsed_spec(THD *thd,
-                                     const char *spec_start,
-                                     const char *spec_end,
-                                     my_ptrdiff_t spec_offset)
+
+bool With_element::set_unparsed_spec(THD *thd, const char *spec_start, const char *spec_end, my_ptrdiff_t spec_offset)
 {
-  stmt_prepare_mode= thd->m_parser_state->m_lip.stmt_prepare_mode;
-  unparsed_spec.length= spec_end - spec_start;
+  stmt_prepare_mode = thd->m_parser_state->m_lip.stmt_prepare_mode;
+  unparsed_spec.length = spec_end - spec_start;
 
   if (stmt_prepare_mode || !thd->lex->sphead)
-    unparsed_spec.str= spec_start;
+    unparsed_spec.str = spec_start;
   else
-    unparsed_spec.str= thd->strmake(spec_start, unparsed_spec.length);
-  unparsed_spec_offset= spec_offset;
+    unparsed_spec.str = thd->strmake(spec_start, unparsed_spec.length);
+  unparsed_spec_offset = spec_offset;
 
   if (!unparsed_spec.str)
   {
-    my_error(ER_OUTOFMEMORY, MYF(ME_FATAL), 
-             static_cast<int>(unparsed_spec.length));
+    my_error(ER_OUTOFMEMORY, MYF(ME_FATAL), static_cast<int>(unparsed_spec.length));
     return true;
   }
   return false;
 }
 
-
 /**
   @brief
    Create a clone of the specification for the given with table
-    
+
   @param old_lex    The LEX structure created for the query or CTE specification
                     where this With_element is defined
   @param with_table The reference to the table defined in this element for which
@@ -1049,7 +960,7 @@ bool With_element::set_unparsed_spec(THD *thd,
     A chain of all table references occurred in the specification is also
     formed.
     The method includes the new unit and its sub-unit into hierarchy of
-    the units of the main query. I also insert the constructed chain of the 
+    the units of the main query. I also insert the constructed chain of the
     table references into the chain of all table references of the main query.
     The method resolves all references to CTE in the clone.
 
@@ -1067,36 +978,35 @@ bool With_element::set_unparsed_spec(THD *thd,
      NULL - otherwise
 */
 
-st_select_lex_unit *With_element::clone_parsed_spec(LEX *old_lex,
-                                                    TABLE_LIST *with_table)
+st_select_lex_unit *With_element::clone_parsed_spec(LEX *old_lex, TABLE_LIST *with_table)
 {
-  THD *thd= old_lex->thd;
+  THD *thd = old_lex->thd;
   LEX *lex;
-  st_select_lex_unit *res= NULL;
+  st_select_lex_unit *res = NULL;
 
-  if (!(lex= (LEX*) new(thd->mem_root) st_lex_local))
+  if (!(lex = (LEX *)new (thd->mem_root) st_lex_local))
     return res;
-  thd->lex= lex;
+  thd->lex = lex;
 
-  bool parse_status= false;
+  bool parse_status = false;
   st_select_lex *with_select;
   st_select_lex *last_clone_select;
 
-  char save_end= unparsed_spec.str[unparsed_spec.length];
-  ((char*) &unparsed_spec.str[unparsed_spec.length])[0]= '\0';
+  char save_end = unparsed_spec.str[unparsed_spec.length];
+  ((char *)&unparsed_spec.str[unparsed_spec.length])[0] = '\0';
 
   lex_start(thd);
-  lex->clone_spec_offset= unparsed_spec_offset;
-  lex->with_cte_resolution= true;
+  lex->clone_spec_offset = unparsed_spec_offset;
+  lex->with_cte_resolution = true;
   /*
     There's no need to add SPs/SFs referenced in the clone to the global
     list of the SPs/SFs used in the query as they were added when the first
     reference to the cloned CTE was parsed. Yet the recursive call of the
     parser must to know that they were already included into the list.
   */
-  lex->sroutines= old_lex->sroutines;
-  lex->sroutines_list_own_last= old_lex->sroutines_list_own_last;
-  lex->sroutines_list_own_elements= old_lex->sroutines_list_own_elements;
+  lex->sroutines = old_lex->sroutines;
+  lex->sroutines_list_own_last = old_lex->sroutines_list_own_last;
+  lex->sroutines_list_own_elements = old_lex->sroutines_list_own_elements;
 
   /*
     The specification of a CTE is to be parsed as a regular query.
@@ -1126,17 +1036,15 @@ st_select_lex_unit *With_element::clone_parsed_spec(LEX *old_lex,
     and this would not be correct.
   */
 
-  lex->only_cte_resolution= true;
+  lex->only_cte_resolution = true;
 
-  lex->stmt_lex= old_lex->stmt_lex ? old_lex->stmt_lex : old_lex;
+  lex->stmt_lex = old_lex->stmt_lex ? old_lex->stmt_lex : old_lex;
 
-  parse_status= thd->sql_parser(old_lex, lex,
-                                (char*) unparsed_spec.str,
-                                (unsigned int)unparsed_spec.length,
-                                stmt_prepare_mode);
+  parse_status =
+      thd->sql_parser(old_lex, lex, (char *)unparsed_spec.str, (unsigned int)unparsed_spec.length, stmt_prepare_mode);
 
-  ((char*) &unparsed_spec.str[unparsed_spec.length])[0]= save_end;
-  with_select= lex->unit.first_select();
+  ((char *)&unparsed_spec.str[unparsed_spec.length])[0] = save_end;
+  with_select = lex->unit.first_select();
 
   if (parse_status)
     goto err;
@@ -1148,7 +1056,7 @@ st_select_lex_unit *With_element::clone_parsed_spec(LEX *old_lex,
   */
   lex->unit.include_down(with_table->select_lex);
   lex->unit.set_slave(with_select);
-  lex->unit.cloned_from= spec;
+  lex->unit.cloned_from = spec;
 
   /*
     Now all references to the CTE defined outside of the cloned specification
@@ -1156,11 +1064,10 @@ st_select_lex_unit *With_element::clone_parsed_spec(LEX *old_lex,
     for the table references that has not been resolved requests for mdl_locks
     has to be set.
   */
-  lex->only_cte_resolution= old_lex->only_cte_resolution;
-  if (lex->resolve_references_to_cte(lex->query_tables,
-                                     lex->query_tables_last))
+  lex->only_cte_resolution = old_lex->only_cte_resolution;
+  if (lex->resolve_references_to_cte(lex->query_tables, lex->query_tables_last))
   {
-    res= NULL;
+    res = NULL;
     goto err;
   }
 
@@ -1174,41 +1081,34 @@ st_select_lex_unit *With_element::clone_parsed_spec(LEX *old_lex,
   {
     head->tables_pos.set_start_pos(&with_table->next_global);
     head->tables_pos.set_end_pos(lex->query_tables_last);
-    TABLE_LIST *next_tbl= with_table->next_global;
+    TABLE_LIST *next_tbl = with_table->next_global;
     if (next_tbl)
     {
-      *(lex->query_tables->prev_global= next_tbl->prev_global)=
-        lex->query_tables;
-      *(next_tbl->prev_global= lex->query_tables_last)= next_tbl;
+      *(lex->query_tables->prev_global = next_tbl->prev_global) = lex->query_tables;
+      *(next_tbl->prev_global = lex->query_tables_last) = next_tbl;
     }
     else
     {
-      *(lex->query_tables->prev_global= old_lex->query_tables_last)=
-        lex->query_tables;
-      old_lex->query_tables_last= lex->query_tables_last;
+      *(lex->query_tables->prev_global = old_lex->query_tables_last) = lex->query_tables;
+      old_lex->query_tables_last = lex->query_tables_last;
     }
   }
-  old_lex->sroutines_list_own_last= lex->sroutines_list_own_last;
-  old_lex->sroutines_list_own_elements= lex->sroutines_list_own_elements;
-  res= &lex->unit;
-  res->with_element= this;
-  
-  last_clone_select= lex->all_selects_list;
-  while (last_clone_select->next_select_in_list())
-    last_clone_select= last_clone_select->next_select_in_list();
-  old_lex->all_selects_list=
-    (st_select_lex*) (lex->all_selects_list->
-                     insert_chain_before(
-                       (st_select_lex_node **) &(old_lex->all_selects_list),
-                       last_clone_select));
+  old_lex->sroutines_list_own_last = lex->sroutines_list_own_last;
+  old_lex->sroutines_list_own_elements = lex->sroutines_list_own_elements;
+  res = &lex->unit;
+  res->with_element = this;
 
- lex->sphead= NULL;    // in order not to delete lex->sphead
+  last_clone_select = lex->all_selects_list;
+  while (last_clone_select->next_select_in_list()) last_clone_select = last_clone_select->next_select_in_list();
+  old_lex->all_selects_list = (st_select_lex *)(lex->all_selects_list->insert_chain_before(
+      (st_select_lex_node **)&(old_lex->all_selects_list), last_clone_select));
+
+  lex->sphead = NULL;  // in order not to delete lex->sphead
   lex_end(lex);
 err:
-  thd->lex= old_lex;
+  thd->lex = old_lex;
   return res;
 }
-
 
 /**
   @brief
@@ -1226,18 +1126,16 @@ err:
     second time.
 
   @retval
-    true   if an error was reported 
+    true   if an error was reported
     false  otherwise
-*/    
+*/
 
-bool
-With_element::process_columns_of_derived_unit(THD *thd,
-                                              st_select_lex_unit *unit)
+bool With_element::process_columns_of_derived_unit(THD *thd, st_select_lex_unit *unit)
 {
   if (unit->columns_are_renamed)
     return false;
 
-  st_select_lex *select= unit->first_select();
+  st_select_lex *select = unit->first_select();
 
   if (column_list.elements)  //  The column list is optional
   {
@@ -1253,13 +1151,13 @@ With_element::process_columns_of_derived_unit(THD *thd,
     }
 
     Query_arena *arena, backup;
-    arena= thd->activate_stmt_arena_if_needed(&backup);
+    arena = thd->activate_stmt_arena_if_needed(&backup);
 
     /* Rename the columns of the first select in the unit */
-    while ((item= it++, name= nm++))
+    while ((item = it++, name = nm++))
     {
       item->set_name(thd, *name);
-      item->base_flags|= item_base_t::IS_EXPLICIT_NAME;
+      item->base_flags |= item_base_t::IS_EXPLICIT_NAME;
     }
 
     if (arena)
@@ -1274,7 +1172,7 @@ With_element::process_columns_of_derived_unit(THD *thd,
     List_iterator_fast<Lex_ident_sys> nm(*cycle_list);
     List_iterator_fast<Lex_ident_sys> nm_check(*cycle_list);
     DBUG_ASSERT(cycle_list->elements != 0);
-    while (LEX_CSTRING *name= nm++)
+    while (LEX_CSTRING *name = nm++)
     {
       Item *item;
       /*
@@ -1284,85 +1182,73 @@ With_element::process_columns_of_derived_unit(THD *thd,
       */
       LEX_CSTRING *check;
       nm_check.rewind();
-      while ((check= nm_check++) && check != name)
+      while ((check = nm_check++) && check != name)
       {
-        if (check->length == name->length &&
-            strncmp(check->str, name->str, name->length) == 0)
+        if (check->length == name->length && strncmp(check->str, name->str, name->length) == 0)
         {
           my_error(ER_DUP_FIELDNAME, MYF(0), check->str);
           return true;
         }
       }
       /* Check that 'name' is the name of a column of the processed CTE */
-      while ((item= it++) &&
-             (item->name.length != name->length ||
-              strncmp(item->name.str, name->str, name->length) != 0));
+      while ((item = it++) &&
+             (item->name.length != name->length || strncmp(item->name.str, name->str, name->length) != 0))
+        ;
       if (item == NULL)
       {
         my_error(ER_BAD_FIELD_ERROR, MYF(0), name->str, "CYCLE clause");
         return true;
       }
-      item->base_flags|= item_base_t::IS_IN_WITH_CYCLE;
+      item->base_flags |= item_base_t::IS_IN_WITH_CYCLE;
     }
   }
-  unit->columns_are_renamed= true;
+  unit->columns_are_renamed = true;
 
   return false;
 }
 
-
 /**
   @brief
     Perform context analysis the definition of an unreferenced table
-     
+
   @param thd        The context of the statement containing this with element
 
   @details
     The method assumes that this with element contains the definition
     of a table that is not used anywhere. In this case one has to check
-    that context conditions are met. 
+    that context conditions are met.
 
   @retval
-    true   if an error was reported 
+    true   if an error was reported
     false  otherwise
-*/    
+*/
 
 bool With_element::prepare_unreferenced(THD *thd)
 {
-  bool rc= false;
-  st_select_lex *first_sl= spec->first_select();
+  bool rc = false;
+  st_select_lex *first_sl = spec->first_select();
 
   /* Prevent name resolution for field references out of with elements */
-  for (st_select_lex *sl= first_sl;
-       sl;
-       sl= sl->next_select())
-    sl->context.outer_context= 0;
+  for (st_select_lex *sl = first_sl; sl; sl = sl->next_select()) sl->context.outer_context = 0;
 
-  thd->lex->context_analysis_only|= CONTEXT_ANALYSIS_ONLY_DERIVED;
-  if (!spec->prepared &&
-      (spec->prepare(spec->derived, 0, 0) ||
-       process_columns_of_derived_unit(thd, spec) ||
-       check_duplicate_names(thd, first_sl->item_list, 1)))
-    rc= true;
+  thd->lex->context_analysis_only |= CONTEXT_ANALYSIS_ONLY_DERIVED;
+  if (!spec->prepared && (spec->prepare(spec->derived, 0, 0) || process_columns_of_derived_unit(thd, spec) ||
+                          check_duplicate_names(thd, first_sl->item_list, 1)))
+    rc = true;
 
-  thd->lex->context_analysis_only&= ~CONTEXT_ANALYSIS_ONLY_DERIVED;
+  thd->lex->context_analysis_only &= ~CONTEXT_ANALYSIS_ONLY_DERIVED;
   return rc;
 }
 
-
-bool With_element::is_anchor(st_select_lex *sel)
-{
-  return !(mutually_recursive & sel->with_dep);
-}   
-
+bool With_element::is_anchor(st_select_lex *sel) { return !(mutually_recursive & sel->with_dep); }
 
 /**
    @brief
      Search for the definition of the given table referred in this select node
 
   @param table  reference to the table whose definition is searched for
-     
-  @details  
+
+  @details
     The method looks for the definition of the table whose reference is occurred
     in the FROM list of this select node. First it searches for it in the
     with clause attached to the unit this select node belongs to. If such a
@@ -1371,53 +1257,46 @@ bool With_element::is_anchor(st_select_lex *sel)
   @retval
     pointer to the found definition if the search has been successful
     NULL -  otherwise
-*/    
+*/
 
 With_element *st_select_lex::find_table_def_in_with_clauses(TABLE_LIST *table)
 {
-  With_element *found= NULL;
-  With_clause *containing_with_clause= NULL;
+  With_element *found = NULL;
+  With_clause *containing_with_clause = NULL;
   st_select_lex_unit *master_unit;
   st_select_lex *outer_sl;
-  for (st_select_lex *sl= this; sl; sl= outer_sl)
+  for (st_select_lex *sl = this; sl; sl = outer_sl)
   {
-    /* 
-      If sl->master_unit() is the spec of a with element then the search for 
+    /*
+      If sl->master_unit() is the spec of a with element then the search for
       a definition was already done by With_element::check_dependencies_in_spec
-      and it was unsuccesful. Yet for units cloned from the spec it has not 
+      and it was unsuccesful. Yet for units cloned from the spec it has not
       been done yet.
     */
-    With_clause *attached_with_clause= sl->get_with_clause();
-    if (attached_with_clause &&
-        attached_with_clause != containing_with_clause &&
-        (found= attached_with_clause->find_table_def(table, NULL)))
+    With_clause *attached_with_clause = sl->get_with_clause();
+    if (attached_with_clause && attached_with_clause != containing_with_clause &&
+        (found = attached_with_clause->find_table_def(table, NULL)))
       break;
-    master_unit= sl->master_unit();
-    outer_sl= master_unit->outer_select();
-    With_element *with_elem= sl->get_with_element();
+    master_unit = sl->master_unit();
+    outer_sl = master_unit->outer_select();
+    With_element *with_elem = sl->get_with_element();
     if (with_elem)
     {
-      containing_with_clause= with_elem->get_owner();
-      With_element *barrier= containing_with_clause->with_recursive ?
-                               NULL : with_elem;
-      if ((found= containing_with_clause->find_table_def(table, barrier)))
+      containing_with_clause = with_elem->get_owner();
+      With_element *barrier = containing_with_clause->with_recursive ? NULL : with_elem;
+      if ((found = containing_with_clause->find_table_def(table, barrier)))
         break;
       if (outer_sl && !outer_sl->get_with_element())
         break;
     }
     /* Do not look for the table's definition beyond the scope of the view */
     if (master_unit->is_view)
-      break; 
+      break;
   }
   return found;
 }
 
-
-bool TABLE_LIST::is_recursive_with_table()
-{
-  return with && with->is_recursive;
-}
-
+bool TABLE_LIST::is_recursive_with_table() { return with && with->is_recursive; }
 
 /*
   A reference to a with table T is recursive if it occurs somewhere
@@ -1427,22 +1306,19 @@ bool TABLE_LIST::is_recursive_with_table()
 
 bool TABLE_LIST::is_with_table_recursive_reference()
 {
-  return (with_internal_reference_map &&
-          (with->get_mutually_recursive() & with_internal_reference_map));
+  return (with_internal_reference_map && (with->get_mutually_recursive() & with_internal_reference_map));
 }
 
-
-/* 
+/*
   Specifications of with tables with recursive table references
   in non-mergeable derived tables are not allowed in this
-  implementation. 
+  implementation.
 */
 
-
 /*
-  We say that the specification of a with table T is restricted  
+  We say that the specification of a with table T is restricted
   if all below is true.
-    1. Any immediate select of the specification contains at most one 
+    1. Any immediate select of the specification contains at most one
      recursive table reference taking into account table references
      from mergeable derived tables.
     2. Any recursive table reference is not an inner operand of an
@@ -1456,17 +1332,16 @@ bool TABLE_LIST::is_with_table_recursive_reference()
   with element unrestricted.
 
   The SQL standards allows only with elements with restricted specification.
-  By default we comply with the standards here.  
- 
+  By default we comply with the standards here.
+
   Yet we allow unrestricted specification if the status variable
   'standards_compliant_cte' set to 'off'(0).
 */
 
-
 /**
   @brief
     Check if this select makes the including specification unrestricted
- 
+
   @param
     only_standards_compliant  true if  the system variable
                               'standards_compliant_cte' is set to 'on'
@@ -1476,14 +1351,14 @@ bool TABLE_LIST::is_with_table_recursive_reference()
     unrestricted and report an error if 'only_standards_compliant' is true.
 
   @retval
-    true    if an error is reported 
+    true    if an error is reported
     false   otherwise
 */
 
 bool st_select_lex::check_unrestricted_recursive(bool only_standard_compliant)
 {
-  With_element *with_elem= get_with_element();
-  if (!with_elem ||!with_elem->is_recursive)
+  With_element *with_elem = get_with_element();
+  if (!with_elem || !with_elem->is_recursive)
   {
     /*
       If this select is not from the specifiocation of a with elememt or
@@ -1493,37 +1368,30 @@ bool st_select_lex::check_unrestricted_recursive(bool only_standard_compliant)
   }
 
   /* Check conditions 1-2 for restricted specification*/
-  table_map unrestricted= 0;
-  table_map encountered= 0;
-  if (with_elem->check_unrestricted_recursive(this, 
-					      unrestricted, 
-					      encountered))
+  table_map unrestricted = 0;
+  table_map encountered = 0;
+  if (with_elem->check_unrestricted_recursive(this, unrestricted, encountered))
     return true;
   with_elem->get_owner()->add_unrestricted(unrestricted);
 
-
   /* Check conditions 3-4 for restricted specification*/
-  if ((with_sum_func && !with_elem->is_anchor(this)) ||
-      (with_elem->contains_sq_with_recursive_reference()))
-    with_elem->get_owner()->add_unrestricted(
-                              with_elem->get_mutually_recursive());
+  if ((with_sum_func && !with_elem->is_anchor(this)) || (with_elem->contains_sq_with_recursive_reference()))
+    with_elem->get_owner()->add_unrestricted(with_elem->get_mutually_recursive());
 
   /* Report an error on unrestricted specification if this is required */
   if (only_standard_compliant && with_elem->is_unrestricted())
   {
-    my_error(ER_NOT_STANDARD_COMPLIANT_RECURSIVE,
-             MYF(0), with_elem->get_name_str());
+    my_error(ER_NOT_STANDARD_COMPLIANT_RECURSIVE, MYF(0), with_elem->get_name_str());
     return true;
   }
 
   return false;
 }
 
-
 /**
   @brief
     Check if a select from the spec of this with element is partially restricted
- 
+
   @param
     sel             select from the specification of this element where to check
                     whether conditions 1-2 are satisfied
@@ -1531,105 +1399,95 @@ bool st_select_lex::check_unrestricted_recursive(bool only_standard_compliant)
     encountered     IN/OUT bitmap where to mark encountered recursive references
   @details
     This method checks whether the conditions 1-2 (see the comment above)
-    are satisfied for the select sel. 
+    are satisfied for the select sel.
     This method is called recursively for derived tables.
 
   @retval
-    true    if an error is reported 
+    true    if an error is reported
     false   otherwise
 */
 
-bool With_element::check_unrestricted_recursive(st_select_lex *sel, 
-					        table_map &unrestricted, 
-						table_map &encountered)
+bool With_element::check_unrestricted_recursive(st_select_lex *sel, table_map &unrestricted, table_map &encountered)
 {
   /* Check conditions 1 for restricted specification*/
   List_iterator<TABLE_LIST> ti(sel->leaf_tables);
   TABLE_LIST *tbl;
-  while ((tbl= ti++))
+  while ((tbl = ti++))
   {
-    st_select_lex_unit *unit= tbl->get_unit();
+    st_select_lex_unit *unit = tbl->get_unit();
     if (unit)
-    { 
-      if(!tbl->is_with_table())
+    {
+      if (!tbl->is_with_table())
       {
-        if (check_unrestricted_recursive(unit->first_select(), 
-					 unrestricted, 
-				         encountered))
+        if (check_unrestricted_recursive(unit->first_select(), unrestricted, encountered))
           return true;
       }
       if (!(tbl->is_recursive_with_table() && unit->with_element->owner == owner))
         continue;
-      With_element *with_elem= unit->with_element;
+      With_element *with_elem = unit->with_element;
       if (encountered & with_elem->get_elem_map())
-        unrestricted|= with_elem->mutually_recursive;
-      else if (with_elem ==this)
-        encountered|= with_elem->get_elem_map();
+        unrestricted |= with_elem->mutually_recursive;
+      else if (with_elem == this)
+        encountered |= with_elem->get_elem_map();
     }
-  } 
-  for (With_element *with_elem= owner->with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  }
+  for (With_element *with_elem = owner->with_list.first; with_elem; with_elem = with_elem->next)
   {
     if (!with_elem->is_recursive && (unrestricted & with_elem->get_elem_map()))
       continue;
     if (encountered & with_elem->get_elem_map())
     {
-      uint cnt= 0;
-      table_map encountered_mr= encountered & with_elem->mutually_recursive;
-      for (table_map map= encountered_mr >> with_elem->number;
-           map != 0;
-           map>>= 1) 
+      uint cnt = 0;
+      table_map encountered_mr = encountered & with_elem->mutually_recursive;
+      for (table_map map = encountered_mr >> with_elem->number; map != 0; map >>= 1)
       {
         if (map & 1)
-        { 
+        {
           if (cnt)
-          { 
-            unrestricted|= with_elem->mutually_recursive;
+          {
+            unrestricted |= with_elem->mutually_recursive;
             break;
           }
           else
             cnt++;
-	}
+        }
       }
     }
   }
 
-  
   /* Check conditions 2 for restricted specification*/
   ti.rewind();
-  while ((tbl= ti++))
+  while ((tbl = ti++))
   {
     if (!tbl->is_with_table_recursive_reference())
       continue;
-    for (TABLE_LIST *tab= tbl; tab; tab= tab->embedding)
+    for (TABLE_LIST *tab = tbl; tab; tab = tab->embedding)
     {
       if (tab->outer_join & (JOIN_TYPE_LEFT | JOIN_TYPE_RIGHT))
       {
-        unrestricted|= mutually_recursive;
-	break;
+        unrestricted |= mutually_recursive;
+        break;
       }
     }
   }
   return false;
 }
 
-
 /**
   @brief
   Check subqueries with recursive table references from FROM list of this select
- 
+
  @details
-    For each recursive table reference from the FROM list of this select 
+    For each recursive table reference from the FROM list of this select
     this method checks:
     - whether this reference is within a materialized derived table and
       if so it report an error
     - whether this reference is within a subquery and if so it set a flag
       in this subquery that disallows some optimization strategies for
       this subquery.
- 
+
   @retval
-    true    if an error is reported 
+    true    if an error is reported
     false   otherwise
 */
 
@@ -1637,32 +1495,30 @@ bool st_select_lex::check_subqueries_with_recursive_references()
 {
   List_iterator<TABLE_LIST> ti(leaf_tables);
   TABLE_LIST *tbl;
-  while ((tbl= ti++))
+  while ((tbl = ti++))
   {
     if (!(tbl->is_with_table_recursive_reference()))
       continue;
-    With_element *rec_elem= tbl->with;
+    With_element *rec_elem = tbl->with;
     st_select_lex_unit *sl_master;
-    for (st_select_lex *sl= this; sl; sl= sl_master->outer_select())
+    for (st_select_lex *sl = this; sl; sl = sl_master->outer_select())
     {
-      sl_master= sl->master_unit();
-      if (sl_master->with_element &&
-          sl_master->with_element->get_owner() == rec_elem->get_owner())
+      sl_master = sl->master_unit();
+      if (sl_master->with_element && sl_master->with_element->get_owner() == rec_elem->get_owner())
         break;
-      sl->uncacheable|= UNCACHEABLE_DEPENDENT;
-      sl_master->uncacheable|= UNCACHEABLE_DEPENDENT;
+      sl->uncacheable |= UNCACHEABLE_DEPENDENT;
+      sl_master->uncacheable |= UNCACHEABLE_DEPENDENT;
       if (sl_master->derived)
         sl_master->derived->register_as_derived_with_rec_ref(rec_elem);
       if (sl_master->item)
       {
-        Item_subselect *subq= (Item_subselect *) (sl_master->item);
+        Item_subselect *subq = (Item_subselect *)(sl_master->item);
         subq->register_as_with_rec_ref(rec_elem);
       }
     }
   }
   return false;
 }
-
 
 /**
   @brief
@@ -1683,14 +1539,12 @@ void With_clause::print(THD *thd, String *str, enum_query_type query_type)
     Any with clause contains just definitions of CTE tables.
     No data expansion is applied to these definitions.
   */
-  query_type= (enum_query_type) (query_type | QT_NO_DATA_EXPANSION);
+  query_type = (enum_query_type)(query_type | QT_NO_DATA_EXPANSION);
 
   str->append(STRING_WITH_LEN("with "));
   if (with_recursive)
     str->append(STRING_WITH_LEN("recursive "));
-  for (With_element *with_elem= with_list.first;
-       with_elem;
-       with_elem= with_elem->next)
+  for (With_element *with_elem = with_list.first; with_elem; with_elem = with_elem->next)
   {
     if (with_elem != with_list.first)
       str->append(STRING_WITH_LEN(", "));
@@ -1698,21 +1552,19 @@ void With_clause::print(THD *thd, String *str, enum_query_type query_type)
   }
 }
 
-
 static void list_strlex_print(THD *thd, String *str, List<Lex_ident_sys> *list)
 {
   List_iterator_fast<Lex_ident_sys> li(*list);
-  bool first= TRUE;
-  while(Lex_ident_sys *col_name= li++)
+  bool first = TRUE;
+  while (Lex_ident_sys *col_name = li++)
   {
     if (first)
-      first= FALSE;
+      first = FALSE;
     else
       str->append(',');
     append_identifier(thd, str, col_name);
   }
 }
-
 
 /**
    @brief
@@ -1750,20 +1602,16 @@ void With_element::print(THD *thd, String *str, enum_query_type query_type)
   }
 }
 
-
 bool With_element::instantiate_tmp_tables()
 {
   List_iterator_fast<TABLE_LIST> li(rec_result->rec_table_refs);
   TABLE_LIST *rec_tbl;
-  while ((rec_tbl= li++))
+  while ((rec_tbl = li++))
   {
-    TABLE *rec_table= rec_tbl->table;
+    TABLE *rec_table = rec_tbl->table;
     if (!rec_table->is_created() &&
-        instantiate_tmp_table(rec_table,
-                              rec_table->s->key_info,
-                              rec_result->tmp_table_param.start_recinfo,
-                              &rec_result->tmp_table_param.recinfo,
-                              0))
+        instantiate_tmp_table(rec_table, rec_table->s->key_info, rec_result->tmp_table_param.start_recinfo,
+                              &rec_result->tmp_table_param.recinfo, 0))
       return true;
 
     rec_table->file->extra(HA_EXTRA_WRITE_CACHE);
@@ -1774,7 +1622,7 @@ bool With_element::instantiate_tmp_tables()
 
 void With_element::set_cycle_list(List<Lex_ident_sys> *cycle_list_arg)
 {
-  cycle_list= cycle_list_arg;
+  cycle_list = cycle_list_arg;
 
   /*
     If a CTE table with columns c1,...,cn is defined with a cycle
@@ -1785,13 +1633,13 @@ void With_element::set_cycle_list(List<Lex_ident_sys> *cycle_list_arg)
     each UNION ALL at the top level of the specification is interpreted
     as a UNION DISTINCT over the cycle columns.
   */
-  for (st_select_lex *sl=  spec->first_select(); sl; sl= sl->next_select())
+  for (st_select_lex *sl = spec->first_select(); sl; sl = sl->next_select())
   {
-    spec->union_distinct= sl;
+    spec->union_distinct = sl;
     if (sl != spec->first_select())
     {
-      sl->distinct= TRUE;
-      sl->with_all_modifier= FALSE;
+      sl->distinct = TRUE;
+      sl->with_all_modifier = FALSE;
     }
   }
 }

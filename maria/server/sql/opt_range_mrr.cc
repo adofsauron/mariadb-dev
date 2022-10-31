@@ -19,25 +19,24 @@
  ****************************************************************************/
 
 /* MRR range sequence, SEL_ARG* implementation: stack entry */
-typedef struct st_range_seq_entry 
+typedef struct st_range_seq_entry
 {
-  /* 
+  /*
     Pointers in min and max keys. They point to right-after-end of key
     images. The 0-th entry has these pointing to key tuple start.
   */
   uchar *min_key, *max_key;
-  
-  /* 
+
+  /*
     Flags, for {keypart0, keypart1, ... this_keypart} subtuple.
     min_key_flag may have NULL_RANGE set.
   */
   uint min_key_flag, max_key_flag;
-  
+
   /* Number of key parts */
   int min_key_parts, max_key_parts;
   SEL_ARG *key_tree;
 } RANGE_SEQ_ENTRY;
-
 
 /*
   MRR range sequence, SEL_ARG* implementation: SEL_ARG graph traversal context
@@ -47,12 +46,12 @@ typedef struct st_sel_arg_range_seq
   uint keyno;      /* index of used tree in SEL_TREE structure */
   uint real_keyno; /* Number of the index in tables */
   PARAM *param;
-  KEY_PART *key_parts; 
+  KEY_PART *key_parts;
   SEL_ARG *start; /* Root node of the traversed SEL_ARG* graph */
-  
+
   RANGE_SEQ_ENTRY stack[MAX_REF_PARTS];
   int i; /* Index of last used element in the above array */
-  
+
   bool at_start; /* TRUE <=> The traversal has just started */
   /*
     Iteration functions will set this to FALSE
@@ -61,14 +60,13 @@ typedef struct st_sel_arg_range_seq
   bool is_ror_scan;
 } SEL_ARG_RANGE_SEQ;
 
-
 /*
   Range sequence interface, SEL_ARG* implementation: Initialize the traversal
 
   SYNOPSIS
     init()
       init_params  SEL_ARG tree traversal context
-      n_ranges     [ignored] The number of ranges obtained 
+      n_ranges     [ignored] The number of ranges obtained
       flags        [ignored] HA_MRR_SINGLE_POINT, HA_MRR_FIXED_KEY
 
   RETURN
@@ -77,53 +75,49 @@ typedef struct st_sel_arg_range_seq
 
 range_seq_t sel_arg_range_seq_init(void *init_param, uint n_ranges, uint flags)
 {
-  SEL_ARG_RANGE_SEQ *seq= (SEL_ARG_RANGE_SEQ*)init_param;
-  seq->param->range_count=0;
-  seq->at_start= TRUE;
-  seq->param->max_key_parts= 0;
-  seq->stack[0].key_tree= NULL;
-  seq->stack[0].min_key= seq->param->min_key;
-  seq->stack[0].min_key_flag= 0;
-  seq->stack[0].min_key_parts= 0;
+  SEL_ARG_RANGE_SEQ *seq = (SEL_ARG_RANGE_SEQ *)init_param;
+  seq->param->range_count = 0;
+  seq->at_start = TRUE;
+  seq->param->max_key_parts = 0;
+  seq->stack[0].key_tree = NULL;
+  seq->stack[0].min_key = seq->param->min_key;
+  seq->stack[0].min_key_flag = 0;
+  seq->stack[0].min_key_parts = 0;
 
-  seq->stack[0].max_key= seq->param->max_key;
-  seq->stack[0].max_key_flag= 0;
-  seq->stack[0].max_key_parts= 0;
-  seq->i= 0;
+  seq->stack[0].max_key = seq->param->max_key;
+  seq->stack[0].max_key_flag = 0;
+  seq->stack[0].max_key_parts = 0;
+  seq->i = 0;
   return init_param;
 }
 
-
 static void step_down_to(SEL_ARG_RANGE_SEQ *arg, SEL_ARG *key_tree)
 {
-  RANGE_SEQ_ENTRY *cur= &arg->stack[arg->i+1];
-  RANGE_SEQ_ENTRY *prev= &arg->stack[arg->i];
-  
-  cur->key_tree= key_tree;
-  cur->min_key= prev->min_key;
-  cur->max_key= prev->max_key;
-  cur->min_key_parts= prev->min_key_parts;
-  cur->max_key_parts= prev->max_key_parts;
+  RANGE_SEQ_ENTRY *cur = &arg->stack[arg->i + 1];
+  RANGE_SEQ_ENTRY *prev = &arg->stack[arg->i];
 
-  uint16 stor_length= arg->param->key[arg->keyno][key_tree->part].store_length;
+  cur->key_tree = key_tree;
+  cur->min_key = prev->min_key;
+  cur->max_key = prev->max_key;
+  cur->min_key_parts = prev->min_key_parts;
+  cur->max_key_parts = prev->max_key_parts;
 
-  key_tree->store_min_max(arg->key_parts, stor_length,
-                          &cur->min_key, prev->min_key_flag,
-                          &cur->max_key, prev->max_key_flag,
-                          &cur->min_key_parts, &cur->max_key_parts);
+  uint16 stor_length = arg->param->key[arg->keyno][key_tree->part].store_length;
 
-  cur->min_key_flag= prev->min_key_flag | key_tree->get_min_flag(arg->key_parts);
-  cur->max_key_flag= prev->max_key_flag | key_tree->get_max_flag(arg->key_parts);
+  key_tree->store_min_max(arg->key_parts, stor_length, &cur->min_key, prev->min_key_flag, &cur->max_key,
+                          prev->max_key_flag, &cur->min_key_parts, &cur->max_key_parts);
+
+  cur->min_key_flag = prev->min_key_flag | key_tree->get_min_flag(arg->key_parts);
+  cur->max_key_flag = prev->max_key_flag | key_tree->get_max_flag(arg->key_parts);
 
   if (key_tree->is_null_interval())
     cur->min_key_flag |= NULL_RANGE;
   (arg->i)++;
 }
 
-
 /*
   Range sequence interface, SEL_ARG* implementation: get the next interval
-  
+
   SYNOPSIS
     sel_arg_range_seq_next()
       rseq        Value returned from sel_arg_range_seq_init
@@ -146,7 +140,7 @@ static void step_down_to(SEL_ARG_RANGE_SEQ *arg, SEL_ARG *key_tree)
 
 #if defined(_MSC_FULL_VER) && (_MSC_FULL_VER == 160030319)
 /*
-   Workaround Visual Studio 2010 RTM compiler backend bug, the function enters 
+   Workaround Visual Studio 2010 RTM compiler backend bug, the function enters
    infinite loop.
  */
 #pragma optimize("g", off)
@@ -155,46 +149,44 @@ static void step_down_to(SEL_ARG_RANGE_SEQ *arg, SEL_ARG *key_tree)
 bool sel_arg_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range)
 {
   SEL_ARG *key_tree;
-  SEL_ARG_RANGE_SEQ *seq= (SEL_ARG_RANGE_SEQ*)rseq;
+  SEL_ARG_RANGE_SEQ *seq = (SEL_ARG_RANGE_SEQ *)rseq;
   if (seq->at_start)
   {
-    key_tree= seq->start;
-    seq->at_start= FALSE;
+    key_tree = seq->start;
+    seq->at_start = FALSE;
     goto walk_up_n_right;
   }
 
-  key_tree= seq->stack[seq->i].key_tree;
+  key_tree = seq->stack[seq->i].key_tree;
   /* Ok, we're at some "full tuple" position in the tree */
- 
+
   /* Step down if we can */
-  if (key_tree->index_order_next(seq->key_parts) &&
-      key_tree->index_order_next(seq->key_parts) != &null_element)
+  if (key_tree->index_order_next(seq->key_parts) && key_tree->index_order_next(seq->key_parts) != &null_element)
   {
-    //step down; (update the tuple, we'll step right and stay there)
+    // step down; (update the tuple, we'll step right and stay there)
     seq->i--;
     step_down_to(seq, key_tree->index_order_next(seq->key_parts));
-    key_tree= key_tree->index_order_next(seq->key_parts);
-    seq->is_ror_scan= FALSE;
+    key_tree = key_tree->index_order_next(seq->key_parts);
+    seq->is_ror_scan = FALSE;
     goto walk_right_n_up;
   }
 
   /* Ok, can't step down, walk left until we can step down */
   while (1)
   {
-    if (seq->i == 1) // can't step left
+    if (seq->i == 1)  // can't step left
       return 1;
     /* Step left */
     seq->i--;
-    key_tree= seq->stack[seq->i].key_tree;
+    key_tree = seq->stack[seq->i].key_tree;
 
     /* Step down if we can */
-    if (key_tree->index_order_next(seq->key_parts) && 
-        key_tree->index_order_next(seq->key_parts) != &null_element)
+    if (key_tree->index_order_next(seq->key_parts) && key_tree->index_order_next(seq->key_parts) != &null_element)
     {
       // Step down; update the tuple
       seq->i--;
       step_down_to(seq, key_tree->index_order_next(seq->key_parts));
-      key_tree= key_tree->index_order_next(seq->key_parts);
+      key_tree = key_tree->index_order_next(seq->key_parts);
       break;
     }
   }
@@ -204,82 +196,75 @@ bool sel_arg_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range)
     Walk right-up while we can
   */
 walk_right_n_up:
-  while (key_tree->next_key_part && key_tree->next_key_part != &null_element && 
-         key_tree->next_key_part->part == key_tree->part + 1 &&
-         key_tree->next_key_part->type == SEL_ARG::KEY_RANGE)
+  while (key_tree->next_key_part && key_tree->next_key_part != &null_element &&
+         key_tree->next_key_part->part == key_tree->part + 1 && key_tree->next_key_part->type == SEL_ARG::KEY_RANGE)
   {
     {
-      RANGE_SEQ_ENTRY *cur= &seq->stack[seq->i];
-      size_t min_key_length= cur->min_key - seq->param->min_key;
-      size_t max_key_length= cur->max_key - seq->param->max_key;
-      size_t len= cur->min_key - cur[-1].min_key;
-      if (!(min_key_length == max_key_length &&
-            !memcmp(cur[-1].min_key, cur[-1].max_key, len) &&
-            !key_tree->min_flag && !key_tree->max_flag))
+      RANGE_SEQ_ENTRY *cur = &seq->stack[seq->i];
+      size_t min_key_length = cur->min_key - seq->param->min_key;
+      size_t max_key_length = cur->max_key - seq->param->max_key;
+      size_t len = cur->min_key - cur[-1].min_key;
+      if (!(min_key_length == max_key_length && !memcmp(cur[-1].min_key, cur[-1].max_key, len) && !key_tree->min_flag &&
+            !key_tree->max_flag))
       {
-        seq->is_ror_scan= FALSE;
-        key_tree->store_next_min_max_keys(seq->param->key[seq->keyno],
-                                          &cur->min_key, &cur->min_key_flag,
-                                          &cur->max_key, &cur->max_key_flag,
-                                          &cur->min_key_parts, &cur->max_key_parts);
+        seq->is_ror_scan = FALSE;
+        key_tree->store_next_min_max_keys(seq->param->key[seq->keyno], &cur->min_key, &cur->min_key_flag, &cur->max_key,
+                                          &cur->max_key_flag, &cur->min_key_parts, &cur->max_key_parts);
         break;
       }
     }
-  
+
     /*
       Ok, current atomic interval is in form "t.field=const" and there is
       next_key_part interval. Step right, and walk up from there.
     */
-    key_tree= key_tree->next_key_part;
+    key_tree = key_tree->next_key_part;
 
-walk_up_n_right:
-    while (key_tree->index_order_prev(seq->key_parts) &&
-           key_tree->index_order_prev(seq->key_parts) != &null_element)
+  walk_up_n_right:
+    while (key_tree->index_order_prev(seq->key_parts) && key_tree->index_order_prev(seq->key_parts) != &null_element)
     {
       /* Step up */
-      key_tree= key_tree->index_order_prev(seq->key_parts);
+      key_tree = key_tree->index_order_prev(seq->key_parts);
     }
     step_down_to(seq, key_tree);
   }
 
   /* Ok got a tuple */
-  RANGE_SEQ_ENTRY *cur= &seq->stack[seq->i];
-  uint min_key_length= (uint)(cur->min_key - seq->param->min_key);
-  
-  range->ptr= (char*)(intptr)(key_tree->part);
+  RANGE_SEQ_ENTRY *cur = &seq->stack[seq->i];
+  uint min_key_length = (uint)(cur->min_key - seq->param->min_key);
+
+  range->ptr = (char *)(intptr)(key_tree->part);
   uint max_key_parts;
   if (cur->min_key_flag & GEOM_FLAG)
   {
-    range->range_flag= cur->min_key_flag;
+    range->range_flag = cur->min_key_flag;
 
     /* Here minimum contains also function code bits, and maximum is +inf */
-    range->start_key.key=    seq->param->min_key;
-    range->start_key.length= min_key_length;
-    range->start_key.keypart_map= make_prev_keypart_map(cur->min_key_parts);
-    range->start_key.flag=  (ha_rkey_function) (cur->min_key_flag ^ GEOM_FLAG);
-    max_key_parts= cur->min_key_parts;
+    range->start_key.key = seq->param->min_key;
+    range->start_key.length = min_key_length;
+    range->start_key.keypart_map = make_prev_keypart_map(cur->min_key_parts);
+    range->start_key.flag = (ha_rkey_function)(cur->min_key_flag ^ GEOM_FLAG);
+    max_key_parts = cur->min_key_parts;
   }
   else
   {
-    max_key_parts= MY_MAX(cur->min_key_parts, cur->max_key_parts);
-    
-    range->start_key.key=    seq->param->min_key;
-    range->start_key.length= (uint)(cur->min_key - seq->param->min_key);
-    range->start_key.keypart_map= make_prev_keypart_map(cur->min_key_parts);
-    range->start_key.flag= (cur->min_key_flag & NEAR_MIN ? HA_READ_AFTER_KEY : 
-                                                           HA_READ_KEY_EXACT);
+    max_key_parts = MY_MAX(cur->min_key_parts, cur->max_key_parts);
 
-    range->end_key.key=    seq->param->max_key;
-    range->end_key.length= (uint)(cur->max_key - seq->param->max_key);
-    range->end_key.flag= (cur->max_key_flag & NEAR_MAX ? HA_READ_BEFORE_KEY : 
-                                                         HA_READ_AFTER_KEY);
-    range->end_key.keypart_map= make_prev_keypart_map(cur->max_key_parts);
-    
+    range->start_key.key = seq->param->min_key;
+    range->start_key.length = (uint)(cur->min_key - seq->param->min_key);
+    range->start_key.keypart_map = make_prev_keypart_map(cur->min_key_parts);
+    range->start_key.flag = (cur->min_key_flag & NEAR_MIN ? HA_READ_AFTER_KEY : HA_READ_KEY_EXACT);
+
+    range->end_key.key = seq->param->max_key;
+    range->end_key.length = (uint)(cur->max_key - seq->param->max_key);
+    range->end_key.flag = (cur->max_key_flag & NEAR_MAX ? HA_READ_BEFORE_KEY : HA_READ_AFTER_KEY);
+    range->end_key.keypart_map = make_prev_keypart_map(cur->max_key_parts);
+
     KEY *key_info;
-    if (seq->real_keyno== MAX_KEY)
-      key_info= NULL;
+    if (seq->real_keyno == MAX_KEY)
+      key_info = NULL;
     else
-      key_info= &seq->param->table->key_info[seq->real_keyno];
+      key_info = &seq->param->table->key_info[seq->real_keyno];
 
     /*
       This is an equality range (keypart_0=X and ... and keypart_n=Z) if
@@ -288,16 +273,14 @@ walk_up_n_right:
         (2) - The lower bound and the upper bound of the range has the
               same value (min_key == max_key).
     */
-    const uint is_open_range =
-        (NO_MIN_RANGE | NO_MAX_RANGE | NEAR_MIN | NEAR_MAX | GEOM_FLAG);
-    const bool is_eq_range_pred =
-        !(cur->min_key_flag & is_open_range) &&              // (1)
-        !(cur->max_key_flag & is_open_range) &&              // (1)
-        range->start_key.length == range->end_key.length &&  // (2)
-        !memcmp(seq->param->min_key, seq->param->max_key,    // (2)
-                range->start_key.length);
+    const uint is_open_range = (NO_MIN_RANGE | NO_MAX_RANGE | NEAR_MIN | NEAR_MAX | GEOM_FLAG);
+    const bool is_eq_range_pred = !(cur->min_key_flag & is_open_range) &&              // (1)
+                                  !(cur->max_key_flag & is_open_range) &&              // (1)
+                                  range->start_key.length == range->end_key.length &&  // (2)
+                                  !memcmp(seq->param->min_key, seq->param->max_key,    // (2)
+                                          range->start_key.length);
 
-    range->range_flag= 0;
+    range->range_flag = 0;
     if (is_eq_range_pred)
     {
       range->range_flag = EQ_RANGE;
@@ -310,16 +293,15 @@ walk_up_n_right:
           (3) - The table uses extended keys, this key covers all components,
              and we have conditions for all key parts.
       */
-      if (
-          !key_info ||                                                   // (1)
-          ((uint)key_tree->part+1 == key_info->user_defined_key_parts && // (2)
-	   key_info->flags & HA_NOSAME) ||                               // (2)
-          ((key_info->flags & HA_EXT_NOSAME) &&                          // (3)
-           (uint)key_tree->part+1 == key_info->ext_key_parts)            // (3)
-         )
+      if (!key_info ||                                                      // (1)
+          ((uint)key_tree->part + 1 == key_info->user_defined_key_parts &&  // (2)
+           key_info->flags & HA_NOSAME) ||                                  // (2)
+          ((key_info->flags & HA_EXT_NOSAME) &&                             // (3)
+           (uint)key_tree->part + 1 == key_info->ext_key_parts)             // (3)
+      )
         range->range_flag |= UNIQUE_RANGE | (cur->min_key_flag & NULL_RANGE);
     }
-      
+
     if (seq->is_ror_scan)
     {
       /*
@@ -335,11 +317,11 @@ walk_up_n_right:
             (range->start_key.length == range->end_key.length) &&
             !memcmp(range->start_key.key, range->end_key.key, range->start_key.length) &&
             is_key_scan_ror(seq->param, seq->real_keyno, key_tree->part + 1)))
-        seq->is_ror_scan= FALSE;
+        seq->is_ror_scan = FALSE;
     }
   }
   seq->param->range_count++;
-  seq->param->max_key_parts= MY_MAX(seq->param->max_key_parts, max_key_parts);
+  seq->param->max_key_parts = MY_MAX(seq->param->max_key_parts, max_key_parts);
   return 0;
 }
 
@@ -348,19 +330,18 @@ walk_up_n_right:
 #pragma optimize("g", on)
 #endif
 
-
 /****************************************************************************
   MRR Range Sequence Interface implementation that walks array<QUICK_RANGE>
  ****************************************************************************/
 
 /*
   Range sequence interface implementation for array<QUICK_RANGE>: initialize
-  
+
   SYNOPSIS
     quick_range_seq_init()
       init_param  Caller-opaque paramenter: QUICK_RANGE_SELECT* pointer
       n_ranges    Number of ranges in the sequence (ignored)
-      flags       MRR flags (currently not used) 
+      flags       MRR flags (currently not used)
 
   RETURN
     Opaque value to be passed to quick_range_seq_next
@@ -368,18 +349,16 @@ walk_up_n_right:
 
 range_seq_t quick_range_seq_init(void *init_param, uint n_ranges, uint flags)
 {
-  QUICK_RANGE_SELECT *quick= (QUICK_RANGE_SELECT*)init_param;
-  quick->qr_traversal_ctx.first=  (QUICK_RANGE**)quick->ranges.buffer;
-  quick->qr_traversal_ctx.cur=    (QUICK_RANGE**)quick->ranges.buffer;
-  quick->qr_traversal_ctx.last=   quick->qr_traversal_ctx.cur + 
-                                  quick->ranges.elements;
+  QUICK_RANGE_SELECT *quick = (QUICK_RANGE_SELECT *)init_param;
+  quick->qr_traversal_ctx.first = (QUICK_RANGE **)quick->ranges.buffer;
+  quick->qr_traversal_ctx.cur = (QUICK_RANGE **)quick->ranges.buffer;
+  quick->qr_traversal_ctx.last = quick->qr_traversal_ctx.cur + quick->ranges.elements;
   return &quick->qr_traversal_ctx;
 }
 
-
 /*
   Range sequence interface implementation for array<QUICK_RANGE>: get next
-  
+
   SYNOPSIS
     quick_range_seq_next()
       rseq        Value returned from quick_range_seq_init
@@ -392,17 +371,15 @@ range_seq_t quick_range_seq_init(void *init_param, uint n_ranges, uint flags)
 
 bool quick_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range)
 {
-  QUICK_RANGE_SEQ_CTX *ctx= (QUICK_RANGE_SEQ_CTX*)rseq;
+  QUICK_RANGE_SEQ_CTX *ctx = (QUICK_RANGE_SEQ_CTX *)rseq;
 
   if (ctx->cur == ctx->last)
     return 1; /* no more ranges */
 
-  QUICK_RANGE *cur= *(ctx->cur);
+  QUICK_RANGE *cur = *(ctx->cur);
   cur->make_min_endpoint(&range->start_key);
   cur->make_max_endpoint(&range->end_key);
-  range->range_flag= cur->flag;
+  range->range_flag = cur->flag;
   ctx->cur++;
   return 0;
 }
-
-

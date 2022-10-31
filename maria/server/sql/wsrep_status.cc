@@ -21,28 +21,24 @@ mysql_mutex_t LOCK_wsrep_status;
 PSI_mutex_key key_LOCK_wsrep_status;
 #endif
 
-Wsrep_mutex*     Wsrep_status::m_mutex    = 0;
-wsrep::reporter* Wsrep_status::m_instance = 0;
+Wsrep_mutex *Wsrep_status::m_mutex = 0;
+wsrep::reporter *Wsrep_status::m_instance = 0;
 
-void Wsrep_status::report_log_msg(wsrep::reporter::log_level const level,
-                                  const char* const tag, size_t const tag_len,
-                                  const char* const buf, size_t const buf_len,
-                                  double const tstamp)
+void Wsrep_status::report_log_msg(wsrep::reporter::log_level const level, const char *const tag, size_t const tag_len,
+                                  const char *const buf, size_t const buf_len, double const tstamp)
 {
-  if (!Wsrep_status::m_instance) return;
+  if (!Wsrep_status::m_instance)
+    return;
 
-  Wsrep_status::m_instance->report_log_msg(level,
-    std::string(tag, tag_len) + std::string(buf, buf_len),
-    tstamp);
+  Wsrep_status::m_instance->report_log_msg(level, std::string(tag, tag_len) + std::string(buf, buf_len), tstamp);
 }
 
-void Wsrep_status::init_once(const std::string& file_name)
+void Wsrep_status::init_once(const std::string &file_name)
 {
   if (file_name.length() > 0 && m_instance == 0)
   {
-    mysql_mutex_init(key_LOCK_wsrep_status, &LOCK_wsrep_status,
-                     MY_MUTEX_INIT_FAST);
-    m_mutex    = new Wsrep_mutex(&LOCK_wsrep_status);
+    mysql_mutex_init(key_LOCK_wsrep_status, &LOCK_wsrep_status, MY_MUTEX_INIT_FAST);
+    m_mutex = new Wsrep_mutex(&LOCK_wsrep_status);
     m_instance = new wsrep::reporter(*m_mutex, file_name, 4);
   }
 }
@@ -52,9 +48,9 @@ void Wsrep_status::destroy()
   if (m_instance)
   {
     delete m_instance;
-    m_instance= 0;
+    m_instance = 0;
     delete m_mutex;
-    m_mutex= 0;
+    m_mutex = 0;
     mysql_mutex_destroy(&LOCK_wsrep_status);
   }
 }

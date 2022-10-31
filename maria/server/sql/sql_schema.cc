@@ -19,14 +19,11 @@
 #include "sql_schema.h"
 #include "sql_class.h"
 
-class Schema_oracle: public Schema
+class Schema_oracle : public Schema
 {
-public:
-  Schema_oracle(const LEX_CSTRING &name)
-   :Schema(name)
-  { }
-  const Type_handler *map_data_type(THD *thd, const Type_handler *src)
-                                    const
+ public:
+  Schema_oracle(const LEX_CSTRING &name) : Schema(name) {}
+  const Type_handler *map_data_type(THD *thd, const Type_handler *src) const
   {
     if (src == &type_handler_newdate)
       return thd->type_handler_for_datetime();
@@ -34,28 +31,21 @@ public:
   }
 };
 
-
-class Schema_maxdb: public Schema
+class Schema_maxdb : public Schema
 {
-public:
-  Schema_maxdb(const LEX_CSTRING &name)
-   :Schema(name)
-  { }
-  const Type_handler *map_data_type(THD *thd, const Type_handler *src)
-                                    const
+ public:
+  Schema_maxdb(const LEX_CSTRING &name) : Schema(name) {}
+  const Type_handler *map_data_type(THD *thd, const Type_handler *src) const
   {
-    if (src == &type_handler_timestamp ||
-        src == &type_handler_timestamp2)
+    if (src == &type_handler_timestamp || src == &type_handler_timestamp2)
       return thd->type_handler_for_datetime();
     return src;
   }
 };
 
-
-Schema        mariadb_schema(Lex_cstring(STRING_WITH_LEN("mariadb_schema")));
+Schema mariadb_schema(Lex_cstring(STRING_WITH_LEN("mariadb_schema")));
 Schema_oracle oracle_schema(Lex_cstring(STRING_WITH_LEN("oracle_schema")));
-Schema_maxdb  maxdb_schema(Lex_cstring(STRING_WITH_LEN("maxdb_schema")));
-
+Schema_maxdb maxdb_schema(Lex_cstring(STRING_WITH_LEN("maxdb_schema")));
 
 Schema *Schema::find_by_name(const LEX_CSTRING &name)
 {
@@ -68,7 +58,6 @@ Schema *Schema::find_by_name(const LEX_CSTRING &name)
     return &maxdb_schema;
   return NULL;
 }
-
 
 Schema *Schema::find_implied(THD *thd)
 {

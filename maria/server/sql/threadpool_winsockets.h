@@ -28,7 +28,7 @@ struct win_aiosocket
   HANDLE m_handle{};
   /** Whether the m_handle refers to pipe*/
   bool m_is_pipe{};
- 
+
   /* Read buffer handling */
 
   /** Pointer to buffer of size READ_BUFSIZ. Can be NULL.*/
@@ -43,10 +43,8 @@ struct win_aiosocket
   size_t (*m_orig_vio_read)(st_vio *, unsigned char *, size_t){};
   char (*m_orig_vio_has_data)(st_vio *){};
 
-
-
   /**
-   Begins asynchronnous reading from socket/pipe. 
+   Begins asynchronnous reading from socket/pipe.
    On IO completion, pre-read some bytes into internal buffer
   */
   DWORD begin_read();

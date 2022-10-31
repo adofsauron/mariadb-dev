@@ -34,42 +34,30 @@ unsigned long mysql_global_audit_mask[MYSQL_AUDIT_CLASS_MASK_SIZE];
 
 static mysql_mutex_t LOCK_audit_mask;
 
-
-static inline
-void set_audit_mask(unsigned long *mask, uint event_class)
+static inline void set_audit_mask(unsigned long *mask, uint event_class)
 {
-  mask[0]= 1;
-  mask[0]<<= event_class;
+  mask[0] = 1;
+  mask[0] <<= event_class;
 }
 
-static inline
-void add_audit_mask(unsigned long *mask, const unsigned long *rhs)
-{
-  mask[0]|= rhs[0];
-}
+static inline void add_audit_mask(unsigned long *mask, const unsigned long *rhs) { mask[0] |= rhs[0]; }
 
-static inline
-bool check_audit_mask(const unsigned long *lhs,
-                      const unsigned long *rhs)
-{
-  return !(lhs[0] & rhs[0]);
-}
-
+static inline bool check_audit_mask(const unsigned long *lhs, const unsigned long *rhs) { return !(lhs[0] & rhs[0]); }
 
 /**
   Acquire and lock any additional audit plugins as required
-  
+
   @param[in] thd
   @param[in] plugin
   @param[in] arg
 
-  @retval FALSE Always  
+  @retval FALSE Always
 */
 
 static my_bool acquire_plugins(THD *thd, plugin_ref plugin, void *arg)
 {
-  ulong *event_class_mask= (ulong*) arg;
-  st_mysql_audit *data= plugin_data(plugin, struct st_mysql_audit *);
+  ulong *event_class_mask = (ulong *)arg;
+  st_mysql_audit *data = plugin_data(plugin, struct st_mysql_audit *);
 
   /* Check if this plugin is interested in the event */
   if (check_audit_mask(data->class_mask, event_class_mask))
@@ -83,22 +71,20 @@ static my_bool acquire_plugins(THD *thd, plugin_ref plugin, void *arg)
   */
   if (!check_audit_mask(data->class_mask, thd->audit_class_mask))
     return 0;
-  
+
   /* Check if we need to initialize the array of acquired plugins */
   if (unlikely(!thd->audit_class_plugins.buffer))
   {
     /* specify some reasonable initialization defaults */
-    my_init_dynamic_array(PSI_INSTRUMENT_ME, &thd->audit_class_plugins,
-                          sizeof(plugin_ref), 16, 16, MYF(0));
+    my_init_dynamic_array(PSI_INSTRUMENT_ME, &thd->audit_class_plugins, sizeof(plugin_ref), 16, 16, MYF(0));
   }
-  
+
   /* lock the plugin and add it to the list */
-  plugin= my_plugin_lock(NULL, plugin);
-  insert_dynamic(&thd->audit_class_plugins, (uchar*) &plugin);
+  plugin = my_plugin_lock(NULL, plugin);
+  insert_dynamic(&thd->audit_class_plugins, (uchar *)&plugin);
 
   return 0;
 }
-
 
 /**
   @brief Acquire audit plugins
@@ -117,11 +103,10 @@ void mysql_audit_acquire_plugins(THD *thd, ulong *event_class_mask)
   {
     plugin_foreach(thd, acquire_plugins, MYSQL_AUDIT_PLUGIN, event_class_mask);
     add_audit_mask(thd->audit_class_mask, event_class_mask);
-    thd->audit_plugin_version= global_plugin_version;
+    thd->audit_plugin_version = global_plugin_version;
   }
   DBUG_VOID_RETURN;
 }
-
 
 /**
   Check if there were changes in the state of plugins
@@ -131,15 +116,11 @@ void mysql_audit_acquire_plugins(THD *thd, ulong *event_class_mask)
 
 */
 
-my_bool mysql_audit_release_required(THD *thd)
-{
-  return thd && (thd->audit_plugin_version != global_plugin_version);
-}
-
+my_bool mysql_audit_release_required(THD *thd) { return thd && (thd->audit_plugin_version != global_plugin_version); }
 
 /**
   Release any resources associated with the current thd.
-  
+
   @param[in] thd
 
 */
@@ -147,16 +128,16 @@ my_bool mysql_audit_release_required(THD *thd)
 void mysql_audit_release(THD *thd)
 {
   plugin_ref *plugins, *plugins_last;
-  
+
   if (!thd || !(thd->audit_class_plugins.elements))
     return;
-  
-  plugins= (plugin_ref*) thd->audit_class_plugins.buffer;
-  plugins_last= plugins + thd->audit_class_plugins.elements;
+
+  plugins = (plugin_ref *)thd->audit_class_plugins.buffer;
+  plugins_last = plugins + thd->audit_class_plugins.elements;
   for (; plugins < plugins_last; plugins++)
   {
-    st_mysql_audit *data= plugin_data(*plugins, struct st_mysql_audit *);
-	
+    st_mysql_audit *data = plugin_data(*plugins, struct st_mysql_audit *);
+
     /* Check to see if the plugin has a release method */
     if (!(data->release_thd))
       continue;
@@ -165,20 +146,18 @@ void mysql_audit_release(THD *thd)
     data->release_thd(thd);
   }
 
-  /* Now we actually unlock the plugins */  
-  plugin_unlock_list(NULL, (plugin_ref*) thd->audit_class_plugins.buffer,
-                     thd->audit_class_plugins.elements);
-  
+  /* Now we actually unlock the plugins */
+  plugin_unlock_list(NULL, (plugin_ref *)thd->audit_class_plugins.buffer, thd->audit_class_plugins.elements);
+
   /* Reset the state of thread values */
   reset_dynamic(&thd->audit_class_plugins);
   bzero(thd->audit_class_mask, sizeof(thd->audit_class_mask));
-  thd->audit_plugin_version= -1;
+  thd->audit_plugin_version = -1;
 }
-
 
 /**
   Initialize thd variables used by Audit
-  
+
   @param[in] thd
 
 */
@@ -189,15 +168,14 @@ void mysql_audit_init_thd(THD *thd)
   bzero(thd->audit_class_mask, sizeof(thd->audit_class_mask));
 }
 
-
 /**
   Free thd variables used by Audit
-  
+
   @param[in] thd
   @param[in] plugin
   @param[in] arg
 
-  @retval FALSE Always  
+  @retval FALSE Always
 */
 
 void mysql_audit_free_thd(THD *thd)
@@ -210,20 +188,17 @@ void mysql_audit_free_thd(THD *thd)
 #ifdef HAVE_PSI_INTERFACE
 static PSI_mutex_key key_LOCK_audit_mask;
 
-static PSI_mutex_info all_audit_mutexes[]=
-{
-  { &key_LOCK_audit_mask, "LOCK_audit_mask", PSI_FLAG_GLOBAL}
-};
+static PSI_mutex_info all_audit_mutexes[] = {{&key_LOCK_audit_mask, "LOCK_audit_mask", PSI_FLAG_GLOBAL}};
 
 static void init_audit_psi_keys(void)
 {
-  const char* category= "sql";
+  const char *category = "sql";
   int count;
 
   if (PSI_server == NULL)
     return;
 
-  count= array_elements(all_audit_mutexes);
+  count = array_elements(all_audit_mutexes);
   PSI_server->register_mutex(category, all_audit_mutexes, count);
 }
 #endif /* HAVE_PSI_INTERFACE */
@@ -242,16 +217,11 @@ void mysql_audit_initialize()
   bzero(mysql_global_audit_mask, sizeof(mysql_global_audit_mask));
 }
 
-
 /**
-  Finalize Audit global variables  
+  Finalize Audit global variables
 */
 
-void mysql_audit_finalize()
-{
-  mysql_mutex_destroy(&LOCK_audit_mask);
-}
-
+void mysql_audit_finalize() { mysql_mutex_destroy(&LOCK_audit_mask); }
 
 /**
   Initialize an Audit plug-in
@@ -264,24 +234,22 @@ void mysql_audit_finalize()
 
 int initialize_audit_plugin(st_plugin_int *plugin)
 {
-  st_mysql_audit *data= (st_mysql_audit*) plugin->plugin->info;
+  st_mysql_audit *data = (st_mysql_audit *)plugin->plugin->info;
 
   if (!data->event_notify || !data->class_mask[0])
   {
-    sql_print_error("Plugin '%s' has invalid data.",
-                    plugin->name.str);
+    sql_print_error("Plugin '%s' has invalid data.", plugin->name.str);
     return 1;
   }
 
   if (plugin->plugin->init && plugin->plugin->init(NULL))
   {
-    sql_print_error("Plugin '%s' init function returned error.",
-                    plugin->name.str);
+    sql_print_error("Plugin '%s' init function returned error.", plugin->name.str);
     return 1;
   }
 
   /* Make the interface info more easily accessible */
-  plugin->data= plugin->plugin->info;
+  plugin->data = plugin->plugin->info;
 
   /* Add the bits the plugin is interested in to the global mask */
   mysql_mutex_lock(&LOCK_audit_mask);
@@ -309,7 +277,7 @@ int initialize_audit_plugin(st_plugin_int *plugin)
 
     See also mysql_install_plugin() and mysql_uninstall_plugin()
   */
-  THD *thd= current_thd;
+  THD *thd = current_thd;
   if (thd)
   {
     acquire_plugins(thd, plugin_int_to_ref(plugin), data->class_mask);
@@ -318,7 +286,6 @@ int initialize_audit_plugin(st_plugin_int *plugin)
 
   return 0;
 }
-
 
 /**
   Performs a bitwise OR of the installed plugins event class masks
@@ -331,16 +298,15 @@ int initialize_audit_plugin(st_plugin_int *plugin)
 */
 static my_bool calc_class_mask(THD *thd, plugin_ref plugin, void *arg)
 {
-  st_mysql_audit *data= plugin_data(plugin, struct st_mysql_audit *);
-  if ((data= plugin_data(plugin, struct st_mysql_audit *)))
-    add_audit_mask((unsigned long *) arg, data->class_mask);
+  st_mysql_audit *data = plugin_data(plugin, struct st_mysql_audit *);
+  if ((data = plugin_data(plugin, struct st_mysql_audit *)))
+    add_audit_mask((unsigned long *)arg, data->class_mask);
   return 0;
 }
 
-
 /**
   Finalize an Audit plug-in
-  
+
   @param[in] plugin
 
   @retval FALSE  OK
@@ -348,13 +314,13 @@ static my_bool calc_class_mask(THD *thd, plugin_ref plugin, void *arg)
 */
 int finalize_audit_plugin(st_plugin_int *plugin)
 {
-  int deinit_status= 0;
+  int deinit_status = 0;
   unsigned long event_class_mask[MYSQL_AUDIT_CLASS_MASK_SIZE];
-  
+
   if (plugin->plugin->deinit)
-    deinit_status= plugin->plugin->deinit(NULL);
-  
-  plugin->data= NULL;
+    deinit_status = plugin->plugin->deinit(NULL);
+
+  plugin->data = NULL;
   bzero(&event_class_mask, sizeof(event_class_mask));
 
   /* Iterate through all the installed plugins to create new mask */
@@ -364,8 +330,7 @@ int finalize_audit_plugin(st_plugin_int *plugin)
     lock on mysql.plugin.
   */
   mysql_mutex_lock(&LOCK_audit_mask);
-  plugin_foreach(current_thd, calc_class_mask, MYSQL_AUDIT_PLUGIN,
-                 &event_class_mask);
+  plugin_foreach(current_thd, calc_class_mask, MYSQL_AUDIT_PLUGIN, &event_class_mask);
 
   /* Set the global audit mask */
   bmove(mysql_global_audit_mask, event_class_mask, sizeof(event_class_mask));
@@ -374,9 +339,8 @@ int finalize_audit_plugin(st_plugin_int *plugin)
   return deinit_status;
 }
 
-
 /**
-  Dispatches an event by invoking the plugin's event_notify method.  
+  Dispatches an event by invoking the plugin's event_notify method.
 
   @param[in] thd
   @param[in] plugin
@@ -387,9 +351,8 @@ int finalize_audit_plugin(st_plugin_int *plugin)
 
 static my_bool plugins_dispatch(THD *thd, plugin_ref plugin, void *arg)
 {
-  const struct st_mysql_event_generic *event_generic=
-    (const struct st_mysql_event_generic *) arg;
-  st_mysql_audit *data= plugin_data(plugin, struct st_mysql_audit *);
+  const struct st_mysql_event_generic *event_generic = (const struct st_mysql_event_generic *)arg;
+  st_mysql_audit *data = plugin_data(plugin, struct st_mysql_audit *);
 
   /* Check to see if the plugin is interested in this event */
   if (!check_audit_mask(data->class_mask, event_generic->event_class_mask))
@@ -397,7 +360,6 @@ static my_bool plugins_dispatch(THD *thd, plugin_ref plugin, void *arg)
 
   return 0;
 }
-
 
 /**
   Distributes an audit event to plug-ins
@@ -410,8 +372,8 @@ static my_bool plugins_dispatch(THD *thd, plugin_ref plugin, void *arg)
 void mysql_audit_notify(THD *thd, uint event_class, const void *event)
 {
   struct st_mysql_event_generic event_generic;
-  event_generic.event_class= event_class;
-  event_generic.event= event;
+  event_generic.event_class = event_class;
+  event_generic.event = event;
   set_audit_mask(event_generic.event_class_mask, event_class);
   /*
     Check if we are doing a slow global dispatch. This event occurs when
@@ -428,55 +390,29 @@ void mysql_audit_notify(THD *thd, uint event_class, const void *event)
     mysql_audit_acquire_plugins(thd, event_generic.event_class_mask);
 
     /* Use the cached set of audit plugins */
-    plugins= (plugin_ref*) thd->audit_class_plugins.buffer;
-    plugins_last= plugins + thd->audit_class_plugins.elements;
+    plugins = (plugin_ref *)thd->audit_class_plugins.buffer;
+    plugins_last = plugins + thd->audit_class_plugins.elements;
 
-    for (; plugins < plugins_last; plugins++)
-      plugins_dispatch(thd, *plugins, &event_generic);
+    for (; plugins < plugins_last; plugins++) plugins_dispatch(thd, *plugins, &event_generic);
   }
 }
 
-
 #else /* EMBEDDED_LIBRARY */
 
+void mysql_audit_acquire_plugins(THD *thd, ulong *event_class_mask) {}
 
-void mysql_audit_acquire_plugins(THD *thd, ulong *event_class_mask)
-{
-}
+void mysql_audit_initialize() {}
 
+void mysql_audit_finalize() {}
 
-void mysql_audit_initialize()
-{
-}
+int initialize_audit_plugin(st_plugin_int *plugin) { return 1; }
 
+int finalize_audit_plugin(st_plugin_int *plugin) { return 0; }
 
-void mysql_audit_finalize()
-{
-}
+void mysql_audit_release(THD *thd) {}
 
+void mysql_audit_init_thd(THD *thd) {}
 
-int initialize_audit_plugin(st_plugin_int *plugin)
-{
-  return 1;
-}
-
-
-int finalize_audit_plugin(st_plugin_int *plugin)
-{
-  return 0;
-}
-
-
-void mysql_audit_release(THD *thd)
-{
-}
-
-void mysql_audit_init_thd(THD *thd)
-{
-}
-
-void mysql_audit_free_thd(THD *thd)
-{
-}
+void mysql_audit_free_thd(THD *thd) {}
 
 #endif /* EMBEDDED_LIBRARY */

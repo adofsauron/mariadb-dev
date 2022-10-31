@@ -21,14 +21,15 @@
 class XID_cache_element;
 enum xa_states
 {
-  XA_ACTIVE= 0,
+  XA_ACTIVE = 0,
   XA_IDLE,
   XA_PREPARED,
   XA_ROLLBACK_ONLY,
   XA_NO_STATE
 };
 
-struct XID_STATE {
+struct XID_STATE
+{
   XID_cache_element *xid_cache_element;
 
   bool check_has_uncommitted_xa() const;
@@ -53,7 +54,6 @@ bool trans_xa_rollback(THD *thd);
 bool trans_xa_detach(THD *thd);
 bool mysql_xa_recover(THD *thd);
 
-void xa_recover_get_fields(THD *thd, List<Item> *field_list,
-                           my_hash_walk_action *action);
+void xa_recover_get_fields(THD *thd, List<Item> *field_list, my_hash_walk_action *action);
 
 #endif /* XA_INCLUDED */

@@ -37,19 +37,14 @@
 /* Log a warning */
 static void tp_log_warning(const char *msg, const char *fct)
 {
-  sql_print_warning("Threadpool: %s. %s failed (last error %d)",msg, fct,
-    GetLastError());
+  sql_print_warning("Threadpool: %s. %s failed (last error %d)", msg, fct, GetLastError());
 }
-
 
 static PTP_POOL pool;
 static TP_CALLBACK_ENVIRON callback_environ;
 static DWORD fls;
 
-PTP_CALLBACK_ENVIRON get_threadpool_win_callback_environ()
-{
-  return pool? &callback_environ: 0;
-}
+PTP_CALLBACK_ENVIRON get_threadpool_win_callback_environ() { return pool ? &callback_environ : 0; }
 
 /*
   Threadpool callbacks.
@@ -60,12 +55,10 @@ PTP_CALLBACK_ENVIRON get_threadpool_win_callback_environ()
 
 */
 
-static void CALLBACK timer_callback(PTP_CALLBACK_INSTANCE instance,
-  PVOID context, PTP_TIMER timer);
+static void CALLBACK timer_callback(PTP_CALLBACK_INSTANCE instance, PVOID context, PTP_TIMER timer);
 
-static void CALLBACK io_completion_callback(PTP_CALLBACK_INSTANCE instance,
-  PVOID context,  PVOID overlapped,  ULONG io_result, ULONG_PTR nbytes, PTP_IO io);
-
+static void CALLBACK io_completion_callback(PTP_CALLBACK_INSTANCE instance, PVOID context, PVOID overlapped,
+                                            ULONG io_result, ULONG_PTR nbytes, PTP_IO io);
 
 static void CALLBACK work_callback(PTP_CALLBACK_INSTANCE instance, PVOID context, PTP_WORK work);
 
@@ -79,10 +72,10 @@ static ulonglong now()
   return current_time;
 }
 
-struct TP_connection_win:public TP_connection
+struct TP_connection_win : public TP_connection
 {
-public:
-  TP_connection_win(CONNECT*);
+ public:
+  TP_connection_win(CONNECT *);
   ~TP_connection_win();
   int init() override;
   void init_vio(st_vio *vio) override;
@@ -91,7 +84,7 @@ public:
   void wait_begin(int type) override;
   void wait_end() override;
 
-  ulonglong timeout=ULLONG_MAX;
+  ulonglong timeout = ULLONG_MAX;
   OVERLAPPED overlapped{};
   PTP_CALLBACK_INSTANCE callback_instance{};
   PTP_IO io{};
@@ -114,7 +107,7 @@ struct TP_connection *new_TP_connection(CONNECT *connect)
 
 void TP_pool_win::add(TP_connection *c)
 {
-  if(FlsGetValue(fls))
+  if (FlsGetValue(fls))
   {
     /* Inside threadpool(), execute callback directly. */
     tp_callback(c);
@@ -125,42 +118,34 @@ void TP_pool_win::add(TP_connection *c)
   }
 }
 
-void TP_pool_win::resume(TP_connection* c)
+void TP_pool_win::resume(TP_connection *c)
 {
   DBUG_ASSERT(c->state == TP_STATE_RUNNING);
-  SubmitThreadpoolWork(((TP_connection_win*)c)->work);
+  SubmitThreadpoolWork(((TP_connection_win *)c)->work);
 }
 
-#define CHECK_ALLOC_ERROR(op)                                                 \
-  do                                                                          \
-  {                                                                           \
-    if (!(op))                                                                \
-    {                                                                         \
-      tp_log_warning("Allocation failed", #op);                               \
-    }                                                                         \
+#define CHECK_ALLOC_ERROR(op)                   \
+  do                                            \
+  {                                             \
+    if (!(op))                                  \
+    {                                           \
+      tp_log_warning("Allocation failed", #op); \
+    }                                           \
   } while (0)
 
-TP_connection_win::TP_connection_win(CONNECT *c) :
-    TP_connection(c)
+TP_connection_win::TP_connection_win(CONNECT *c) : TP_connection(c)
 {
   /* Assign io completion callback */
-  HANDLE h= c->vio_type == VIO_TYPE_NAMEDPIPE ? c->pipe
-                                              : (HANDLE)mysql_socket_getfd(c->sock);
+  HANDLE h = c->vio_type == VIO_TYPE_NAMEDPIPE ? c->pipe : (HANDLE)mysql_socket_getfd(c->sock);
 
-  CHECK_ALLOC_ERROR(io=CreateThreadpoolIo(h, io_completion_callback, this, &callback_environ));
-  CHECK_ALLOC_ERROR(timer= CreateThreadpoolTimer(timer_callback, this, &callback_environ));
-  CHECK_ALLOC_ERROR(work= CreateThreadpoolWork(work_callback, this, &callback_environ));
+  CHECK_ALLOC_ERROR(io = CreateThreadpoolIo(h, io_completion_callback, this, &callback_environ));
+  CHECK_ALLOC_ERROR(timer = CreateThreadpoolTimer(timer_callback, this, &callback_environ));
+  CHECK_ALLOC_ERROR(work = CreateThreadpoolWork(work_callback, this, &callback_environ));
 }
 
-int TP_connection_win::init()
-{
-  return !io  || !timer || !work ;
-}
+int TP_connection_win::init() { return !io || !timer || !work; }
 
-void TP_connection_win::init_vio(st_vio* vio)
-{
-  sock.init(vio);
-}
+void TP_connection_win::init_vio(st_vio *vio) { sock.init(vio); }
 
 /*
   Start asynchronous read
@@ -182,7 +167,7 @@ int TP_connection_win::start_io()
 */
 void TP_connection_win::set_io_timeout(int timeout_sec)
 {
-  ulonglong old_timeout= timeout;
+  ulonglong old_timeout = timeout;
   ulonglong new_timeout = now() + 10000000LL * timeout_sec;
 
   if (new_timeout < old_timeout)
@@ -192,7 +177,6 @@ void TP_connection_win::set_io_timeout(int timeout_sec)
   /*  new_timeout > old_timeout case is handled by expiring timer. */
   timeout = new_timeout;
 }
-
 
 TP_connection_win::~TP_connection_win()
 {
@@ -221,15 +205,12 @@ void TP_connection_win::wait_begin(int type)
     if (!long_callback && callback_instance)
     {
       CallbackMayRunLong(callback_instance);
-      long_callback= true;
+      long_callback = true;
     }
   }
 }
 
-void TP_connection_win::wait_end()
-{
-  /* Do we need to do anything ? */
-}
+void TP_connection_win::wait_end() { /* Do we need to do anything ? */ }
 
 /*
   This function should be called first whenever a callback is invoked in the
@@ -256,21 +237,18 @@ static void pre_callback(PVOID context, PTP_CALLBACK_INSTANCE instance)
   c->long_callback = false;
 }
 
-
 /*
   Decrement number of threads when a thread exits.
   On Windows, FlsAlloc() provides the thread destruction callbacks.
 */
 static VOID WINAPI thread_destructor(void *data)
 {
-  if(data)
+  if (data)
   {
     tp_stats.num_worker_threads--;
     my_thread_end();
   }
 }
-
-
 
 static inline void tp_callback(PTP_CALLBACK_INSTANCE instance, PVOID context)
 {
@@ -278,14 +256,13 @@ static inline void tp_callback(PTP_CALLBACK_INSTANCE instance, PVOID context)
   tp_callback((TP_connection *)context);
 }
 
-
 /*
   Handle read completion/notification.
 */
-static VOID CALLBACK io_completion_callback(PTP_CALLBACK_INSTANCE instance,
-  PVOID context,  PVOID overlapped,  ULONG io_result, ULONG_PTR nbytes, PTP_IO io)
+static VOID CALLBACK io_completion_callback(PTP_CALLBACK_INSTANCE instance, PVOID context, PVOID overlapped,
+                                            ULONG io_result, ULONG_PTR nbytes, PTP_IO io)
 {
-  TP_connection_win *c= (TP_connection_win *)context;
+  TP_connection_win *c = (TP_connection_win *)context;
 
   /* How many bytes were preread into read buffer */
   c->sock.end_read((ULONG)nbytes, io_result);
@@ -301,13 +278,11 @@ static VOID CALLBACK io_completion_callback(PTP_CALLBACK_INSTANCE instance,
     SubmitThreadpoolWork(c->work);
 }
 
-
 /*
   Timer callback.
   Invoked when connection times out (wait_timeout)
 */
-static VOID CALLBACK timer_callback(PTP_CALLBACK_INSTANCE instance,
-  PVOID parameter, PTP_TIMER timer)
+static VOID CALLBACK timer_callback(PTP_CALLBACK_INSTANCE instance, PVOID parameter, PTP_TIMER timer)
 {
   TP_connection_win *c = (TP_connection_win *)parameter;
   if (c->timeout <= now())
@@ -333,19 +308,19 @@ static void CALLBACK work_callback(PTP_CALLBACK_INSTANCE instance, PVOID context
   tp_callback(instance, context);
 }
 
-TP_pool_win::TP_pool_win()
-{}
+TP_pool_win::TP_pool_win() {}
 
 int TP_pool_win::init()
 {
-  fls= FlsAlloc(thread_destructor);
-  pool= CreateThreadpool(NULL);
+  fls = FlsAlloc(thread_destructor);
+  pool = CreateThreadpool(NULL);
 
   if (!pool)
   {
-    sql_print_error("Can't create threadpool. "
-      "CreateThreadpool() failed with %d. Likely cause is memory pressure",
-      GetLastError());
+    sql_print_error(
+        "Can't create threadpool. "
+        "CreateThreadpool() failed with %d. Likely cause is memory pressure",
+        GetLastError());
     return -1;
   }
 
@@ -358,7 +333,7 @@ int TP_pool_win::init()
      Nr 500 comes from Microsoft documentation,
      there is no API for GetThreadpoolThreadMaxThreads()
     */
-    SYSVAR_AUTOSIZE(threadpool_max_threads,500);
+    SYSVAR_AUTOSIZE(threadpool_max_threads, 500);
   }
   else
   {
@@ -367,17 +342,15 @@ int TP_pool_win::init()
 
   if (IS_SYSVAR_AUTOSIZE(&threadpool_min_threads))
   {
-    SYSVAR_AUTOSIZE(threadpool_min_threads,1);
+    SYSVAR_AUTOSIZE(threadpool_min_threads, 1);
   }
   else
   {
     if (!SetThreadpoolThreadMinimum(pool, threadpool_min_threads))
     {
-      tp_log_warning("Can't set threadpool minimum threads",
-        "SetThreadpoolThreadMinimum");
+      tp_log_warning("Can't set threadpool minimum threads", "SetThreadpoolThreadMinimum");
     }
   }
-
 
   if (IS_SYSVAR_AUTOSIZE(&global_system_variables.threadpool_priority))
   {
@@ -386,8 +359,7 @@ int TP_pool_win::init()
      use "high" which handles socket IO callbacks as they come
      without rescheduling to work queue.
     */
-    SYSVAR_AUTOSIZE(global_system_variables.threadpool_priority,
-                    TP_PRIORITY_HIGH);
+    SYSVAR_AUTOSIZE(global_system_variables.threadpool_priority, TP_PRIORITY_HIGH);
   }
 
   TP_POOL_STACK_INFORMATION stackinfo;
@@ -395,12 +367,10 @@ int TP_pool_win::init()
   stackinfo.StackReserve = (SIZE_T)my_thread_stack_size;
   if (!SetThreadpoolStackInformation(pool, &stackinfo))
   {
-    tp_log_warning("Can't set threadpool stack size",
-      "SetThreadpoolStackInformation");
+    tp_log_warning("Can't set threadpool stack size", "SetThreadpoolStackInformation");
   }
   return 0;
 }
-
 
 /**
   Scheduler callback : Destroy the scheduler.
@@ -431,11 +401,10 @@ int TP_pool_win::set_max_threads(uint val)
   return 0;
 }
 
-
 TP_connection *TP_pool_win::new_connection(CONNECT *connect)
 {
-  TP_connection *c= new (std::nothrow) TP_connection_win(connect);
-  if (!c )
+  TP_connection *c = new (std::nothrow) TP_connection_win(connect);
+  if (!c)
     return 0;
   if (c->init())
   {
@@ -444,4 +413,3 @@ TP_connection *TP_pool_win::new_connection(CONNECT *connect)
   }
   return c;
 }
-

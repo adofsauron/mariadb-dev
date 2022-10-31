@@ -13,14 +13,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /*
 ** A class for static sized hash tables where old entries are deleted according
 ** to usage.
 */
 
 #ifdef USE_PRAGMA_IMPLEMENTATION
-#pragma implementation				// gcc: Class implementation
+#pragma implementation  // gcc: Class implementation
 #endif
 
 #include "mariadb.h"
@@ -29,5 +28,8 @@
 
 #ifdef _WIN32
 // Remove linker warning 4221 about empty file
-namespace { char dummy; };
-#endif // _WIN32
+namespace
+{
+char dummy;
+};
+#endif  // _WIN32

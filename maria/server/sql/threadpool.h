@@ -20,13 +20,14 @@
 /* Threadpool parameters */
 extern uint threadpool_min_threads;  /* Minimum threads in pool */
 extern uint threadpool_idle_timeout; /* Shutdown idle worker threads  after this timeout */
-extern uint threadpool_size; /* Number of parallel executing threads */
+extern uint threadpool_size;         /* Number of parallel executing threads */
 extern uint threadpool_max_size;
-extern uint threadpool_stall_limit;  /* time interval in milliseconds for stall checks*/
-extern uint threadpool_max_threads;  /* Maximum threads in pool */
-extern uint threadpool_oversubscribe;  /* Maximum active threads in group */
-extern uint threadpool_prio_kickup_timer;  /* Time before low prio item gets prio boost */
-extern my_bool threadpool_exact_stats; /* Better queueing time stats for information_schema, at small performance cost */
+extern uint threadpool_stall_limit;       /* time interval in milliseconds for stall checks*/
+extern uint threadpool_max_threads;       /* Maximum threads in pool */
+extern uint threadpool_oversubscribe;     /* Maximum active threads in group */
+extern uint threadpool_prio_kickup_timer; /* Time before low prio item gets prio boost */
+extern my_bool
+    threadpool_exact_stats; /* Better queueing time stats for information_schema, at small performance cost */
 extern my_bool threadpool_dedicated_listener; /* Listener thread does not pick up work items. */
 #ifdef _WIN32
 extern uint threadpool_mode; /* Thread pool implementation , windows or generic */
@@ -42,8 +43,6 @@ struct st_vio;
 extern void tp_callback(TP_connection *c);
 extern void tp_timeout_handler(TP_connection *c);
 
-
-
 /*
   Threadpool statistics
 */
@@ -55,7 +54,6 @@ struct TP_STATISTICS
 
 extern TP_STATISTICS tp_stats;
 
-
 /* Functions to set threadpool parameters */
 extern void tp_set_min_threads(uint val);
 extern void tp_set_max_threads(uint val);
@@ -64,13 +62,12 @@ extern void tp_set_threadpool_stall_limit(uint val);
 extern int tp_get_idle_thread_count();
 extern int tp_get_thread_count();
 
-
-enum  TP_PRIORITY {
+enum TP_PRIORITY
+{
   TP_PRIORITY_HIGH,
   TP_PRIORITY_LOW,
   TP_PRIORITY_AUTO
 };
-
 
 enum TP_STATE
 {
@@ -91,19 +88,13 @@ class CONNECT;
 
 struct TP_connection
 {
-  THD*        thd;
-  CONNECT*    connect;
-  TP_STATE    state;
+  THD *thd;
+  CONNECT *connect;
+  TP_STATE state;
   TP_PRIORITY priority;
-  TP_connection(CONNECT *c) :
-    thd(0),
-    connect(c),
-    state(TP_STATE_IDLE),
-    priority(TP_PRIORITY_HIGH)
-  {}
+  TP_connection(CONNECT *c) : thd(0), connect(c), state(TP_STATE_IDLE), priority(TP_PRIORITY_HIGH) {}
 
-  virtual ~TP_connection()
-  {};
+  virtual ~TP_connection(){};
 
   /* Initialize io structures windows threadpool, epoll etc */
   virtual int init() = 0;
@@ -113,32 +104,31 @@ struct TP_connection
   /* Read for the next client command (async) with specified timeout */
   virtual int start_io() = 0;
 
-  virtual void wait_begin(int type)= 0;
+  virtual void wait_begin(int type) = 0;
   virtual void wait_end() = 0;
-  IF_WIN(virtual,) void init_vio(st_vio *){};
+  IF_WIN(virtual, ) void init_vio(st_vio *){};
 };
-
 
 struct TP_pool
 {
   virtual ~TP_pool(){};
-  virtual int init()= 0;
-  virtual TP_connection *new_connection(CONNECT *)= 0;
-  virtual void add(TP_connection *c)= 0;
-  virtual int set_max_threads(uint){ return 0; }
-  virtual int set_min_threads(uint){ return 0; }
-  virtual int set_pool_size(uint){ return 0; }
-  virtual int set_idle_timeout(uint){ return 0; }
-  virtual int set_oversubscribe(uint){ return 0; }
-  virtual int set_stall_limit(uint){ return 0; }
+  virtual int init() = 0;
+  virtual TP_connection *new_connection(CONNECT *) = 0;
+  virtual void add(TP_connection *c) = 0;
+  virtual int set_max_threads(uint) { return 0; }
+  virtual int set_min_threads(uint) { return 0; }
+  virtual int set_pool_size(uint) { return 0; }
+  virtual int set_idle_timeout(uint) { return 0; }
+  virtual int set_oversubscribe(uint) { return 0; }
+  virtual int set_stall_limit(uint) { return 0; }
   virtual int get_thread_count() { return tp_stats.num_worker_threads; }
-  virtual int get_idle_thread_count(){ return 0; }
-  virtual void resume(TP_connection* c)=0;
+  virtual int get_idle_thread_count() { return 0; }
+  virtual void resume(TP_connection *c) = 0;
 };
 
 #ifdef _WIN32
 
-struct TP_pool_win:TP_pool
+struct TP_pool_win : TP_pool
 {
   TP_pool_win();
   virtual int init();
@@ -151,7 +141,7 @@ struct TP_pool_win:TP_pool
 };
 #endif
 
-struct TP_pool_generic :TP_pool
+struct TP_pool_generic : TP_pool
 {
   TP_pool_generic();
   ~TP_pool_generic();
@@ -161,7 +151,7 @@ struct TP_pool_generic :TP_pool
   virtual int set_pool_size(uint);
   virtual int set_stall_limit(uint);
   virtual int get_idle_thread_count();
-  void resume(TP_connection* c);
+  void resume(TP_connection *c);
 };
 
 #endif /* HAVE_POOL_OF_THREADS */

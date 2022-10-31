@@ -31,7 +31,7 @@
 */
 
 /*
-  HFTODO this must be hidden if we don't want client capabilities in 
+  HFTODO this must be hidden if we don't want client capabilities in
   embedded library
  */
 
@@ -80,7 +80,10 @@ static void inline MYSQL_SERVER_my_error(...) {}
 #endif
 
 #ifndef EXTRA_DEBUG_ASSERT
-# define EXTRA_DEBUG_ASSERT(X) do {} while(0)
+#define EXTRA_DEBUG_ASSERT(X) \
+  do                          \
+  {                           \
+  } while (0)
 #endif
 
 /*
@@ -93,7 +96,7 @@ static void inline MYSQL_SERVER_my_error(...) {}
 */
 
 #if defined(_WIN32) || !defined(MYSQL_SERVER)
-  /* The following is because alarms doesn't work on windows. */
+/* The following is because alarms doesn't work on windows. */
 #ifndef NO_ALARM
 #define NO_ALARM
 #endif
@@ -101,7 +104,7 @@ static void inline MYSQL_SERVER_my_error(...) {}
 
 #ifndef NO_ALARM
 #include "my_pthread.h"
-void sql_print_error(const char *format,...);
+void sql_print_error(const char *format, ...);
 #else
 #define DONT_USE_THR_ALARM
 #endif /* NO_ALARM */
@@ -118,9 +121,8 @@ extern ulonglong test_flags;
 extern ulong bytes_sent, bytes_received, net_big_packet_count;
 #ifdef HAVE_QUERY_CACHE
 #define USE_QUERY_CACHE
-extern void query_cache_insert(void *thd, const char *packet, size_t length,
-                               unsigned pkt_nr);
-#endif // HAVE_QUERY_CACHE
+extern void query_cache_insert(void *thd, const char *packet, size_t length, unsigned pkt_nr);
+#endif  // HAVE_QUERY_CACHE
 #define update_statistics(A) A
 extern my_bool thd_net_is_killed(THD *thd);
 /* Additional instrumentation hooks for the server */
@@ -129,7 +131,6 @@ extern my_bool thd_net_is_killed(THD *thd);
 #define update_statistics(A)
 #define thd_net_is_killed(A) 0
 #endif
-
 
 static my_bool net_write_buff(NET *, const uchar *, size_t len);
 
@@ -142,31 +143,33 @@ my_bool my_net_init(NET *net, Vio *vio, void *thd, uint my_flags)
   DBUG_ENTER("my_net_init");
   DBUG_PRINT("enter", ("my_flags: %u", my_flags));
   net->vio = vio;
-  net->read_timeout= 0;
-  net->write_timeout= 0;
-  my_net_local_init(net);			/* Set some limits */
+  net->read_timeout = 0;
+  net->write_timeout = 0;
+  my_net_local_init(net); /* Set some limits */
 
   if (net_allocate_new_packet(net, thd, my_flags))
     DBUG_RETURN(1);
 
-  net->error=0; net->return_status=0;
-  net->pkt_nr=net->compress_pkt_nr=0;
-  net->last_error[0]=0;
-  net->compress=0; net->reading_or_writing=0;
-  net->where_b = net->remain_in_buf=0;
-  net->net_skip_rest_factor= 0;
-  net->last_errno=0;
-  net->thread_specific_malloc= MY_TEST(my_flags & MY_THREAD_SPECIFIC);
-  net->thd= 0;
+  net->error = 0;
+  net->return_status = 0;
+  net->pkt_nr = net->compress_pkt_nr = 0;
+  net->last_error[0] = 0;
+  net->compress = 0;
+  net->reading_or_writing = 0;
+  net->where_b = net->remain_in_buf = 0;
+  net->net_skip_rest_factor = 0;
+  net->last_errno = 0;
+  net->thread_specific_malloc = MY_TEST(my_flags & MY_THREAD_SPECIFIC);
+  net->thd = 0;
 #ifdef MYSQL_SERVER
-  net->extension= NULL;
-  net->thd= thd;
+  net->extension = NULL;
+  net->thd = thd;
 #endif
 
   if (vio)
   {
     /* For perl DBI/DBD. */
-    net->fd= vio_fd(vio);
+    net->fd = vio_fd(vio);
 #if defined(MYSQL_SERVER) && !defined(_WIN32)
     if (!(test_flags & TEST_BLOCKING))
     {
@@ -178,7 +181,6 @@ my_bool my_net_init(NET *net, Vio *vio, void *thd, uint my_flags)
   }
   DBUG_RETURN(0);
 }
-
 
 /**
   Allocate and assign new net buffer
@@ -193,26 +195,22 @@ my_bool net_allocate_new_packet(NET *net, void *thd, uint my_flags)
 {
   uchar *tmp;
   DBUG_ENTER("net_allocate_new_packet");
-  if (!(tmp= (uchar*) my_malloc(key_memory_NET_buff,
-                                (size_t) net->max_packet +
-				NET_HEADER_SIZE + COMP_HEADER_SIZE + 1,
-				MYF(MY_WME | my_flags))))
+  if (!(tmp = (uchar *)my_malloc(key_memory_NET_buff, (size_t)net->max_packet + NET_HEADER_SIZE + COMP_HEADER_SIZE + 1,
+                                 MYF(MY_WME | my_flags))))
     DBUG_RETURN(1);
-  net->buff= tmp;
-  net->buff_end=net->buff+net->max_packet;
-  net->write_pos=net->read_pos = net->buff;
+  net->buff = tmp;
+  net->buff_end = net->buff + net->max_packet;
+  net->write_pos = net->read_pos = net->buff;
   DBUG_RETURN(0);
 }
-
 
 void net_end(NET *net)
 {
   DBUG_ENTER("net_end");
   my_free(net->buff);
-  net->buff=0;
+  net->buff = 0;
   DBUG_VOID_RETURN;
 }
-
 
 /** Realloc the packet buffer. */
 
@@ -221,42 +219,38 @@ my_bool net_realloc(NET *net, size_t length)
   uchar *buff;
   size_t pkt_length;
   DBUG_ENTER("net_realloc");
-  DBUG_PRINT("enter",("length: %lu", (ulong) length));
+  DBUG_PRINT("enter", ("length: %lu", (ulong)length));
 
   if (length >= net->max_packet_size)
   {
-    DBUG_PRINT("error", ("Packet too large. Max size: %lu",
-                         net->max_packet_size));
+    DBUG_PRINT("error", ("Packet too large. Max size: %lu", net->max_packet_size));
     /* @todo: 1 and 2 codes are identical. */
-    net->error= 1;
-    net->last_errno= ER_NET_PACKET_TOO_LARGE;
+    net->error = 1;
+    net->last_errno = ER_NET_PACKET_TOO_LARGE;
     MYSQL_SERVER_my_error(ER_NET_PACKET_TOO_LARGE, MYF(0));
     DBUG_RETURN(1);
   }
-  pkt_length = (length+IO_SIZE-1) & ~(IO_SIZE-1); 
+  pkt_length = (length + IO_SIZE - 1) & ~(IO_SIZE - 1);
   /*
     We must allocate some extra bytes for the end 0 and to be able to
     read big compressed blocks + 1 safety byte since uint3korr() in
     my_real_read() may actually read 4 bytes depending on build flags and
     platform.
   */
-  if (!(buff= (uchar*) my_realloc(key_memory_NET_buff,
-                                  (char*) net->buff, pkt_length +
-                                  NET_HEADER_SIZE + COMP_HEADER_SIZE + 1,
-                                  MYF(MY_WME | (net->thread_specific_malloc
-                                                ?  MY_THREAD_SPECIFIC : 0)))))
+  if (!(buff = (uchar *)my_realloc(key_memory_NET_buff, (char *)net->buff,
+                                   pkt_length + NET_HEADER_SIZE + COMP_HEADER_SIZE + 1,
+                                   MYF(MY_WME | (net->thread_specific_malloc ? MY_THREAD_SPECIFIC : 0)))))
   {
     /* @todo: 1 and 2 codes are identical. */
-    net->error= 1;
-    net->last_errno= ER_OUT_OF_RESOURCES;
+    net->error = 1;
+    net->last_errno = ER_OUT_OF_RESOURCES;
     /* In the server the error is reported by MY_WME flag. */
     DBUG_RETURN(1);
   }
-  net->buff=net->write_pos=buff;
-  net->buff_end=buff+(net->max_packet= (ulong) pkt_length);
+  net->buff = net->write_pos = buff;
+  net->buff_end = buff + (net->max_packet = (ulong)pkt_length);
   DBUG_RETURN(0);
 }
-
 
 /**
   Check if there is any data to be read from the socket.
@@ -279,9 +273,9 @@ static int net_data_is_ready(my_socket sd)
   struct pollfd ufds;
   int res;
 
-  ufds.fd= sd;
-  ufds.events= POLLIN | POLLPRI;
-  if (!(res= poll(&ufds, 1, 0)))
+  ufds.fd = sd;
+  ufds.events = POLLIN | POLLPRI;
+  if (!(res = poll(&ufds, 1, 0)))
     return 0;
   if (res < 0 || !(ufds.revents & (POLLIN | POLLPRI)))
     return 0;
@@ -301,9 +295,9 @@ static int net_data_is_ready(my_socket sd)
   FD_ZERO(&sfds);
   FD_SET(sd, &sfds);
 
-  tv.tv_sec= tv.tv_usec= 0;
+  tv.tv_sec = tv.tv_usec = 0;
 
-  if ((res= select((int) (sd + 1), &sfds, NULL, NULL, &tv)) < 0)
+  if ((res = select((int)(sd + 1), &sfds, NULL, NULL, &tv)) < 0)
     return 0;
   else
     return MY_TEST(res ? FD_ISSET(sd, &sfds) : 0);
@@ -339,31 +333,29 @@ void net_clear(NET *net, my_bool clear_buffer __attribute__((unused)))
 {
   DBUG_ENTER("net_clear");
 
-/*
-  We don't do a clear in case of not DBUG_OFF to catch bugs in the
-  protocol handling.
-*/
+  /*
+    We don't do a clear in case of not DBUG_OFF to catch bugs in the
+    protocol handling.
+  */
 
 #if (!defined(EMBEDDED_LIBRARY) && defined(DBUG_OFF)) || defined(USE_NET_CLEAR)
   if (clear_buffer)
   {
     size_t count;
     int ready;
-    while ((ready= net_data_is_ready(vio_fd(net->vio))) > 0)
+    while ((ready = net_data_is_ready(vio_fd(net->vio))) > 0)
     {
       /* The socket is ready */
-      if ((long) (count= vio_read(net->vio, net->buff,
-                                  (size_t) net->max_packet)) > 0)
+      if ((long)(count = vio_read(net->vio, net->buff, (size_t)net->max_packet)) > 0)
       {
-        DBUG_PRINT("info",("skipped %ld bytes from file: %s",
-                           (long) count, vio_description(net->vio)));
-        EXTRA_DEBUG_fprintf(stderr,"Note: net_clear() skipped %ld bytes from file: %s\n",
-                (long) count, vio_description(net->vio));
+        DBUG_PRINT("info", ("skipped %ld bytes from file: %s", (long)count, vio_description(net->vio)));
+        EXTRA_DEBUG_fprintf(stderr, "Note: net_clear() skipped %ld bytes from file: %s\n", (long)count,
+                            vio_description(net->vio));
       }
       else
       {
-        DBUG_PRINT("info",("socket ready but only EOF to read - disconnected"));
-        net->error= 2;
+        DBUG_PRINT("info", ("socket ready but only EOF to read - disconnected"));
+        net->error = 2;
         break;
       }
     }
@@ -375,40 +367,35 @@ void net_clear(NET *net, my_bool clear_buffer __attribute__((unused)))
       my_bool old_mode;
       if (!vio_blocking(net->vio, FALSE, &old_mode))
       {
-        while ((long) (count= vio_read(net->vio, net->buff,
-                                       (size_t) net->max_packet)) > 0)
-          DBUG_PRINT("info",("skipped %ld bytes from file: %s",
-                             (long) count, vio_description(net->vio)));
+        while ((long)(count = vio_read(net->vio, net->buff, (size_t)net->max_packet)) > 0)
+          DBUG_PRINT("info", ("skipped %ld bytes from file: %s", (long)count, vio_description(net->vio)));
         vio_blocking(net->vio, TRUE, &old_mode);
       }
     }
 #endif /* NET_DATA_IS_READY_CAN_RETURN_MINUS_ONE */
   }
-#endif /* EMBEDDED_LIBRARY */
-  net->pkt_nr=net->compress_pkt_nr=0;		/* Ready for new command */
-  net->write_pos=net->buff;
+#endif                                    /* EMBEDDED_LIBRARY */
+  net->pkt_nr = net->compress_pkt_nr = 0; /* Ready for new command */
+  net->write_pos = net->buff;
   DBUG_VOID_RETURN;
 }
-
 
 /** Flush write_buffer if not empty. */
 
 my_bool net_flush(NET *net)
 {
-  my_bool error= 0;
+  my_bool error = 0;
   DBUG_ENTER("net_flush");
   if (net->buff != net->write_pos)
   {
-    error= MY_TEST(net_real_write(net, net->buff,
-                                  (size_t) (net->write_pos - net->buff)));
-    net->write_pos= net->buff;
+    error = MY_TEST(net_real_write(net, net->buff, (size_t)(net->write_pos - net->buff)));
+    net->write_pos = net->buff;
   }
   /* Sync packet number if using compression */
   if (net->compress)
-    net->pkt_nr=net->compress_pkt_nr;
+    net->pkt_nr = net->compress_pkt_nr;
   DBUG_RETURN(error);
 }
-
 
 /*****************************************************************************
 ** Write something to server/client buffer
@@ -441,19 +428,18 @@ my_bool my_net_write(NET *net, const uchar *packet, size_t len)
   {
     const ulong z_size = MAX_PACKET_LENGTH;
     int3store(buff, z_size);
-    buff[3]= (uchar) net->pkt_nr++;
-    if (net_write_buff(net, buff, NET_HEADER_SIZE) ||
-	net_write_buff(net, packet, z_size))
+    buff[3] = (uchar)net->pkt_nr++;
+    if (net_write_buff(net, buff, NET_HEADER_SIZE) || net_write_buff(net, packet, z_size))
     {
       MYSQL_NET_WRITE_DONE(1);
       return 1;
     }
     packet += z_size;
-    len-=     z_size;
+    len -= z_size;
   }
   /* Write last packet */
-  int3store(buff,len);
-  buff[3]= (uchar) net->pkt_nr++;
+  int3store(buff, len);
+  buff[3] = (uchar)net->pkt_nr++;
   if (net_write_buff(net, buff, NET_HEADER_SIZE))
   {
     MYSQL_NET_WRITE_DONE(1);
@@ -462,11 +448,10 @@ my_bool my_net_write(NET *net, const uchar *packet, size_t len)
 #ifndef DEBUG_DATA_PACKETS
   DBUG_DUMP("packet_header", buff, NET_HEADER_SIZE);
 #endif
-  my_bool rc= MY_TEST(net_write_buff(net, packet, len));
+  my_bool rc = MY_TEST(net_write_buff(net, packet, len));
   MYSQL_NET_WRITE_DONE(rc);
   return rc;
 }
-
 
 /**
   Send a command to the server.
@@ -478,7 +463,7 @@ my_bool my_net_write(NET *net, const uchar *packet, size_t len)
     As the command is part of the first data packet, we have to do some data
     juggling to put the command in there, without having to create a new
     packet.
-  
+
     This function will split big packets into sub-packets if needed.
     (Each sub packet can only be 2^24 bytes)
 
@@ -495,63 +480,56 @@ my_bool my_net_write(NET *net, const uchar *packet, size_t len)
     1	error
 */
 
-my_bool
-net_write_command(NET *net,uchar command,
-		  const uchar *header, size_t head_len,
-		  const uchar *packet, size_t len)
+my_bool net_write_command(NET *net, uchar command, const uchar *header, size_t head_len, const uchar *packet,
+                          size_t len)
 {
-  size_t length=len+1+head_len;			/* 1 extra byte for command */
-  uchar buff[NET_HEADER_SIZE+1];
-  uint header_size=NET_HEADER_SIZE+1;
+  size_t length = len + 1 + head_len; /* 1 extra byte for command */
+  uchar buff[NET_HEADER_SIZE + 1];
+  uint header_size = NET_HEADER_SIZE + 1;
   my_bool rc;
   DBUG_ENTER("net_write_command");
-  DBUG_PRINT("enter",("length: %lu", (ulong) len));
+  DBUG_PRINT("enter", ("length: %lu", (ulong)len));
 
 #ifdef ENABLED_DEBUG_SYNC
-  DBUG_EXECUTE_IF("simulate_error_on_packet_write",
-                  {
-                    if (command == COM_BINLOG_DUMP)
-                    {
-                      net->last_errno = ER_NET_ERROR_ON_WRITE;
-                      DBUG_ASSERT(!debug_sync_set_action(
-                      (THD *)net->thd,
-                      STRING_WITH_LEN("now SIGNAL parked WAIT_FOR continue")));
-                      DBUG_RETURN(true);
-                    }
-                  };);
+  DBUG_EXECUTE_IF("simulate_error_on_packet_write", {
+    if (command == COM_BINLOG_DUMP)
+    {
+      net->last_errno = ER_NET_ERROR_ON_WRITE;
+      DBUG_ASSERT(!debug_sync_set_action((THD *)net->thd, STRING_WITH_LEN("now SIGNAL parked WAIT_FOR continue")));
+      DBUG_RETURN(true);
+    }
+  };);
 #endif
   MYSQL_NET_WRITE_START(length);
 
-  buff[4]=command;				/* For first packet */
+  buff[4] = command; /* For first packet */
 
   if (length >= MAX_PACKET_LENGTH)
   {
     /* Take into account that we have the command in the first header */
-    len= MAX_PACKET_LENGTH - 1 - head_len;
+    len = MAX_PACKET_LENGTH - 1 - head_len;
     do
     {
       int3store(buff, MAX_PACKET_LENGTH);
-      buff[3]= (uchar) net->pkt_nr++;
-      if (net_write_buff(net, buff, header_size) ||
-	  net_write_buff(net, header, head_len) ||
-	  net_write_buff(net, packet, len))
+      buff[3] = (uchar)net->pkt_nr++;
+      if (net_write_buff(net, buff, header_size) || net_write_buff(net, header, head_len) ||
+          net_write_buff(net, packet, len))
       {
         MYSQL_NET_WRITE_DONE(1);
-	DBUG_RETURN(1);
+        DBUG_RETURN(1);
       }
-      packet+= len;
-      length-= MAX_PACKET_LENGTH;
-      len= MAX_PACKET_LENGTH;
-      head_len= 0;
-      header_size= NET_HEADER_SIZE;
+      packet += len;
+      length -= MAX_PACKET_LENGTH;
+      len = MAX_PACKET_LENGTH;
+      head_len = 0;
+      header_size = NET_HEADER_SIZE;
     } while (length >= MAX_PACKET_LENGTH);
-    len=length;					/* Data left to be written */
+    len = length; /* Data left to be written */
   }
-  int3store(buff,length);
-  buff[3]= (uchar) net->pkt_nr++;
-  rc= MY_TEST(net_write_buff(net, buff, header_size) ||
-              (head_len && net_write_buff(net, header, head_len)) ||
-              net_write_buff(net, packet, len) || net_flush(net));
+  int3store(buff, length);
+  buff[3] = (uchar)net->pkt_nr++;
+  rc = MY_TEST(net_write_buff(net, buff, header_size) || (head_len && net_write_buff(net, header, head_len)) ||
+               net_write_buff(net, packet, len) || net_flush(net));
   MYSQL_NET_WRITE_DONE(rc);
   DBUG_RETURN(rc);
 }
@@ -582,14 +560,13 @@ net_write_command(NET *net,uchar command,
     1
 */
 
-static my_bool
-net_write_buff(NET *net, const uchar *packet, size_t len)
+static my_bool net_write_buff(NET *net, const uchar *packet, size_t len)
 {
   size_t left_length;
   if (net->compress && net->max_packet > MAX_PACKET_LENGTH)
-    left_length= (MAX_PACKET_LENGTH - (net->write_pos - net->buff));
+    left_length = (MAX_PACKET_LENGTH - (net->write_pos - net->buff));
   else
-    left_length= (net->buff_end - net->write_pos);
+    left_length = (net->buff_end - net->write_pos);
 
 #ifdef DEBUG_DATA_PACKETS
   DBUG_DUMP("data_written", packet, len);
@@ -599,27 +576,26 @@ net_write_buff(NET *net, const uchar *packet, size_t len)
     if (net->write_pos != net->buff)
     {
       /* Fill up already used packet and write it */
-      memcpy((char*) net->write_pos,packet,left_length);
-      if (net_real_write(net, net->buff, 
-			 (size_t) (net->write_pos - net->buff) + left_length))
-	return 1;
-      net->write_pos= net->buff;
-      packet+= left_length;
-      len-= left_length;
+      memcpy((char *)net->write_pos, packet, left_length);
+      if (net_real_write(net, net->buff, (size_t)(net->write_pos - net->buff) + left_length))
+        return 1;
+      net->write_pos = net->buff;
+      packet += left_length;
+      len -= left_length;
     }
     if (net->compress)
     {
       /*
-	We can't have bigger packets than 16M with compression
-	Because the uncompressed length is stored in 3 bytes
+        We can't have bigger packets than 16M with compression
+        Because the uncompressed length is stored in 3 bytes
       */
-      left_length= MAX_PACKET_LENGTH;
+      left_length = MAX_PACKET_LENGTH;
       while (len > left_length)
       {
-	if (net_real_write(net, packet, left_length))
-	  return 1;
-	packet+= left_length;
-	len-= left_length;
+        if (net_real_write(net, packet, left_length))
+          return 1;
+        packet += left_length;
+        len -= left_length;
       }
     }
     if (len > net->max_packet)
@@ -627,11 +603,10 @@ net_write_buff(NET *net, const uchar *packet, size_t len)
     /* Send out rest of the blocks as full sized blocks */
   }
   if (len)
-    memcpy((char*) net->write_pos,packet,len);
-  net->write_pos+= len;
+    memcpy((char *)net->write_pos, packet, len);
+  net->write_pos += len;
   return 0;
 }
-
 
 /**
   Read and write one packet using timeouts.
@@ -641,23 +616,22 @@ net_write_buff(NET *net, const uchar *packet, size_t len)
     - TODO is it needed to set this variable if we have no socket
 */
 
-int
-net_real_write(NET *net,const uchar *packet, size_t len)
+int net_real_write(NET *net, const uchar *packet, size_t len)
 {
   size_t length;
-  const uchar *pos,*end;
+  const uchar *pos, *end;
   thr_alarm_t alarmed;
 #ifndef NO_ALARM
   ALARM alarm_buff;
 #endif
-  uint retry_count=0;
+  uint retry_count = 0;
   my_bool net_blocking = vio_is_blocking(net->vio);
   DBUG_ENTER("net_real_write");
 
 #if defined(MYSQL_SERVER)
-  THD *thd= (THD *)net->thd;
+  THD *thd = (THD *)net->thd;
 #if defined(USE_QUERY_CACHE)
-  query_cache_insert(thd, (char*) packet, len, net->pkt_nr);
+  query_cache_insert(thd, (char *)packet, len, net->pkt_nr);
 #endif
   if (likely(thd))
   {
@@ -671,36 +645,34 @@ net_real_write(NET *net,const uchar *packet, size_t len)
 #endif
 
   if (unlikely(net->error == 2))
-    DBUG_RETURN(-1);				/* socket can't be used */
+    DBUG_RETURN(-1); /* socket can't be used */
 
-  net->reading_or_writing=2;
+  net->reading_or_writing = 2;
 #ifdef HAVE_COMPRESS
   if (net->compress)
   {
     size_t complen;
     uchar *b;
-    uint header_length=NET_HEADER_SIZE+COMP_HEADER_SIZE;
-    if (!(b= (uchar*) my_malloc(key_memory_NET_compress_packet,
-                                len + NET_HEADER_SIZE + COMP_HEADER_SIZE + 1,
-                                MYF(MY_WME | (net->thread_specific_malloc
-                                              ? MY_THREAD_SPECIFIC : 0)))))
+    uint header_length = NET_HEADER_SIZE + COMP_HEADER_SIZE;
+    if (!(b = (uchar *)my_malloc(key_memory_NET_compress_packet, len + NET_HEADER_SIZE + COMP_HEADER_SIZE + 1,
+                                 MYF(MY_WME | (net->thread_specific_malloc ? MY_THREAD_SPECIFIC : 0)))))
     {
-      net->error= 2;
-      net->last_errno= ER_OUT_OF_RESOURCES;
+      net->error = 2;
+      net->last_errno = ER_OUT_OF_RESOURCES;
       /* In the server, the error is reported by MY_WME flag. */
-      net->reading_or_writing= 0;
+      net->reading_or_writing = 0;
       DBUG_RETURN(1);
     }
-    memcpy(b+header_length,packet,len);
+    memcpy(b + header_length, packet, len);
 
     /* Don't compress error packets (compress == 2) */
-    if (net->compress == 2 || my_compress(b+header_length, &len, &complen))
-      complen=0;
-    int3store(&b[NET_HEADER_SIZE],complen);
-    int3store(b,len);
-    b[3]=(uchar) (net->compress_pkt_nr++);
-    len+= header_length;
-    packet= b;
+    if (net->compress == 2 || my_compress(b + header_length, &len, &complen))
+      complen = 0;
+    int3store(&b[NET_HEADER_SIZE], complen);
+    int3store(b, len);
+    b[3] = (uchar)(net->compress_pkt_nr++);
+    len += header_length;
+    packet = b;
   }
 #endif /* HAVE_COMPRESS */
 
@@ -713,71 +685,67 @@ net_real_write(NET *net,const uchar *packet, size_t len)
   if (net_blocking)
     thr_alarm(&alarmed, net->write_timeout, &alarm_buff);
 #else
-  alarmed=0;
+  alarmed = 0;
   /* Write timeout is set in my_net_set_write_timeout */
 #endif /* NO_ALARM */
 
-  pos= packet;
-  end=pos+len;
+  pos = packet;
+  end = pos + len;
   while (pos != end)
   {
-    if ((long) (length= vio_write(net->vio,pos,(size_t) (end-pos))) <= 0)
+    if ((long)(length = vio_write(net->vio, pos, (size_t)(end - pos))) <= 0)
     {
       my_bool interrupted = vio_should_retry(net->vio);
 #if !defined(_WIN32)
       if ((interrupted || length == 0) && !thr_alarm_in_use(&alarmed))
       {
         if (!thr_alarm(&alarmed, net->write_timeout, &alarm_buff))
-        {                                       /* Always true for client */
-	  my_bool old_mode;
-	  while (vio_blocking(net->vio, TRUE, &old_mode) < 0)
-	  {
-	    if (vio_should_retry(net->vio) && retry_count++ < net->retry_count)
-	      continue;
-	    EXTRA_DEBUG_fprintf(stderr,
-		    "%s: my_net_write: fcntl returned error %d, aborting thread\n",
-		    my_progname,vio_errno(net->vio));
-	    net->error= 2;                     /* Close socket */
-            net->last_errno= ER_NET_PACKET_TOO_LARGE;
+        { /* Always true for client */
+          my_bool old_mode;
+          while (vio_blocking(net->vio, TRUE, &old_mode) < 0)
+          {
+            if (vio_should_retry(net->vio) && retry_count++ < net->retry_count)
+              continue;
+            EXTRA_DEBUG_fprintf(stderr, "%s: my_net_write: fcntl returned error %d, aborting thread\n", my_progname,
+                                vio_errno(net->vio));
+            net->error = 2; /* Close socket */
+            net->last_errno = ER_NET_PACKET_TOO_LARGE;
             MYSQL_SERVER_my_error(ER_NET_PACKET_TOO_LARGE, MYF(0));
-	    goto end;
-	  }
-	  retry_count=0;
-	  continue;
-	}
+            goto end;
+          }
+          retry_count = 0;
+          continue;
+        }
       }
       else
 #endif /* !defined(_WIN32) */
-	if (thr_alarm_in_use(&alarmed) && !thr_got_alarm(&alarmed) &&
-	    interrupted)
-      {
-	if (retry_count++ < net->retry_count)
-	    continue;
-	  EXTRA_DEBUG_fprintf(stderr, "%s: write looped, aborting thread\n",
-		  my_progname);
-      }
+        if (thr_alarm_in_use(&alarmed) && !thr_got_alarm(&alarmed) && interrupted)
+        {
+          if (retry_count++ < net->retry_count)
+            continue;
+          EXTRA_DEBUG_fprintf(stderr, "%s: write looped, aborting thread\n", my_progname);
+        }
 #ifndef MYSQL_SERVER
       if (vio_errno(net->vio) == SOCKET_EINTR)
       {
-	DBUG_PRINT("warning",("Interrupted write. Retrying..."));
-	continue;
+        DBUG_PRINT("warning", ("Interrupted write. Retrying..."));
+        continue;
       }
-#endif /* !defined(MYSQL_SERVER) */
-      net->error= 2;				/* Close socket */
-      net->last_errno= (interrupted ? ER_NET_WRITE_INTERRUPTED :
-                               ER_NET_ERROR_ON_WRITE);
+#endif                /* !defined(MYSQL_SERVER) */
+      net->error = 2; /* Close socket */
+      net->last_errno = (interrupted ? ER_NET_WRITE_INTERRUPTED : ER_NET_ERROR_ON_WRITE);
       MYSQL_SERVER_my_error(net->last_errno, MYF(0));
       break;
     }
-    pos+=length;
+    pos += length;
     update_statistics(thd_increment_bytes_sent(net->thd, length));
   }
 #ifndef _WIN32
- end:
+end:
 #endif
 #ifdef HAVE_COMPRESS
   if (net->compress)
-    my_free((void*) packet);
+    my_free((void *)packet);
 #endif
   if (thr_alarm_in_use(&alarmed))
   {
@@ -786,10 +754,9 @@ net_real_write(NET *net,const uchar *packet, size_t len)
     if (!net_blocking)
       vio_blocking(net->vio, net_blocking, &old_mode);
   }
-  net->reading_or_writing=0;
-  DBUG_RETURN(((int) (pos != end)));
+  net->reading_or_writing = 0;
+  DBUG_RETURN(((int)(pos != end)));
 }
-
 
 /*****************************************************************************
 ** Read something from server/clinet
@@ -797,25 +764,24 @@ net_real_write(NET *net,const uchar *packet, size_t len)
 
 #ifndef NO_ALARM
 
-static my_bool net_safe_read(NET *net, uchar *buff, size_t length,
-			     thr_alarm_t *alarmed)
+static my_bool net_safe_read(NET *net, uchar *buff, size_t length, thr_alarm_t *alarmed)
 {
-  uint retry_count=0;
+  uint retry_count = 0;
   while (length > 0)
   {
     size_t tmp;
-    if ((long) (tmp= vio_read(net->vio, buff, length)) <= 0)
+    if ((long)(tmp = vio_read(net->vio, buff, length)) <= 0)
     {
       my_bool interrupted = vio_should_retry(net->vio);
       if (!thr_got_alarm(alarmed) && interrupted)
-      {					/* Probably in MIT threads */
-	if (retry_count++ < net->retry_count)
-	  continue;
+      { /* Probably in MIT threads */
+        if (retry_count++ < net->retry_count)
+          continue;
       }
       return 1;
     }
-    length-= tmp;
-    buff+= tmp;
+    length -= tmp;
+    buff += tmp;
   }
   return 0;
 }
@@ -834,13 +800,12 @@ static my_bool net_safe_read(NET *net, uchar *buff, size_t length,
    1	Got mailformed packet from client
 */
 
-static my_bool my_net_skip_rest(NET *net, uint32 remain, thr_alarm_t *alarmed,
-				ALARM *alarm_buff)
+static my_bool my_net_skip_rest(NET *net, uint32 remain, thr_alarm_t *alarmed, ALARM *alarm_buff)
 {
-  longlong limit= net->max_packet_size*net->net_skip_rest_factor;
-  uint32 old=remain;
+  longlong limit = net->max_packet_size * net->net_skip_rest_factor;
+  uint32 old = remain;
   DBUG_ENTER("my_net_skip_rest");
-  DBUG_PRINT("enter",("bytes_to_skip: %u", (uint) remain));
+  DBUG_PRINT("enter", ("bytes_to_skip: %u", (uint)remain));
 
   /* The following is good for debugging */
   update_statistics(thd_increment_net_big_packet_count(net->thd, 1));
@@ -848,20 +813,19 @@ static my_bool my_net_skip_rest(NET *net, uint32 remain, thr_alarm_t *alarmed,
   if (!thr_alarm_in_use(alarmed))
   {
     my_bool old_mode;
-    if (thr_alarm(alarmed,net->read_timeout, alarm_buff) ||
-	vio_blocking(net->vio, TRUE, &old_mode) < 0)
-      DBUG_RETURN(1);				/* Can't setup, abort */
+    if (thr_alarm(alarmed, net->read_timeout, alarm_buff) || vio_blocking(net->vio, TRUE, &old_mode) < 0)
+      DBUG_RETURN(1); /* Can't setup, abort */
   }
   for (;;)
   {
     while (remain > 0)
     {
-      size_t length= MY_MIN(remain, net->max_packet);
+      size_t length = MY_MIN(remain, net->max_packet);
       if (net_safe_read(net, net->buff, length, alarmed))
-	DBUG_RETURN(1);
+        DBUG_RETURN(1);
       update_statistics(thd_increment_bytes_received(net->thd, length));
-      remain -= (uint32) length;
-      limit-= length;
+      remain -= (uint32)length;
+      limit -= length;
       if (limit < 0)
         DBUG_RETURN(1);
     }
@@ -869,14 +833,13 @@ static my_bool my_net_skip_rest(NET *net, uint32 remain, thr_alarm_t *alarmed,
       break;
     if (net_safe_read(net, net->buff, NET_HEADER_SIZE, alarmed))
       DBUG_RETURN(1);
-    limit-= NET_HEADER_SIZE;
-    old=remain= uint3korr(net->buff);
+    limit -= NET_HEADER_SIZE;
+    old = remain = uint3korr(net->buff);
     net->pkt_nr++;
   }
   DBUG_RETURN(0);
 }
 #endif /* NO_ALARM */
-
 
 /**
   Try to parse and process proxy protocol header.
@@ -891,17 +854,21 @@ static my_bool my_net_skip_rest(NET *net, uint32 remain, thr_alarm_t *alarmed,
   Note, that proxy header can only be sent either when the connection is established,
   or as the client reply packet to
 */
-#undef IGNORE                   /* for Windows */
-typedef enum { RETRY, ABORT, IGNORE} handle_proxy_header_result;
+#undef IGNORE /* for Windows */
+typedef enum
+{
+  RETRY,
+  ABORT,
+  IGNORE
+} handle_proxy_header_result;
 static handle_proxy_header_result handle_proxy_header(NET *net)
 {
 #if !defined(MYSQL_SERVER) || defined(EMBEDDED_LIBRARY)
   return IGNORE;
 #else
-  THD *thd= (THD *)net->thd;
+  THD *thd = (THD *)net->thd;
 
-  if (!has_proxy_protocol_header(net) || !thd ||
-      thd->get_command() != COM_CONNECT)
+  if (!has_proxy_protocol_header(net) || !thd || thd->get_command() != COM_CONNECT)
     return IGNORE;
 
   /*
@@ -918,17 +885,16 @@ static handle_proxy_header_result handle_proxy_header(NET *net)
 
   if (!is_proxy_protocol_allowed((sockaddr *)&(thd->net.vio->remote)))
   {
-     /* proxy-protocol-networks variable needs to be set to allow this remote address */
-     my_printf_error(ER_HOST_NOT_PRIVILEGED, "Proxy header is not accepted from %s",
-       MYF(0), thd->main_security_ctx.ip);
-     return ABORT;
+    /* proxy-protocol-networks variable needs to be set to allow this remote address */
+    my_printf_error(ER_HOST_NOT_PRIVILEGED, "Proxy header is not accepted from %s", MYF(0), thd->main_security_ctx.ip);
+    return ABORT;
   }
 
   if (parse_proxy_protocol_header(net, &peer_info))
   {
-     /* Failed to parse proxy header*/
-     my_printf_error(ER_UNKNOWN_ERROR, "Failed to parse proxy header", MYF(0));
-     return ABORT;
+    /* Failed to parse proxy header*/
+    my_printf_error(ER_UNKNOWN_ERROR, "Failed to parse proxy header", MYF(0));
+    return ABORT;
   }
 
   if (peer_info.is_local_command)
@@ -936,9 +902,8 @@ static handle_proxy_header_result handle_proxy_header(NET *net)
     return RETRY;
   /* Change peer address in THD and ACL structures.*/
   uint host_errors;
-  return (handle_proxy_header_result)thd_set_peer_addr(thd,
-                         &(peer_info.peer_addr), NULL, peer_info.port,
-                         false, &host_errors);
+  return (handle_proxy_header_result)thd_set_peer_addr(thd, &(peer_info.peer_addr), NULL, peer_info.port, false,
+                                                       &host_errors);
 #endif
 }
 
@@ -951,15 +916,13 @@ static handle_proxy_header_result handle_proxy_header(NET *net)
     Returns length of packet.
 */
 
-static ulong
-my_real_read(NET *net, size_t *complen,
-             my_bool header __attribute__((unused)))
+static ulong my_real_read(NET *net, size_t *complen, my_bool header __attribute__((unused)))
 {
   uchar *pos;
   size_t length;
-  uint i,retry_count=0;
-  ulong len=packet_error;
-  my_bool expect_error_packet __attribute__((unused))= 0;
+  uint i, retry_count = 0;
+  ulong len = packet_error;
+  my_bool expect_error_packet __attribute__((unused)) = 0;
   thr_alarm_t alarmed;
 #ifndef NO_ALARM
   ALARM alarm_buff;
@@ -967,19 +930,18 @@ my_real_read(NET *net, size_t *complen,
 
 retry:
 
-  my_bool net_blocking=vio_is_blocking(net->vio);
-  uint32 remain= (net->compress ? NET_HEADER_SIZE+COMP_HEADER_SIZE :
-		  NET_HEADER_SIZE);
+  my_bool net_blocking = vio_is_blocking(net->vio);
+  uint32 remain = (net->compress ? NET_HEADER_SIZE + COMP_HEADER_SIZE : NET_HEADER_SIZE);
 #ifdef MYSQL_SERVER
-  size_t count= remain;
-  struct st_net_server *server_extension= 0;
+  size_t count = remain;
+  struct st_net_server *server_extension = 0;
 
   if (header)
   {
-    server_extension= static_cast<st_net_server*> (net->extension);
+    server_extension = static_cast<st_net_server *>(net->extension);
     if (server_extension != NULL)
     {
-      void *user_data= server_extension->m_user_data;
+      void *user_data = server_extension->m_user_data;
       server_extension->m_before_header(net, user_data, count);
     }
   }
@@ -987,191 +949,181 @@ retry:
 
   *complen = 0;
 
-  net->reading_or_writing=1;
+  net->reading_or_writing = 1;
   thr_alarm_init(&alarmed);
 #ifndef NO_ALARM
   if (net_blocking)
-    thr_alarm(&alarmed,net->read_timeout,&alarm_buff);
+    thr_alarm(&alarmed, net->read_timeout, &alarm_buff);
 #else
   /* Read timeout is set in my_net_set_read_timeout */
 #endif /* NO_ALARM */
 
-    pos = net->buff + net->where_b;		/* net->packet -4 */
-    for (i=0 ; i < 2 ; i++)
+  pos = net->buff + net->where_b; /* net->packet -4 */
+  for (i = 0; i < 2; i++)
+  {
+    while (remain > 0)
     {
-      while (remain > 0)
+      /* First read is done with non blocking mode */
+      if ((long)(length = vio_read(net->vio, pos, remain)) <= 0L)
       {
-	/* First read is done with non blocking mode */
-        if ((long) (length= vio_read(net->vio, pos, remain)) <= 0L)
+        my_bool interrupted = vio_should_retry(net->vio);
+
+        DBUG_PRINT("info", ("vio_read returned %ld  errno: %d", (long)length, vio_errno(net->vio)));
+
+        if (i == 0 && unlikely(thd_net_is_killed((THD *)net->thd)))
         {
-          my_bool interrupted = vio_should_retry(net->vio);
-
-	  DBUG_PRINT("info",("vio_read returned %ld  errno: %d",
-			     (long) length, vio_errno(net->vio)));
-
-          if (i== 0 && unlikely(thd_net_is_killed((THD*) net->thd)))
-          {
-            DBUG_PRINT("info", ("thd is killed"));
-            len= packet_error;
-            net->error= 0;
-            net->last_errno= ER_CONNECTION_KILLED;
-            MYSQL_SERVER_my_error(net->last_errno, MYF(0));
-            goto end;
-          }
+          DBUG_PRINT("info", ("thd is killed"));
+          len = packet_error;
+          net->error = 0;
+          net->last_errno = ER_CONNECTION_KILLED;
+          MYSQL_SERVER_my_error(net->last_errno, MYF(0));
+          goto end;
+        }
 
 #if !defined(_WIN32) && defined(MYSQL_SERVER)
-	  /*
-	    We got an error that there was no data on the socket. We now set up
-	    an alarm to not 'read forever', change the socket to the blocking
-	    mode and try again
-	  */
-	  if ((interrupted || length == 0) && !thr_alarm_in_use(&alarmed))
-	  {
-	    if (!thr_alarm(&alarmed,net->read_timeout,&alarm_buff)) /* Don't wait too long */
-	    {
-	      my_bool old_mode;
-	      while (vio_blocking(net->vio, TRUE, &old_mode) < 0)
-	      {
-		if (vio_should_retry(net->vio) &&
-		    retry_count++ < net->retry_count)
-		  continue;
-		DBUG_PRINT("error",
-			   ("fcntl returned error %d, aborting thread",
-			    vio_errno(net->vio)));
-		EXTRA_DEBUG_fprintf(stderr,
-			"%s: read: fcntl returned error %d, aborting thread\n",
-			my_progname,vio_errno(net->vio));
-		len= packet_error;
-		net->error= 2;                 /* Close socket */
-	        net->last_errno= ER_NET_FCNTL_ERROR;
-		MYSQL_SERVER_my_error(ER_NET_FCNTL_ERROR, MYF(0));
-		goto end;
-	      }
-	      retry_count=0;
-	      continue;
-	    }
-	  }
+        /*
+          We got an error that there was no data on the socket. We now set up
+          an alarm to not 'read forever', change the socket to the blocking
+          mode and try again
+        */
+        if ((interrupted || length == 0) && !thr_alarm_in_use(&alarmed))
+        {
+          if (!thr_alarm(&alarmed, net->read_timeout, &alarm_buff)) /* Don't wait too long */
+          {
+            my_bool old_mode;
+            while (vio_blocking(net->vio, TRUE, &old_mode) < 0)
+            {
+              if (vio_should_retry(net->vio) && retry_count++ < net->retry_count)
+                continue;
+              DBUG_PRINT("error", ("fcntl returned error %d, aborting thread", vio_errno(net->vio)));
+              EXTRA_DEBUG_fprintf(stderr, "%s: read: fcntl returned error %d, aborting thread\n", my_progname,
+                                  vio_errno(net->vio));
+              len = packet_error;
+              net->error = 2; /* Close socket */
+              net->last_errno = ER_NET_FCNTL_ERROR;
+              MYSQL_SERVER_my_error(ER_NET_FCNTL_ERROR, MYF(0));
+              goto end;
+            }
+            retry_count = 0;
+            continue;
+          }
+        }
 #endif /* (!defined(_WIN32) && defined(MYSQL_SERVER) */
-	  if (thr_alarm_in_use(&alarmed) && !thr_got_alarm(&alarmed) &&
-	      interrupted)
-	  {					/* Probably in MIT threads */
-	    if (retry_count++ < net->retry_count)
-	      continue;
-	    EXTRA_DEBUG_fprintf(stderr, "%s: read looped with error %d, aborting thread\n",
-		    my_progname,vio_errno(net->vio));
-	  }
+        if (thr_alarm_in_use(&alarmed) && !thr_got_alarm(&alarmed) && interrupted)
+        { /* Probably in MIT threads */
+          if (retry_count++ < net->retry_count)
+            continue;
+          EXTRA_DEBUG_fprintf(stderr, "%s: read looped with error %d, aborting thread\n", my_progname,
+                              vio_errno(net->vio));
+        }
 #ifndef MYSQL_SERVER
-	  if (length != 0 && vio_errno(net->vio) == SOCKET_EINTR)
-	  {
-	    DBUG_PRINT("warning",("Interrupted read. Retrying..."));
-	    continue;
-	  }
+        if (length != 0 && vio_errno(net->vio) == SOCKET_EINTR)
+        {
+          DBUG_PRINT("warning", ("Interrupted read. Retrying..."));
+          continue;
+        }
 #endif
-	  DBUG_PRINT("error",("Couldn't read packet: remain: %u  errno: %d  length: %ld",
-			      remain, vio_errno(net->vio), (long) length));
-	  len= packet_error;
-	  net->error= 2;				/* Close socket */
-          net->last_errno= (vio_was_timeout(net->vio) ?
-                                   ER_NET_READ_INTERRUPTED :
-                                   ER_NET_READ_ERROR);
-          MYSQL_SERVER_my_error(net->last_errno, MYF(0));
-	  goto end;
-	}
-	remain -= (uint32) length;
-	pos+= length;
-	update_statistics(thd_increment_bytes_received(net->thd, length));
+        DBUG_PRINT("error", ("Couldn't read packet: remain: %u  errno: %d  length: %ld", remain, vio_errno(net->vio),
+                             (long)length));
+        len = packet_error;
+        net->error = 2; /* Close socket */
+        net->last_errno = (vio_was_timeout(net->vio) ? ER_NET_READ_INTERRUPTED : ER_NET_READ_ERROR);
+        MYSQL_SERVER_my_error(net->last_errno, MYF(0));
+        goto end;
       }
+      remain -= (uint32)length;
+      pos += length;
+      update_statistics(thd_increment_bytes_received(net->thd, length));
+    }
 
 #ifdef DEBUG_DATA_PACKETS
-      DBUG_DUMP("data_read", net->buff+net->where_b, length);
+    DBUG_DUMP("data_read", net->buff + net->where_b, length);
 #endif
-      if (i == 0)
-      {					/* First parts is packet length */
-        size_t helping;
+    if (i == 0)
+    { /* First parts is packet length */
+      size_t helping;
 #ifndef DEBUG_DATA_PACKETS
-        DBUG_DUMP("packet_header", net->buff+net->where_b,
-                  NET_HEADER_SIZE);
+      DBUG_DUMP("packet_header", net->buff + net->where_b, NET_HEADER_SIZE);
 #endif
-	if (net->buff[net->where_b + 3] != (uchar) net->pkt_nr)
-        {
+      if (net->buff[net->where_b + 3] != (uchar)net->pkt_nr)
+      {
 #ifndef MYSQL_SERVER
-          if (net->buff[net->where_b + 3] == (uchar) (net->pkt_nr -1))
-          {
-            /*
-              If the server was killed then the server may have missed the
-              last sent client packet and the packet numbering may be one off.
-            */
-            DBUG_PRINT("warning", ("Found possible out of order packets"));
-            expect_error_packet= 1;
-          }
-          else
-#endif
-            goto packets_out_of_order;
-        }
-        net->compress_pkt_nr= ++net->pkt_nr;
-#ifdef HAVE_COMPRESS
-	if (net->compress)
-	{
+        if (net->buff[net->where_b + 3] == (uchar)(net->pkt_nr - 1))
+        {
           /*
-            The following uint3korr() may read 4 bytes, so make sure we don't
-            read unallocated or uninitialized memory. The right-hand expression
-            must match the size of the buffer allocated in net_realloc().
+            If the server was killed then the server may have missed the
+            last sent client packet and the packet numbering may be one off.
           */
-          DBUG_ASSERT(net->where_b + NET_HEADER_SIZE + sizeof(uint32) <=
-                      net->max_packet + NET_HEADER_SIZE + COMP_HEADER_SIZE + 1);
-	  /*
-	    If the packet is compressed then complen > 0 and contains the
-	    number of bytes in the uncompressed packet
-	  */
-	  *complen=uint3korr(&(net->buff[net->where_b + NET_HEADER_SIZE]));
-	}
-#endif
-
-	len=uint3korr(net->buff+net->where_b);
-	if (!len)				/* End of big multi-packet */
-	  goto end;
-	helping = MY_MAX(len,*complen) + net->where_b;
-	/* The necessary size of net->buff */
-	if (helping >= net->max_packet)
-	{
-	  if (net_realloc(net,helping))
-	  {
-#if defined(MYSQL_SERVER) && !defined(NO_ALARM)
-	    if (!net->compress &&
-		!my_net_skip_rest(net, (uint32) len, &alarmed, &alarm_buff))
-	      net->error= 3;		/* Successfully skiped packet */
-#endif
-	    len= packet_error;          /* Return error and close connection */
-	    goto end;
-	  }
-	}
-	pos=net->buff + net->where_b;
-	remain = (uint32) len;
-#ifdef MYSQL_SERVER
-        if (server_extension != NULL)
-        {
-          void *user_data= server_extension->m_user_data;
-          server_extension->m_after_header(net, user_data, count, 0);
-          server_extension=  NULL;
+          DBUG_PRINT("warning", ("Found possible out of order packets"));
+          expect_error_packet = 1;
         }
+        else
 #endif
+          goto packets_out_of_order;
       }
-#ifndef MYSQL_SERVER
-      else if (expect_error_packet)
+      net->compress_pkt_nr = ++net->pkt_nr;
+#ifdef HAVE_COMPRESS
+      if (net->compress)
       {
         /*
-          This check is safe both for compressed and not compressed protocol
-          as for the compressed protocol errors are not compressed anymore.
+          The following uint3korr() may read 4 bytes, so make sure we don't
+          read unallocated or uninitialized memory. The right-hand expression
+          must match the size of the buffer allocated in net_realloc().
         */
-        if (net->buff[net->where_b] != (uchar) 255)
+        DBUG_ASSERT(net->where_b + NET_HEADER_SIZE + sizeof(uint32) <=
+                    net->max_packet + NET_HEADER_SIZE + COMP_HEADER_SIZE + 1);
+        /*
+          If the packet is compressed then complen > 0 and contains the
+          number of bytes in the uncompressed packet
+        */
+        *complen = uint3korr(&(net->buff[net->where_b + NET_HEADER_SIZE]));
+      }
+#endif
+
+      len = uint3korr(net->buff + net->where_b);
+      if (!len) /* End of big multi-packet */
+        goto end;
+      helping = MY_MAX(len, *complen) + net->where_b;
+      /* The necessary size of net->buff */
+      if (helping >= net->max_packet)
+      {
+        if (net_realloc(net, helping))
         {
-          /* Restore pkt_nr to original value */
-          net->pkt_nr--;
-          goto packets_out_of_order;
+#if defined(MYSQL_SERVER) && !defined(NO_ALARM)
+          if (!net->compress && !my_net_skip_rest(net, (uint32)len, &alarmed, &alarm_buff))
+            net->error = 3; /* Successfully skiped packet */
+#endif
+          len = packet_error; /* Return error and close connection */
+          goto end;
         }
+      }
+      pos = net->buff + net->where_b;
+      remain = (uint32)len;
+#ifdef MYSQL_SERVER
+      if (server_extension != NULL)
+      {
+        void *user_data = server_extension->m_user_data;
+        server_extension->m_after_header(net, user_data, count, 0);
+        server_extension = NULL;
       }
 #endif
     }
+#ifndef MYSQL_SERVER
+    else if (expect_error_packet)
+    {
+      /*
+        This check is safe both for compressed and not compressed protocol
+        as for the compressed protocol errors are not compressed anymore.
+      */
+      if (net->buff[net->where_b] != (uchar)255)
+      {
+        /* Restore pkt_nr to original value */
+        net->pkt_nr--;
+        goto packets_out_of_order;
+      }
+    }
+#endif
+  }
 
 end:
   if (thr_alarm_in_use(&alarmed))
@@ -1181,69 +1133,60 @@ end:
     if (!net_blocking)
       vio_blocking(net->vio, net_blocking, &old_mode);
   }
-  net->reading_or_writing=0;
+  net->reading_or_writing = 0;
 #ifdef DEBUG_DATA_PACKETS
   if (len != packet_error)
-    DBUG_DUMP("data_read", net->buff+net->where_b, len);
+    DBUG_DUMP("data_read", net->buff + net->where_b, len);
 #endif
 #ifdef MYSQL_SERVER
   if (server_extension != NULL)
   {
-    void *user_data= server_extension->m_user_data;
+    void *user_data = server_extension->m_user_data;
     server_extension->m_after_header(net, user_data, count, 1);
     DBUG_ASSERT(len == packet_error || len == 0);
   }
 #endif
-  return(len);
+  return (len);
 
 packets_out_of_order:
+{
+  switch (handle_proxy_header(net))
   {
-    switch (handle_proxy_header(net)) {
     case ABORT:
-        /* error happened, message is already written. */
-        len= packet_error;
-        goto end; 
+      /* error happened, message is already written. */
+      len = packet_error;
+      goto end;
     case RETRY:
-        goto retry;
+      goto retry;
     case IGNORE:
-        break;
-    }
-
-    DBUG_PRINT("error",
-               ("Packets out of order (Found: %d, expected %u)",
-                (int) net->buff[net->where_b + 3],
-                net->pkt_nr));
-    EXTRA_DEBUG_ASSERT(0);
-    /*
-       We don't make noise server side, since the client is expected
-       to break the protocol for e.g. --send LOAD DATA .. LOCAL where
-       the server expects the client to send a file, but the client
-       may reply with a new command instead.
-    */
-#ifndef MYSQL_SERVER
-    EXTRA_DEBUG_fflush(stdout);
-    EXTRA_DEBUG_fprintf(stderr,"Error: Packets out of order (Found: %d, expected %d)\n",
-                        (int) net->buff[net->where_b + 3],
-                        (uint) (uchar) net->pkt_nr);
-    EXTRA_DEBUG_fflush(stderr);
-#endif
-    len= packet_error;
-    MYSQL_SERVER_my_error(ER_NET_PACKETS_OUT_OF_ORDER, MYF(0));
-    goto end;
+      break;
   }
+
+  DBUG_PRINT("error", ("Packets out of order (Found: %d, expected %u)", (int)net->buff[net->where_b + 3], net->pkt_nr));
+  EXTRA_DEBUG_ASSERT(0);
+  /*
+     We don't make noise server side, since the client is expected
+     to break the protocol for e.g. --send LOAD DATA .. LOCAL where
+     the server expects the client to send a file, but the client
+     may reply with a new command instead.
+  */
+#ifndef MYSQL_SERVER
+  EXTRA_DEBUG_fflush(stdout);
+  EXTRA_DEBUG_fprintf(stderr, "Error: Packets out of order (Found: %d, expected %d)\n",
+                      (int)net->buff[net->where_b + 3], (uint)(uchar)net->pkt_nr);
+  EXTRA_DEBUG_fflush(stderr);
+#endif
+  len = packet_error;
+  MYSQL_SERVER_my_error(ER_NET_PACKETS_OUT_OF_ORDER, MYF(0));
+  goto end;
 }
-
-
+}
 
 /* Old interface. See my_net_read_packet() for function description */
 
 #undef my_net_read
 
-ulong my_net_read(NET *net)
-{
-  return my_net_read_packet(net, 0);
-}
-
+ulong my_net_read(NET *net) { return my_net_read_packet(net, 0); }
 
 /**
   Read a packet from the client/server and return it without the internal
@@ -1263,16 +1206,13 @@ ulong my_net_read(NET *net)
   The function returns the length of the found packet or packet_error.
   net->read_pos points to the read data.
 */
-ulong
-my_net_read_packet(NET *net, my_bool read_from_server)
+ulong my_net_read_packet(NET *net, my_bool read_from_server)
 {
   ulong reallen = 0;
-  return my_net_read_packet_reallen(net, read_from_server, &reallen); 
+  return my_net_read_packet_reallen(net, read_from_server, &reallen);
 }
 
-
-ulong
-my_net_read_packet_reallen(NET *net, my_bool read_from_server, ulong* reallen)
+ulong my_net_read_packet_reallen(NET *net, my_bool read_from_server, ulong *reallen)
 {
   size_t len, complen;
 
@@ -1283,27 +1223,27 @@ my_net_read_packet_reallen(NET *net, my_bool read_from_server, ulong* reallen)
   if (!net->compress)
   {
 #endif
-    len = my_real_read(net,&complen, read_from_server);
+    len = my_real_read(net, &complen, read_from_server);
     if (len == MAX_PACKET_LENGTH)
     {
       /* First packet of a multi-packet.  Concatenate the packets */
       ulong save_pos = net->where_b;
-      size_t total_length= 0;
+      size_t total_length = 0;
       do
       {
-	net->where_b += (ulong)len;
-	total_length += len;
-	len = my_real_read(net,&complen, 0);
+        net->where_b += (ulong)len;
+        total_length += len;
+        len = my_real_read(net, &complen, 0);
       } while (len == MAX_PACKET_LENGTH);
       if (likely(len != packet_error))
-	len+= total_length;
+        len += total_length;
       net->where_b = save_pos;
     }
 
     net->read_pos = net->buff + net->where_b;
     if (likely(len != packet_error))
     {
-      net->read_pos[len]=0;		/* Safeguard for mysql_use_result */
+      net->read_pos[len] = 0; /* Safeguard for mysql_use_result */
       *reallen = (ulong)len;
     }
     MYSQL_NET_READ_DONE(0, len);
@@ -1317,20 +1257,19 @@ my_net_read_packet_reallen(NET *net, my_bool read_from_server, ulong* reallen)
     ulong buf_length;
     ulong start_of_packet;
     ulong first_packet_offset;
-    uint read_length, multi_byte_packet=0;
+    uint read_length, multi_byte_packet = 0;
 
     if (net->remain_in_buf)
     {
-      buf_length= net->buf_length;		/* Data left in old packet */
-      first_packet_offset= start_of_packet= (net->buf_length -
-					     net->remain_in_buf);
+      buf_length = net->buf_length; /* Data left in old packet */
+      first_packet_offset = start_of_packet = (net->buf_length - net->remain_in_buf);
       /* Restore the character that was overwritten by the end 0 */
-      net->buff[start_of_packet]= net->save_char;
+      net->buff[start_of_packet] = net->save_char;
     }
     else
     {
       /* reuse buffer, as there is nothing in it that we need */
-      buf_length= start_of_packet= first_packet_offset= 0;
+      buf_length = start_of_packet = first_packet_offset = 0;
     }
     for (;;)
     {
@@ -1338,90 +1277,82 @@ my_net_read_packet_reallen(NET *net, my_bool read_from_server, ulong* reallen)
 
       if (buf_length - start_of_packet >= NET_HEADER_SIZE)
       {
-	read_length = uint3korr(net->buff+start_of_packet);
-	if (!read_length)
-	{ 
-	  /* End of multi-byte packet */
-	  start_of_packet += NET_HEADER_SIZE;
-	  break;
-	}
-	if (read_length + NET_HEADER_SIZE <= buf_length - start_of_packet)
-	{
-	  if (multi_byte_packet)
-	  {
-	    /* Remove packet header for second packet */
-	    memmove(net->buff + first_packet_offset + start_of_packet,
-		    net->buff + first_packet_offset + start_of_packet +
-		    NET_HEADER_SIZE,
-		    buf_length - start_of_packet);
-	    start_of_packet += read_length;
-	    buf_length -= NET_HEADER_SIZE;
-	  }
-	  else
-	    start_of_packet+= read_length + NET_HEADER_SIZE;
+        read_length = uint3korr(net->buff + start_of_packet);
+        if (!read_length)
+        {
+          /* End of multi-byte packet */
+          start_of_packet += NET_HEADER_SIZE;
+          break;
+        }
+        if (read_length + NET_HEADER_SIZE <= buf_length - start_of_packet)
+        {
+          if (multi_byte_packet)
+          {
+            /* Remove packet header for second packet */
+            memmove(net->buff + first_packet_offset + start_of_packet,
+                    net->buff + first_packet_offset + start_of_packet + NET_HEADER_SIZE, buf_length - start_of_packet);
+            start_of_packet += read_length;
+            buf_length -= NET_HEADER_SIZE;
+          }
+          else
+            start_of_packet += read_length + NET_HEADER_SIZE;
 
-	  if (read_length != MAX_PACKET_LENGTH)	/* last package */
-	  {
-	    multi_byte_packet= 0;		/* No last zero len packet */
-	    break;
-	  }
-	  multi_byte_packet= NET_HEADER_SIZE;
-	  /* Move data down to read next data packet after current one */
-	  if (first_packet_offset)
-	  {
-	    memmove(net->buff,net->buff+first_packet_offset,
-		    buf_length-first_packet_offset);
-	    buf_length-=first_packet_offset;
-	    start_of_packet -= first_packet_offset;
-	    first_packet_offset=0;
-	  }
-	  continue;
-	}
+          if (read_length != MAX_PACKET_LENGTH) /* last package */
+          {
+            multi_byte_packet = 0; /* No last zero len packet */
+            break;
+          }
+          multi_byte_packet = NET_HEADER_SIZE;
+          /* Move data down to read next data packet after current one */
+          if (first_packet_offset)
+          {
+            memmove(net->buff, net->buff + first_packet_offset, buf_length - first_packet_offset);
+            buf_length -= first_packet_offset;
+            start_of_packet -= first_packet_offset;
+            first_packet_offset = 0;
+          }
+          continue;
+        }
       }
       /* Move data down to read next data packet after current one */
       if (first_packet_offset)
       {
-	memmove(net->buff,net->buff+first_packet_offset,
-		buf_length-first_packet_offset);
-	buf_length-=first_packet_offset;
-	start_of_packet -= first_packet_offset;
-	first_packet_offset=0;
+        memmove(net->buff, net->buff + first_packet_offset, buf_length - first_packet_offset);
+        buf_length -= first_packet_offset;
+        start_of_packet -= first_packet_offset;
+        first_packet_offset = 0;
       }
 
-      net->where_b=buf_length;
-      if ((packet_len = my_real_read(net,&complen, read_from_server))
-          == packet_error)
+      net->where_b = buf_length;
+      if ((packet_len = my_real_read(net, &complen, read_from_server)) == packet_error)
       {
         MYSQL_NET_READ_DONE(1, 0);
-	return packet_error;
+        return packet_error;
       }
-      read_from_server= 0;
-      if (my_uncompress(net->buff + net->where_b, packet_len,
-			&complen))
+      read_from_server = 0;
+      if (my_uncompress(net->buff + net->where_b, packet_len, &complen))
       {
-	net->error= 2;			/* caller will close socket */
-        net->last_errno= ER_NET_UNCOMPRESS_ERROR;
-	MYSQL_SERVER_my_error(ER_NET_UNCOMPRESS_ERROR, MYF(0));
+        net->error = 2; /* caller will close socket */
+        net->last_errno = ER_NET_UNCOMPRESS_ERROR;
+        MYSQL_SERVER_my_error(ER_NET_UNCOMPRESS_ERROR, MYF(0));
         MYSQL_NET_READ_DONE(1, 0);
-	return packet_error;
+        return packet_error;
       }
-      buf_length+= (ulong)complen;
+      buf_length += (ulong)complen;
       *reallen += packet_len;
     }
 
-    net->read_pos=      net->buff+ first_packet_offset + NET_HEADER_SIZE;
-    net->buf_length=    buf_length;
-    net->remain_in_buf= (ulong) (buf_length - start_of_packet);
-    len = ((ulong) (start_of_packet - first_packet_offset) - NET_HEADER_SIZE -
-           multi_byte_packet);
-    net->save_char= net->read_pos[len];	/* Must be saved */
-    net->read_pos[len]=0;		/* Safeguard for mysql_use_result */
+    net->read_pos = net->buff + first_packet_offset + NET_HEADER_SIZE;
+    net->buf_length = buf_length;
+    net->remain_in_buf = (ulong)(buf_length - start_of_packet);
+    len = ((ulong)(start_of_packet - first_packet_offset) - NET_HEADER_SIZE - multi_byte_packet);
+    net->save_char = net->read_pos[len]; /* Must be saved */
+    net->read_pos[len] = 0;              /* Safeguard for mysql_use_result */
   }
 #endif /* HAVE_COMPRESS */
   MYSQL_NET_READ_DONE(0, len);
   return (ulong)len;
 }
-
 
 void my_net_set_read_timeout(NET *net, uint timeout)
 {
@@ -1429,13 +1360,12 @@ void my_net_set_read_timeout(NET *net, uint timeout)
   DBUG_PRINT("enter", ("timeout: %d", timeout));
   if (net->read_timeout != timeout)
   {
-    net->read_timeout= timeout;
+    net->read_timeout = timeout;
     if (net->vio)
       vio_timeout(net->vio, 0, timeout);
   }
   DBUG_VOID_RETURN;
 }
-
 
 void my_net_set_write_timeout(NET *net, uint timeout)
 {
@@ -1443,7 +1373,7 @@ void my_net_set_write_timeout(NET *net, uint timeout)
   DBUG_PRINT("enter", ("timeout: %d", timeout));
   if (net->write_timeout != timeout)
   {
-    net->write_timeout= timeout;
+    net->write_timeout = timeout;
     if (net->vio)
       vio_timeout(net->vio, 1, timeout);
   }

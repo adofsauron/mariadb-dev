@@ -20,25 +20,25 @@
 
 #include "mariadb.h"
 #include "sql_priv.h"
-#include "sql_class.h"                          // system_variables
+#include "sql_class.h"  // system_variables
 
 /*
   Function called by my_net_init() to set some check variables
 */
 
-extern "C" {
-void my_net_local_init(NET *net)
+extern "C"
 {
+  void my_net_local_init(NET *net)
+  {
 #ifndef EMBEDDED_LIBRARY
-  net->max_packet=   (uint) global_system_variables.net_buffer_length;
-  net->read_timeout= net->write_timeout= 0;
-  my_net_set_read_timeout(net, (uint)global_system_variables.net_read_timeout);
-  my_net_set_write_timeout(net,
-                           (uint)global_system_variables.net_write_timeout);
+    net->max_packet = (uint)global_system_variables.net_buffer_length;
+    net->read_timeout = net->write_timeout = 0;
+    my_net_set_read_timeout(net, (uint)global_system_variables.net_read_timeout);
+    my_net_set_write_timeout(net, (uint)global_system_variables.net_write_timeout);
 
-  net->retry_count=  (uint) global_system_variables.net_retry_count;
-  net->max_packet_size= MY_MAX(global_system_variables.net_buffer_length,
-			    global_system_variables.max_allowed_packet);
+    net->retry_count = (uint)global_system_variables.net_retry_count;
+    net->max_packet_size =
+        MY_MAX(global_system_variables.net_buffer_length, global_system_variables.max_allowed_packet);
 #endif
-}
+  }
 }

@@ -19,7 +19,8 @@
 
 /* Structure of the name list */
 
-struct show_table_contributors_st {
+struct show_table_contributors_st
+{
   const char *name;
   const char *location;
   const char *comment;
@@ -35,31 +36,30 @@ struct show_table_contributors_st {
   See also https://mariadb.com/kb/en/log-of-mariadb-contributions/
 */
 
-struct show_table_contributors_st show_table_contributors[]= {
-  /* MariaDB foundation sponsors, in contribution, size , time order */
-  {"Alibaba Cloud", "https://www.alibabacloud.com/", "Platinum Sponsor of the MariaDB Foundation"},
-  {"Tencent Cloud", "https://cloud.tencent.com", "Platinum Sponsor of the MariaDB Foundation"},
-  {"Microsoft", "https://microsoft.com/", "Platinum Sponsor of the MariaDB Foundation"},
-  {"MariaDB Corporation", "https://mariadb.com", "Founding member, Platinum Sponsor of the MariaDB Foundation"},
-  {"ServiceNow", "https://servicenow.com", "Platinum Sponsor of the MariaDB Foundation"},
-  {"Intel", "https://www.intel.com", "Platinum Sponsor of the MariaDB Foundation"},
-  {"SIT", "https://sit.org", "Platinum Sponsor of the MariaDB Foundation"},
-  {"Visma", "https://visma.com", "Gold Sponsor of the MariaDB Foundation"},
-  {"DBS", "https://dbs.com", "Gold Sponsor of the MariaDB Foundation"},
-  {"IBM", "https://www.ibm.com", "Gold Sponsor of the MariaDB Foundation"},
-  {"Automattic", "https://automattic.com", "Silver Sponsor of the MariaDB Foundation"},
-  {"Percona", "https://www.percona.com/", "Sponsor of the MariaDB Foundation"},
-  {"Galera Cluster", "https://galeracluster.com", "Sponsor of the MariaDB Foundation"},
+struct show_table_contributors_st show_table_contributors[] = {
+    /* MariaDB foundation sponsors, in contribution, size , time order */
+    {"Alibaba Cloud", "https://www.alibabacloud.com/", "Platinum Sponsor of the MariaDB Foundation"},
+    {"Tencent Cloud", "https://cloud.tencent.com", "Platinum Sponsor of the MariaDB Foundation"},
+    {"Microsoft", "https://microsoft.com/", "Platinum Sponsor of the MariaDB Foundation"},
+    {"MariaDB Corporation", "https://mariadb.com", "Founding member, Platinum Sponsor of the MariaDB Foundation"},
+    {"ServiceNow", "https://servicenow.com", "Platinum Sponsor of the MariaDB Foundation"},
+    {"Intel", "https://www.intel.com", "Platinum Sponsor of the MariaDB Foundation"},
+    {"SIT", "https://sit.org", "Platinum Sponsor of the MariaDB Foundation"},
+    {"Visma", "https://visma.com", "Gold Sponsor of the MariaDB Foundation"},
+    {"DBS", "https://dbs.com", "Gold Sponsor of the MariaDB Foundation"},
+    {"IBM", "https://www.ibm.com", "Gold Sponsor of the MariaDB Foundation"},
+    {"Automattic", "https://automattic.com", "Silver Sponsor of the MariaDB Foundation"},
+    {"Percona", "https://www.percona.com/", "Sponsor of the MariaDB Foundation"},
+    {"Galera Cluster", "https://galeracluster.com", "Sponsor of the MariaDB Foundation"},
 
-  /* Sponsors of important features */
-  {"Google", "USA", "Sponsoring encryption, parallel replication and GTID"},
-  {"Facebook", "USA", "Sponsoring non-blocking API, LIMIT ROWS EXAMINED etc"},
+    /* Sponsors of important features */
+    {"Google", "USA", "Sponsoring encryption, parallel replication and GTID"},
+    {"Facebook", "USA", "Sponsoring non-blocking API, LIMIT ROWS EXAMINED etc"},
 
-  /* Individual contributors, names in historical order, newer first */
-  {"Ronald Bradford", "Brisbane, Australia", "EFF contribution for UC2006 Auction"},
-  {"Sheeri Kritzer", "Boston, Mass. USA", "EFF contribution for UC2006 Auction"},
-  {"Mark Shuttleworth", "London, UK.", "EFF contribution for UC2006 Auction"},
-  {NULL, NULL, NULL}
-};
+    /* Individual contributors, names in historical order, newer first */
+    {"Ronald Bradford", "Brisbane, Australia", "EFF contribution for UC2006 Auction"},
+    {"Sheeri Kritzer", "Boston, Mass. USA", "EFF contribution for UC2006 Auction"},
+    {"Mark Shuttleworth", "London, UK.", "EFF contribution for UC2006 Auction"},
+    {NULL, NULL, NULL}};
 
 #endif /* CONTRIBUTORS_INCLUDED */

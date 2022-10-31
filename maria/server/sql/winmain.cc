@@ -81,30 +81,30 @@ static void report_svc_status(DWORD current_state, DWORD exit_code, DWORD wait_h
   if (!svc_status_handle)
     return;
 
-  static DWORD check_point= 1;
+  static DWORD check_point = 1;
   if (current_state != (DWORD)-1)
-    svc_status.dwCurrentState= current_state;
-  svc_status.dwWaitHint= wait_hint;
+    svc_status.dwCurrentState = current_state;
+  svc_status.dwWaitHint = wait_hint;
 
   if (exit_code)
   {
-    svc_status.dwWin32ExitCode= ERROR_SERVICE_SPECIFIC_ERROR;
-    svc_status.dwServiceSpecificExitCode= exit_code;
+    svc_status.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
+    svc_status.dwServiceSpecificExitCode = exit_code;
   }
   else
   {
-    svc_status.dwWin32ExitCode= 0;
+    svc_status.dwWin32ExitCode = 0;
   }
 
   if (current_state == SERVICE_START_PENDING)
-    svc_status.dwControlsAccepted= 0;
+    svc_status.dwControlsAccepted = 0;
   else
-    svc_status.dwControlsAccepted= SERVICE_ACCEPT_STOP|SERVICE_ACCEPT_SHUTDOWN;
+    svc_status.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
 
   if ((current_state == SERVICE_RUNNING) || (current_state == SERVICE_STOPPED))
-    svc_status.dwCheckPoint= 0;
+    svc_status.dwCheckPoint = 0;
   else
-    svc_status.dwCheckPoint= check_point++;
+    svc_status.dwCheckPoint = check_point++;
 
   SetServiceStatus(svc_status_handle, &svc_status);
 }
@@ -113,8 +113,7 @@ static void report_svc_status(DWORD current_state, DWORD exit_code, DWORD wait_h
 static void svc_report_event(const char *svc_name, const char *command)
 {
   char buffer[80];
-  sprintf_s(buffer, "mariadb service %s, %s failed with %d",
-      svc_name, command, GetLastError());
+  sprintf_s(buffer, "mariadb service %s, %s failed with %d", svc_name, command, GetLastError());
   OutputDebugString(buffer);
 }
 
@@ -126,20 +125,18 @@ static void WINAPI svc_ctrl_handle(DWORD cntrl)
 {
   switch (cntrl)
   {
-  case SERVICE_CONTROL_SHUTDOWN:
-  case SERVICE_CONTROL_STOP:
-    sql_print_information(
-      "Windows service \"%s\":  received %s",
-      svc_name,
-      cntrl == SERVICE_CONTROL_STOP? "SERVICE_CONTROL_STOP": "SERVICE_CONTROL_SHUTDOWN");
+    case SERVICE_CONTROL_SHUTDOWN:
+    case SERVICE_CONTROL_STOP:
+      sql_print_information("Windows service \"%s\":  received %s", svc_name,
+                            cntrl == SERVICE_CONTROL_STOP ? "SERVICE_CONTROL_STOP" : "SERVICE_CONTROL_SHUTDOWN");
 
-    /* The below will also set the status to STOP_PENDING. */
-    mysqld_win_initiate_shutdown();
-    break;
+      /* The below will also set the status to STOP_PENDING. */
+      mysqld_win_initiate_shutdown();
+      break;
 
-  case SERVICE_CONTROL_INTERROGATE:
-  default:
-    break;
+    case SERVICE_CONTROL_INTERROGATE:
+    default:
+      break;
   }
 }
 
@@ -147,9 +144,9 @@ static void WINAPI svc_ctrl_handle(DWORD cntrl)
 static void WINAPI svc_main(DWORD svc_argc, char **svc_argv)
 {
   /* Register the handler function for the service */
-  char *name= svc_argv[0];
+  char *name = svc_argv[0];
 
-  svc_status_handle= RegisterServiceCtrlHandler(name, svc_ctrl_handle);
+  svc_status_handle = RegisterServiceCtrlHandler(name, svc_ctrl_handle);
   if (!svc_status_handle)
   {
     svc_report_event(name, "RegisterServiceCtrlHandler");
@@ -167,7 +164,7 @@ static void WINAPI svc_main(DWORD svc_argc, char **svc_argv)
    Do not pass the service name parameter (last on the command line)
    to mysqld_main(), it is unaware of it.
   */
-  save_argv[save_argc - 1]= 0;
+  save_argv[save_argc - 1] = 0;
   mysqld_main(save_argc - 1, save_argv);
 }
 
@@ -178,7 +175,7 @@ static void WINAPI svc_main(DWORD svc_argc, char **svc_argv)
 */
 static int run_as_service(char *name)
 {
-  SERVICE_TABLE_ENTRY stb[]= {{name, svc_main}, {0, 0}};
+  SERVICE_TABLE_ENTRY stb[] = {{name, svc_main}, {0, 0}};
   if (!StartServiceCtrlDispatcher(stb))
   {
     assert(GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT);
@@ -199,9 +196,9 @@ static bool is_existing_service(const char *name)
     return false;
   }
 
-  SC_HANDLE sc_service= 0, scm= 0;
-  bool ret= ((scm= OpenSCManager(0, 0, SC_MANAGER_ENUMERATE_SERVICE)) != 0) &&
-       ((sc_service= OpenService(scm, name, SERVICE_QUERY_STATUS)) != 0);
+  SC_HANDLE sc_service = 0, scm = 0;
+  bool ret = ((scm = OpenSCManager(0, 0, SC_MANAGER_ENUMERATE_SERVICE)) != 0) &&
+             ((sc_service = OpenService(scm, name, SERVICE_QUERY_STATUS)) != 0);
 
   if (sc_service)
     CloseServiceHandle(sc_service);
@@ -215,10 +212,7 @@ static bool is_existing_service(const char *name)
   If service name is not given to --install/--remove
   it is assumed to be "MySQL" (traditional handling)
 */
-static const char *get_svc_name(const char *arg)
-{
-  return arg ? arg : "MySQL";
-}
+static const char *get_svc_name(const char *arg) { return arg ? arg : "MySQL"; }
 
 /*
   Main function on Windows.
@@ -228,17 +222,17 @@ static const char *get_svc_name(const char *arg)
 */
 __declspec(dllexport) int mysqld_win_main(int argc, char **argv)
 {
-  save_argv= argv;
-  save_argc= argc;
+  save_argv = argv;
+  save_argc = argc;
 
-   /*
-     If no special arguments are given, service name is nor present
-     run as normal program.
-   */
+  /*
+    If no special arguments are given, service name is nor present
+    run as normal program.
+  */
   if (argc == 1)
     return mysqld_main(argc, argv);
 
-  auto cmd= argv[1];
+  auto cmd = argv[1];
 
   /* Handle install/remove */
   if (!strcmp(cmd, "--install") || !strcmp(cmd, "--install-manual"))
@@ -248,15 +242,14 @@ __declspec(dllexport) int mysqld_win_main(int argc, char **argv)
     return remove_service(get_svc_name(argv[2]));
 
   /* Try to run as service, and fallback to mysqld_main(), if this fails */
-  svc_name= argv[argc - 1];
+  svc_name = argv[argc - 1];
   if (is_existing_service(svc_name) && !run_as_service(svc_name))
     return 0;
-  svc_name= 0;
+  svc_name = 0;
 
   /* Run as normal program.*/
   return mysqld_main(argc, argv);
 }
-
 
 /*
   Register/remove services functionality.
@@ -268,24 +261,25 @@ __declspec(dllexport) int mysqld_win_main(int argc, char **argv)
 */
 static void ATTRIBUTE_NORETURN die(const char *func, const char *name)
 {
-  DWORD err= GetLastError();
+  DWORD err = GetLastError();
   fprintf(stderr, "FATAL ERROR : %s failed (%lu)\n", func, err);
   switch (err)
   {
-  case ERROR_SERVICE_EXISTS:
-    fprintf(stderr, "Service %s already exists.\n", name);
-    break;
-  case ERROR_SERVICE_DOES_NOT_EXIST:
-    fprintf(stderr, "Service %s does not exist.\n", name);
-    break;
-  case ERROR_ACCESS_DENIED:
-    fprintf(stderr, "Access is denied. "
-        "Make sure to run as elevated admin user.\n");
-    break;
-  case ERROR_INVALID_NAME:
-    fprintf(stderr, "Invalid service name '%s'\n", name);
-  default:
-    break;
+    case ERROR_SERVICE_EXISTS:
+      fprintf(stderr, "Service %s already exists.\n", name);
+      break;
+    case ERROR_SERVICE_DOES_NOT_EXIST:
+      fprintf(stderr, "Service %s does not exist.\n", name);
+      break;
+    case ERROR_ACCESS_DENIED:
+      fprintf(stderr,
+              "Access is denied. "
+              "Make sure to run as elevated admin user.\n");
+      break;
+    case ERROR_INVALID_NAME:
+      fprintf(stderr, "Invalid service name '%s'\n", name);
+    default:
+      break;
   }
   exit(1);
 }
@@ -304,19 +298,19 @@ static int install_service(int argc, char **argv, const char *name)
   char path[MAX_PATH];
   auto nSize = GetModuleFileName(0, path, sizeof(path));
 
-  if (nSize == (DWORD) sizeof(path) && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+  if (nSize == (DWORD)sizeof(path) && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
     die("GetModuleName", name);
 
   cmdline.append(quoted(path));
 
-  const char *user= 0;
+  const char *user = 0;
   // mysqld --install[-manual] name ...[--local-service]
   if (argc > 2)
   {
-    for (int i= 3; argv[i]; i++)
+    for (int i = 3; argv[i]; i++)
     {
       if (!strcmp(argv[i], "--local-service"))
-        user= "NT AUTHORITY\\LocalService";
+        user = "NT AUTHORITY\\LocalService";
       else
       {
         cmdline.append(" ").append(quoted(argv[i]));
@@ -327,22 +321,20 @@ static int install_service(int argc, char **argv, const char *name)
 
   DWORD start_type;
   if (!strcmp(argv[1], "--install-manual"))
-    start_type= SERVICE_DEMAND_START;
+    start_type = SERVICE_DEMAND_START;
   else
-    start_type= SERVICE_AUTO_START;
+    start_type = SERVICE_AUTO_START;
 
   SC_HANDLE scm, sc_service;
-  if (!(scm= OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE)))
+  if (!(scm = OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE)))
     die("OpenSCManager", name);
 
-  if (!(sc_service= CreateService(
-      scm, name, name, SERVICE_ALL_ACCESS,
-      SERVICE_WIN32_OWN_PROCESS, start_type, SERVICE_ERROR_NORMAL,
-      cmdline.c_str(), 0, 0, 0, user, 0)))
+  if (!(sc_service = CreateService(scm, name, name, SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, start_type,
+                                   SERVICE_ERROR_NORMAL, cmdline.c_str(), 0, 0, 0, user, 0)))
     die("CreateService", name);
 
-  char description[]= "MariaDB database server";
-  SERVICE_DESCRIPTION sd= {description};
+  char description[] = "MariaDB database server";
+  SERVICE_DESCRIPTION sd = {description};
   ChangeServiceConfig2(sc_service, SERVICE_CONFIG_DESCRIPTION, &sd);
 
   CloseServiceHandle(sc_service);
@@ -356,10 +348,10 @@ static int remove_service(const char *name)
 {
   SC_HANDLE scm, sc_service;
 
-  if (!(scm= OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE)))
+  if (!(scm = OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE)))
     die("OpenSCManager", name);
 
-  if (!(sc_service= OpenService(scm, name, DELETE)))
+  if (!(sc_service = OpenService(scm, name, DELETE)))
     die("OpenService", name);
 
   if (!DeleteService(sc_service))

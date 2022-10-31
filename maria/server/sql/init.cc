@@ -13,7 +13,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /**
   @file
 
@@ -25,8 +24,8 @@
 #include "sql_priv.h"
 #include "init.h"
 #include "mysqld.h"
-#include "my_time.h"                            // my_init_time
-#include "unireg.h"                             // SPECIAL_SAME_DB_NAME
+#include "my_time.h"  // my_init_time
+#include "unireg.h"   // SPECIAL_SAME_DB_NAME
 #include <m_ctype.h>
 
 void unireg_init(ulong options)
@@ -34,14 +33,16 @@ void unireg_init(ulong options)
   DBUG_ENTER("unireg_init");
 
   error_handler_hook = my_message_stderr;
-  my_disable_async_io=1;		/* aioread is only in shared library */
-  wild_many='%'; wild_one='_'; wild_prefix='\\'; /* Change to sql syntax */
+  my_disable_async_io = 1; /* aioread is only in shared library */
+  wild_many = '%';
+  wild_one = '_';
+  wild_prefix = '\\'; /* Change to sql syntax */
 
-  current_pid=(ulong) getpid();		/* Save for later ref */
-  my_init_time();			/* Init time-functions (read zone) */
+  current_pid = (ulong)getpid(); /* Save for later ref */
+  my_init_time();                /* Init time-functions (read zone) */
 
-  (void) strmov(reg_ext,".frm");
-  reg_ext_length= 4;
-  specialflag=SPECIAL_SAME_DB_NAME | options;  /* Set options from argv */
+  (void)strmov(reg_ext, ".frm");
+  reg_ext_length = 4;
+  specialflag = SPECIAL_SAME_DB_NAME | options; /* Set options from argv */
   DBUG_VOID_RETURN;
 }

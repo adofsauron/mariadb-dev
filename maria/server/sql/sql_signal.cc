@@ -30,118 +30,91 @@
 */
 #define MAX_MYSQL_ERRNO 65534
 
-const LEX_CSTRING Diag_condition_item_names[]=
-{
-  { STRING_WITH_LEN("CLASS_ORIGIN") },
-  { STRING_WITH_LEN("SUBCLASS_ORIGIN") },
-  { STRING_WITH_LEN("CONSTRAINT_CATALOG") },
-  { STRING_WITH_LEN("CONSTRAINT_SCHEMA") },
-  { STRING_WITH_LEN("CONSTRAINT_NAME") },
-  { STRING_WITH_LEN("CATALOG_NAME") },
-  { STRING_WITH_LEN("SCHEMA_NAME") },
-  { STRING_WITH_LEN("TABLE_NAME") },
-  { STRING_WITH_LEN("COLUMN_NAME") },
-  { STRING_WITH_LEN("CURSOR_NAME") },
-  { STRING_WITH_LEN("MESSAGE_TEXT") },
-  { STRING_WITH_LEN("MYSQL_ERRNO") },
-  { STRING_WITH_LEN("ROW_NUMBER") },
+const LEX_CSTRING Diag_condition_item_names[] = {
+    {STRING_WITH_LEN("CLASS_ORIGIN")},         {STRING_WITH_LEN("SUBCLASS_ORIGIN")},
+    {STRING_WITH_LEN("CONSTRAINT_CATALOG")},   {STRING_WITH_LEN("CONSTRAINT_SCHEMA")},
+    {STRING_WITH_LEN("CONSTRAINT_NAME")},      {STRING_WITH_LEN("CATALOG_NAME")},
+    {STRING_WITH_LEN("SCHEMA_NAME")},          {STRING_WITH_LEN("TABLE_NAME")},
+    {STRING_WITH_LEN("COLUMN_NAME")},          {STRING_WITH_LEN("CURSOR_NAME")},
+    {STRING_WITH_LEN("MESSAGE_TEXT")},         {STRING_WITH_LEN("MYSQL_ERRNO")},
+    {STRING_WITH_LEN("ROW_NUMBER")},
 
-  { STRING_WITH_LEN("CONDITION_IDENTIFIER") },
-  { STRING_WITH_LEN("CONDITION_NUMBER") },
-  { STRING_WITH_LEN("CONNECTION_NAME") },
-  { STRING_WITH_LEN("MESSAGE_LENGTH") },
-  { STRING_WITH_LEN("MESSAGE_OCTET_LENGTH") },
-  { STRING_WITH_LEN("PARAMETER_MODE") },
-  { STRING_WITH_LEN("PARAMETER_NAME") },
-  { STRING_WITH_LEN("PARAMETER_ORDINAL_POSITION") },
-  { STRING_WITH_LEN("RETURNED_SQLSTATE") },
-  { STRING_WITH_LEN("ROUTINE_CATALOG") },
-  { STRING_WITH_LEN("ROUTINE_NAME") },
-  { STRING_WITH_LEN("ROUTINE_SCHEMA") },
-  { STRING_WITH_LEN("SERVER_NAME") },
-  { STRING_WITH_LEN("SPECIFIC_NAME") },
-  { STRING_WITH_LEN("TRIGGER_CATALOG") },
-  { STRING_WITH_LEN("TRIGGER_NAME") },
-  { STRING_WITH_LEN("TRIGGER_SCHEMA") }
-};
+    {STRING_WITH_LEN("CONDITION_IDENTIFIER")}, {STRING_WITH_LEN("CONDITION_NUMBER")},
+    {STRING_WITH_LEN("CONNECTION_NAME")},      {STRING_WITH_LEN("MESSAGE_LENGTH")},
+    {STRING_WITH_LEN("MESSAGE_OCTET_LENGTH")}, {STRING_WITH_LEN("PARAMETER_MODE")},
+    {STRING_WITH_LEN("PARAMETER_NAME")},       {STRING_WITH_LEN("PARAMETER_ORDINAL_POSITION")},
+    {STRING_WITH_LEN("RETURNED_SQLSTATE")},    {STRING_WITH_LEN("ROUTINE_CATALOG")},
+    {STRING_WITH_LEN("ROUTINE_NAME")},         {STRING_WITH_LEN("ROUTINE_SCHEMA")},
+    {STRING_WITH_LEN("SERVER_NAME")},          {STRING_WITH_LEN("SPECIFIC_NAME")},
+    {STRING_WITH_LEN("TRIGGER_CATALOG")},      {STRING_WITH_LEN("TRIGGER_NAME")},
+    {STRING_WITH_LEN("TRIGGER_SCHEMA")}};
 
-
-Set_signal_information::Set_signal_information(
-  const Set_signal_information& set)
+Set_signal_information::Set_signal_information(const Set_signal_information &set)
 {
   memcpy(m_item, set.m_item, sizeof(m_item));
 }
 
-void Set_signal_information::clear()
-{
-  memset(m_item, 0, sizeof(m_item));
-}
+void Set_signal_information::clear() { memset(m_item, 0, sizeof(m_item)); }
 
-
-static bool assign_fixed_string(MEM_ROOT *mem_root,
-                                CHARSET_INFO *dst_cs,
-                                size_t max_char,
-                                String *dst,
-                                const String* src)
+static bool assign_fixed_string(MEM_ROOT *mem_root, CHARSET_INFO *dst_cs, size_t max_char, String *dst,
+                                const String *src)
 {
   bool truncated;
   size_t numchars;
   CHARSET_INFO *src_cs;
-  const char* src_str;
-  const char* src_end;
+  const char *src_str;
+  const char *src_end;
   size_t src_len;
   size_t to_copy;
-  char* dst_str;
+  char *dst_str;
   size_t dst_len;
   size_t dst_copied;
   uint32 dummy_offset;
 
-  src_str= src->ptr();
+  src_str = src->ptr();
   if (src_str == NULL)
   {
-    dst->set((const char*) NULL, 0, dst_cs);
+    dst->set((const char *)NULL, 0, dst_cs);
     return false;
   }
 
-  src_cs= src->charset();
-  src_len= src->length();
-  src_end= src_str + src_len;
-  numchars= src_cs->numchars(src_str, src_end);
+  src_cs = src->charset();
+  src_len = src->length();
+  src_end = src_str + src_len;
+  numchars = src_cs->numchars(src_str, src_end);
 
   if (numchars <= max_char)
   {
-    to_copy= src->length();
-    truncated= false;
+    to_copy = src->length();
+    truncated = false;
   }
   else
   {
-    numchars= max_char;
-    to_copy= dst_cs->charpos(src_str, src_end, numchars);
-    truncated= true;
+    numchars = max_char;
+    to_copy = dst_cs->charpos(src_str, src_end, numchars);
+    truncated = true;
   }
 
-  if (String::needs_conversion(to_copy, src_cs, dst_cs, & dummy_offset))
+  if (String::needs_conversion(to_copy, src_cs, dst_cs, &dummy_offset))
   {
-    dst_len= numchars * dst_cs->mbmaxlen;
-    dst_str= (char*) alloc_root(mem_root, dst_len + 1);
+    dst_len = numchars * dst_cs->mbmaxlen;
+    dst_str = (char *)alloc_root(mem_root, dst_len + 1);
     if (dst_str)
     {
-      dst_copied= String_copier().well_formed_copy(dst_cs, dst_str, dst_len,
-                                                   src_cs, src_str, src_len,
-                                                   numchars);
+      dst_copied = String_copier().well_formed_copy(dst_cs, dst_str, dst_len, src_cs, src_str, src_len, numchars);
       DBUG_ASSERT(dst_copied <= dst_len);
-      dst_len= dst_copied; /* In case the copy truncated the data */
-      dst_str[dst_copied]= '\0';
+      dst_len = dst_copied; /* In case the copy truncated the data */
+      dst_str[dst_copied] = '\0';
     }
   }
   else
   {
-    dst_len= to_copy;
-    dst_str= (char*) alloc_root(mem_root, dst_len + 1);
+    dst_len = to_copy;
+    dst_str = (char *)alloc_root(mem_root, dst_len + 1);
     if (dst_str)
     {
       memcpy(dst_str, src_str, to_copy);
-      dst_str[to_copy]= '\0';
+      dst_str[to_copy] = '\0';
     }
   }
   dst->set(dst_str, dst_len, dst_cs);
@@ -149,11 +122,10 @@ static bool assign_fixed_string(MEM_ROOT *mem_root,
   return truncated;
 }
 
-static int assign_condition_item(MEM_ROOT *mem_root, const char* name, THD *thd,
-                                 Item *set, String *ci)
+static int assign_condition_item(MEM_ROOT *mem_root, const char *name, THD *thd, Item *set, String *ci)
 {
-  char str_buff[(64+1)*4]; /* Room for a null terminated UTF8 String 64 */
-  String str_value(str_buff, sizeof(str_buff), & my_charset_utf8mb3_bin);
+  char str_buff[(64 + 1) * 4]; /* Room for a null terminated UTF8 String 64 */
+  String str_value(str_buff, sizeof(str_buff), &my_charset_utf8mb3_bin);
   String *str;
   bool truncated;
 
@@ -165,8 +137,8 @@ static int assign_condition_item(MEM_ROOT *mem_root, const char* name, THD *thd,
     DBUG_RETURN(1);
   }
 
-  str= set->val_str(& str_value);
-  truncated= assign_fixed_string(mem_root, & my_charset_utf8mb3_bin, 64, ci, str);
+  str = set->val_str(&str_value);
+  truncated = assign_fixed_string(mem_root, &my_charset_utf8mb3_bin, 64, ci, str);
   if (truncated)
   {
     if (thd->is_strict_mode())
@@ -181,7 +153,6 @@ static int assign_condition_item(MEM_ROOT *mem_root, const char* name, THD *thd,
   DBUG_RETURN(0);
 }
 
-
 int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *cond)
 {
   struct cond_item_map
@@ -190,37 +161,32 @@ int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *con
     String Sql_condition::*m_member;
   };
 
-  static cond_item_map map[]=
-  {
-    { DIAG_CLASS_ORIGIN, & Sql_condition::m_class_origin },
-    { DIAG_SUBCLASS_ORIGIN, & Sql_condition::m_subclass_origin },
-    { DIAG_CONSTRAINT_CATALOG, & Sql_condition::m_constraint_catalog },
-    { DIAG_CONSTRAINT_SCHEMA, & Sql_condition::m_constraint_schema },
-    { DIAG_CONSTRAINT_NAME, & Sql_condition::m_constraint_name },
-    { DIAG_CATALOG_NAME, & Sql_condition::m_catalog_name },
-    { DIAG_SCHEMA_NAME, & Sql_condition::m_schema_name },
-    { DIAG_TABLE_NAME, & Sql_condition::m_table_name },
-    { DIAG_COLUMN_NAME, & Sql_condition::m_column_name },
-    { DIAG_CURSOR_NAME, & Sql_condition::m_cursor_name }
-  };
+  static cond_item_map map[] = {{DIAG_CLASS_ORIGIN, &Sql_condition::m_class_origin},
+                                {DIAG_SUBCLASS_ORIGIN, &Sql_condition::m_subclass_origin},
+                                {DIAG_CONSTRAINT_CATALOG, &Sql_condition::m_constraint_catalog},
+                                {DIAG_CONSTRAINT_SCHEMA, &Sql_condition::m_constraint_schema},
+                                {DIAG_CONSTRAINT_NAME, &Sql_condition::m_constraint_name},
+                                {DIAG_CATALOG_NAME, &Sql_condition::m_catalog_name},
+                                {DIAG_SCHEMA_NAME, &Sql_condition::m_schema_name},
+                                {DIAG_TABLE_NAME, &Sql_condition::m_table_name},
+                                {DIAG_COLUMN_NAME, &Sql_condition::m_column_name},
+                                {DIAG_CURSOR_NAME, &Sql_condition::m_cursor_name}};
 
   Item *set;
   String str_value;
   String *str;
   int i;
   uint j;
-  int result= 1;
+  int result = 1;
   enum enum_diag_condition_item_name item_enum;
   String *member;
   const LEX_CSTRING *name;
 
   DBUG_ENTER("Sql_cmd_common_signal::eval_signal_informations");
 
-  for (i= FIRST_DIAG_SET_PROPERTY;
-       i <= LAST_DIAG_SET_PROPERTY;
-       i++)
+  for (i = FIRST_DIAG_SET_PROPERTY; i <= LAST_DIAG_SET_PROPERTY; i++)
   {
-    if ((set= m_set_signal_information.m_item[i]) &&
+    if ((set = m_set_signal_information.m_item[i]) &&
         set->fix_fields_if_needed(thd, &m_set_signal_information.m_item[i]))
       goto end;
   }
@@ -229,14 +195,14 @@ int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *con
     Generically assign all the UTF8 String 64 condition items
     described in the map.
   */
-  for (j= 0; j < array_elements(map); j++)
+  for (j = 0; j < array_elements(map); j++)
   {
-    item_enum= map[j].m_item;
-    set= m_set_signal_information.m_item[item_enum];
+    item_enum = map[j].m_item;
+    set = m_set_signal_information.m_item[item_enum];
     if (set != NULL)
     {
-      member= & (cond->* map[j].m_member);
-      name= & Diag_condition_item_names[item_enum];
+      member = &(cond->*map[j].m_member);
+      name = &Diag_condition_item_names[item_enum];
       if (assign_condition_item(cond->m_mem_root, name->str, thd, set, member))
         goto end;
     }
@@ -246,13 +212,12 @@ int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *con
     Assign the remaining attributes.
   */
 
-  set= m_set_signal_information.m_item[DIAG_MESSAGE_TEXT];
+  set = m_set_signal_information.m_item[DIAG_MESSAGE_TEXT];
   if (set != NULL)
   {
     if (set->is_null())
     {
-      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR,
-                              "MESSAGE_TEXT", "NULL");
+      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR, "MESSAGE_TEXT", "NULL");
       goto end;
     }
     /*
@@ -261,21 +226,17 @@ int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *con
     */
     bool truncated;
     String utf8_text;
-    str= set->val_str(& str_value);
-    truncated= assign_fixed_string(thd->mem_root, & my_charset_utf8mb3_bin,
-                                   MYSQL_ERRMSG_SIZE,
-                                   & utf8_text, str);
+    str = set->val_str(&str_value);
+    truncated = assign_fixed_string(thd->mem_root, &my_charset_utf8mb3_bin, MYSQL_ERRMSG_SIZE, &utf8_text, str);
     if (truncated)
     {
       if (thd->is_strict_mode())
       {
-        thd->raise_error_printf(ER_COND_ITEM_TOO_LONG,
-                                "MESSAGE_TEXT");
+        thd->raise_error_printf(ER_COND_ITEM_TOO_LONG, "MESSAGE_TEXT");
         goto end;
       }
 
-      thd->raise_warning_printf(WARN_COND_ITEM_TRUNCATED,
-                                "MESSAGE_TEXT");
+      thd->raise_warning_printf(WARN_COND_ITEM_TRUNCATED, "MESSAGE_TEXT");
     }
 
     /*
@@ -285,49 +246,44 @@ int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *con
     */
     String converted_text;
     converted_text.set_charset(error_message_charset_info);
-    converted_text.append(utf8_text.ptr(), utf8_text.length(),
-                          utf8_text.charset());
+    converted_text.append(utf8_text.ptr(), utf8_text.length(), utf8_text.charset());
     cond->set_builtin_message_text(converted_text.c_ptr_safe());
   }
 
-  set= m_set_signal_information.m_item[DIAG_MYSQL_ERRNO];
+  set = m_set_signal_information.m_item[DIAG_MYSQL_ERRNO];
   if (set != NULL)
   {
     if (set->is_null())
     {
-      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR,
-                              "MYSQL_ERRNO", "NULL");
+      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR, "MYSQL_ERRNO", "NULL");
       goto end;
     }
-    longlong code= set->val_int();
+    longlong code = set->val_int();
     if ((code <= 0) || (code > MAX_MYSQL_ERRNO))
     {
-      str= set->val_str(& str_value);
-      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR,
-                              "MYSQL_ERRNO", str->c_ptr_safe());
+      str = set->val_str(&str_value);
+      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR, "MYSQL_ERRNO", str->c_ptr_safe());
       goto end;
     }
-    cond->m_sql_errno= (int) code;
+    cond->m_sql_errno = (int)code;
   }
 
-  set= m_set_signal_information.m_item[DIAG_ROW_NUMBER];
+  set = m_set_signal_information.m_item[DIAG_ROW_NUMBER];
   if (set != NULL)
   {
     if (set->is_null())
     {
-      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR,
-                              "ROW_NUMBER", "NULL");
+      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR, "ROW_NUMBER", "NULL");
       goto end;
     }
-    longlong row_number_value= set->val_int();
+    longlong row_number_value = set->val_int();
     if (row_number_value < 0)
     {
-      str= set->val_str(& str_value);
-      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR,
-                              "ROW_NUMBER", str->c_ptr_safe());
+      str = set->val_str(&str_value);
+      thd->raise_error_printf(ER_WRONG_VALUE_FOR_VAR, "ROW_NUMBER", str->c_ptr_safe());
       goto end;
     }
-    cond->m_row_number= (ulong) row_number_value;
+    cond->m_row_number = (ulong)row_number_value;
   }
 
   /*
@@ -335,14 +291,12 @@ int Sql_cmd_common_signal::eval_signal_informations(THD *thd, Sql_condition *con
     but flag thd in case of failure.
   */
   if (likely(!thd->is_error()))
-    result= 0;
+    result = 0;
 
 end:
-  for (i= FIRST_DIAG_SET_PROPERTY;
-       i <= LAST_DIAG_SET_PROPERTY;
-       i++)
+  for (i = FIRST_DIAG_SET_PROPERTY; i <= LAST_DIAG_SET_PROPERTY; i++)
   {
-    set= m_set_signal_information.m_item[i];
+    set = m_set_signal_information.m_item[i];
     if (set)
     {
       if (set->fixed())
@@ -355,7 +309,7 @@ end:
 
 bool Sql_cmd_common_signal::raise_condition(THD *thd, Sql_condition *cond)
 {
-  bool result= TRUE;
+  bool result = TRUE;
 
   DBUG_ENTER("Sql_cmd_common_signal::raise_condition");
 
@@ -366,17 +320,15 @@ bool Sql_cmd_common_signal::raise_condition(THD *thd, Sql_condition *cond)
     DBUG_RETURN(result);
 
   /* SIGNAL should not signal WARN_LEVEL_NOTE, but RESIGNAL can */
-  DBUG_ASSERT(cond->m_level == Sql_condition::WARN_LEVEL_ERROR ||
-              cond->m_level != Sql_condition::WARN_LEVEL_NOTE ||
+  DBUG_ASSERT(cond->m_level == Sql_condition::WARN_LEVEL_ERROR || cond->m_level != Sql_condition::WARN_LEVEL_NOTE ||
               sql_command_code() == SQLCOM_RESIGNAL);
 
-  (void) thd->raise_condition(cond);
+  (void)thd->raise_condition(cond);
 
-  if (cond->m_level == Sql_condition::WARN_LEVEL_WARN ||
-      cond->m_level == Sql_condition::WARN_LEVEL_NOTE)
+  if (cond->m_level == Sql_condition::WARN_LEVEL_WARN || cond->m_level == Sql_condition::WARN_LEVEL_NOTE)
   {
     my_ok(thd);
-    result= FALSE;
+    result = FALSE;
   }
 
   DBUG_RETURN(result);
@@ -384,7 +336,7 @@ bool Sql_cmd_common_signal::raise_condition(THD *thd, Sql_condition *cond)
 
 bool Sql_cmd_signal::execute(THD *thd)
 {
-  bool result= TRUE;
+  bool result = TRUE;
   DBUG_ASSERT(m_cond);
   Sql_condition cond(thd->mem_root, m_cond->get_user_condition_identity());
 
@@ -406,11 +358,10 @@ bool Sql_cmd_signal::execute(THD *thd)
   thd->set_row_count_func(0);
   thd->get_stmt_da()->clear_warning_info(thd->query_id);
 
-  result= raise_condition(thd, &cond);
+  result = raise_condition(thd, &cond);
 
   DBUG_RETURN(result);
 }
-
 
 /**
   Execute RESIGNAL SQL-statement.
@@ -424,9 +375,9 @@ bool Sql_cmd_signal::execute(THD *thd)
 
 bool Sql_cmd_resignal::execute(THD *thd)
 {
-  Diagnostics_area *da= thd->get_stmt_da();
+  Diagnostics_area *da = thd->get_stmt_da();
   const sp_rcontext::Sql_condition_info *signaled;
-  int result= TRUE;
+  int result = TRUE;
 
   DBUG_ENTER("Resignal_statement::execute");
 
@@ -434,14 +385,13 @@ bool Sql_cmd_resignal::execute(THD *thd)
   // passed to the caller's Warning_info.
   da->set_warning_info_id(thd->query_id);
 
-  if (! thd->spcont || ! (signaled= thd->spcont->raised_condition()))
+  if (!thd->spcont || !(signaled = thd->spcont->raised_condition()))
   {
     thd->raise_error(ER_RESIGNAL_WITHOUT_ACTIVE_HANDLER);
     DBUG_RETURN(result);
   }
 
-  Sql_condition signaled_err(thd->mem_root, *signaled, signaled->message,
-                             signaled->m_row_number);
+  Sql_condition signaled_err(thd->mem_root, *signaled, signaled->message, signaled->m_row_number);
 
   if (m_cond)
   {
@@ -472,9 +422,7 @@ bool Sql_cmd_resignal::execute(THD *thd)
   }
 
   /* RESIGNAL with signal_value */
-  result= raise_condition(thd, &signaled_err);
+  result = raise_condition(thd, &signaled_err);
 
   DBUG_RETURN(result);
-
 }
-

@@ -30,20 +30,17 @@
 
 #ifndef DBUG_OFF
 
-static const LEX_CSTRING debug_crash_counter=
-{ STRING_WITH_LEN("debug_crash_counter") };
-static const LEX_CSTRING debug_error_counter=
-{ STRING_WITH_LEN("debug_error_counter") };
+static const LEX_CSTRING debug_crash_counter = {STRING_WITH_LEN("debug_crash_counter")};
+static const LEX_CSTRING debug_error_counter = {STRING_WITH_LEN("debug_error_counter")};
 
 static bool debug_decrement_counter(const LEX_CSTRING *name)
 {
-  THD *thd= current_thd;
-  user_var_entry *entry= (user_var_entry*)
-    my_hash_search(&thd->user_vars, (uchar*) name->str, name->length);
-  if (!entry || entry->type != INT_RESULT || ! entry->value)
+  THD *thd = current_thd;
+  user_var_entry *entry = (user_var_entry *)my_hash_search(&thd->user_vars, (uchar *)name->str, name->length);
+  if (!entry || entry->type != INT_RESULT || !entry->value)
     return 0;
-  (*(ulonglong*) entry->value)= (*(ulonglong*) entry->value)-1;
-  return !*(ulonglong*) entry->value;
+  (*(ulonglong *)entry->value) = (*(ulonglong *)entry->value) - 1;
+  return !*(ulonglong *)entry->value;
 }
 
 void debug_crash_here(const char *keyword)
@@ -51,14 +48,11 @@ void debug_crash_here(const char *keyword)
   DBUG_ENTER("debug_crash_here");
   DBUG_PRINT("enter", ("keyword: %s", keyword));
 
-  DBUG_EXECUTE_IF(keyword,
-                  if (debug_decrement_counter(&debug_crash_counter))
-                  {
-                    my_printf_error(ER_INTERNAL_ERROR,
-                                    "Crashing at %s",
-                                    MYF(ME_ERROR_LOG | ME_NOTE), keyword);
-                    DBUG_SUICIDE();
-                  });
+  DBUG_EXECUTE_IF(
+      keyword, if (debug_decrement_counter(&debug_crash_counter)) {
+        my_printf_error(ER_INTERNAL_ERROR, "Crashing at %s", MYF(ME_ERROR_LOG | ME_NOTE), keyword);
+        DBUG_SUICIDE();
+      });
   DBUG_VOID_RETURN;
 }
 
@@ -75,14 +69,11 @@ bool debug_simulate_error(const char *keyword, uint error)
 {
   DBUG_ENTER("debug_crash_here");
   DBUG_PRINT("enter", ("keyword: %s", keyword));
-  DBUG_EXECUTE_IF(keyword,
-                  if (debug_decrement_counter(&debug_error_counter))
-                  {
-                    my_printf_error(error,
-                                    "Simulating error for '%s'",
-                                    MYF(ME_ERROR_LOG), keyword);
-                    DBUG_RETURN(1);
-                  });
+  DBUG_EXECUTE_IF(
+      keyword, if (debug_decrement_counter(&debug_error_counter)) {
+        my_printf_error(error, "Simulating error for '%s'", MYF(ME_ERROR_LOG), keyword);
+        DBUG_RETURN(1);
+      });
   DBUG_RETURN(0);
 }
 #endif /* DBUG_OFF */

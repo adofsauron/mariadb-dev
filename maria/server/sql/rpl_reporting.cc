@@ -17,71 +17,63 @@
 #include "mariadb.h"
 #include "sql_priv.h"
 #include "rpl_reporting.h"
-#include "log.h" // sql_print_error, sql_print_warning,
-                 // sql_print_information
+#include "log.h"  // sql_print_error, sql_print_warning,
+                  // sql_print_information
 #include "sql_class.h"
 
 Slave_reporting_capability::Slave_reporting_capability(char const *thread_name)
-  : err_thread_id(0), m_thread_name(thread_name)
+    : err_thread_id(0), m_thread_name(thread_name)
 {
-  mysql_mutex_init(key_mutex_slave_reporting_capability_err_lock,
-                   &err_lock, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(key_mutex_slave_reporting_capability_err_lock, &err_lock, MY_MUTEX_INIT_FAST);
 }
 
-void
-Slave_reporting_capability::report(loglevel level, int err_code,
-                                   const char *extra_info,
-                                   const char *msg, ...) const
+void Slave_reporting_capability::report(loglevel level, int err_code, const char *extra_info, const char *msg,
+                                        ...) const
 {
   void (*report_function)(const char *, ...);
   char buff[MAX_SLAVE_ERRMSG];
-  char *pbuff= buff;
-  uint pbuffsize= sizeof(buff);
+  char *pbuff = buff;
+  uint pbuffsize = sizeof(buff);
   va_list args;
   va_start(args, msg);
 
   mysql_mutex_lock(&err_lock);
   switch (level)
   {
-  case ERROR_LEVEL:
-    /*
-      It's an error, it must be reported in Last_error and Last_errno in SHOW
-      SLAVE STATUS.
-    */
-    pbuff= m_last_error.message;
-    pbuffsize= sizeof(m_last_error.message);
-    m_last_error.number = err_code;
-    m_last_error.update_timestamp();
-    report_function= sql_print_error;
-    break;
-  case WARNING_LEVEL:
-    report_function= sql_print_warning;
-    break;
-  case INFORMATION_LEVEL:
-    report_function= sql_print_information;
-    break;
-  default:
-    va_end(args);
-    DBUG_ASSERT(0);                            // should not come here
-    return;          // don't crash production builds, just do nothing
+    case ERROR_LEVEL:
+      /*
+        It's an error, it must be reported in Last_error and Last_errno in SHOW
+        SLAVE STATUS.
+      */
+      pbuff = m_last_error.message;
+      pbuffsize = sizeof(m_last_error.message);
+      m_last_error.number = err_code;
+      m_last_error.update_timestamp();
+      report_function = sql_print_error;
+      break;
+    case WARNING_LEVEL:
+      report_function = sql_print_warning;
+      break;
+    case INFORMATION_LEVEL:
+      report_function = sql_print_information;
+      break;
+    default:
+      va_end(args);
+      DBUG_ASSERT(0);  // should not come here
+      return;          // don't crash production builds, just do nothing
   }
 
   my_vsnprintf(pbuff, pbuffsize, msg, args);
 
   mysql_mutex_unlock(&err_lock);
   va_end(args);
-  err_thread_id= current_thd->thread_id;
+  err_thread_id = current_thd->thread_id;
 
   /* If the msg string ends with '.', do not add a ',' it would be ugly */
   report_function("%s %s: %s%s %s%sInternal MariaDB error code: %d",
-                  (current_thd && current_thd->rgi_fake) ? "" : "Slave",
-                  m_thread_name, pbuff,
-                  (pbuff[0] && *(strend(pbuff)-1) == '.') ? "" : ",",
-                  (extra_info ? extra_info : ""), (extra_info ? ", " : ""),
-                  err_code);
+                  (current_thd && current_thd->rgi_fake) ? "" : "Slave", m_thread_name, pbuff,
+                  (pbuff[0] && *(strend(pbuff) - 1) == '.') ? "" : ",", (extra_info ? extra_info : ""),
+                  (extra_info ? ", " : ""), err_code);
 }
 
-Slave_reporting_capability::~Slave_reporting_capability()
-{
-  mysql_mutex_destroy(&err_lock);
-}
+Slave_reporting_capability::~Slave_reporting_capability() { mysql_mutex_destroy(&err_lock); }

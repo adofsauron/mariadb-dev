@@ -17,23 +17,25 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /* This file defines structures needed by udf functions */
 
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface
 #endif
 
-enum Item_udftype {UDFTYPE_FUNCTION=1,UDFTYPE_AGGREGATE};
+enum Item_udftype
+{
+  UDFTYPE_FUNCTION = 1,
+  UDFTYPE_AGGREGATE
+};
 
 typedef void (*Udf_func_clear)(UDF_INIT *, uchar *, uchar *);
 typedef void (*Udf_func_add)(UDF_INIT *, UDF_ARGS *, uchar *, uchar *);
-typedef void (*Udf_func_deinit)(UDF_INIT*);
-typedef my_bool (*Udf_func_init)(UDF_INIT *, UDF_ARGS *,  char *);
+typedef void (*Udf_func_deinit)(UDF_INIT *);
+typedef my_bool (*Udf_func_init)(UDF_INIT *, UDF_ARGS *, char *);
 typedef void (*Udf_func_any)();
 typedef double (*Udf_func_double)(UDF_INIT *, UDF_ARGS *, uchar *, uchar *);
-typedef longlong (*Udf_func_longlong)(UDF_INIT *, UDF_ARGS *, uchar *,
-                                      uchar *);
+typedef longlong (*Udf_func_longlong)(UDF_INIT *, UDF_ARGS *, uchar *, uchar *);
 
 typedef struct st_udf_func
 {
@@ -53,7 +55,7 @@ typedef struct st_udf_func
 
 class Item_result_field;
 
-class udf_handler :public Sql_alloc
+class udf_handler : public Sql_alloc
 {
  protected:
   udf_func *u_d;
@@ -67,94 +69,88 @@ class udf_handler :public Sql_alloc
 
  public:
   bool not_original;
-  udf_handler(udf_func *udf_arg) :u_d(udf_arg), buffers(0), error(0),
-    is_null(0), initialized(0), not_original(0)
-  {}
+  udf_handler(udf_func *udf_arg) : u_d(udf_arg), buffers(0), error(0), is_null(0), initialized(0), not_original(0) {}
   ~udf_handler();
   const char *name() const { return u_d ? u_d->name.str : "?"; }
-  Item_result result_type () const
-  { return u_d	? u_d->returns : STRING_RESULT;}
+  Item_result result_type() const { return u_d ? u_d->returns : STRING_RESULT; }
   bool get_arguments();
-  bool fix_fields(THD *thd, Item_func_or_sum *item,
-		  uint arg_count, Item **args);
+  bool fix_fields(THD *thd, Item_func_or_sum *item, uint arg_count, Item **args);
   void cleanup();
   double val(my_bool *null_value)
   {
-    is_null= 0;
+    is_null = 0;
     if (get_arguments())
     {
-      *null_value=1;
+      *null_value = 1;
       return 0.0;
     }
-    Udf_func_double func= (Udf_func_double) u_d->func;
-    double tmp=func(&initid, &f_args, &is_null, &error);
+    Udf_func_double func = (Udf_func_double)u_d->func;
+    double tmp = func(&initid, &f_args, &is_null, &error);
     if (is_null || error)
     {
-      *null_value=1;
+      *null_value = 1;
       return 0.0;
     }
-    *null_value=0;
+    *null_value = 0;
     return tmp;
   }
   longlong val_int(my_bool *null_value)
   {
-    is_null= 0;
+    is_null = 0;
     if (get_arguments())
     {
-      *null_value=1;
+      *null_value = 1;
       return 0;
     }
-    Udf_func_longlong func= (Udf_func_longlong) u_d->func;
-    longlong tmp=func(&initid, &f_args, &is_null, &error);
+    Udf_func_longlong func = (Udf_func_longlong)u_d->func;
+    longlong tmp = func(&initid, &f_args, &is_null, &error);
     if (is_null || error)
     {
-      *null_value=1;
+      *null_value = 1;
       return 0;
     }
-    *null_value=0;
+    *null_value = 0;
     return tmp;
   }
   my_decimal *val_decimal(my_bool *null_value, my_decimal *dec_buf);
   void clear()
   {
-    is_null= 0;
-    Udf_func_clear func= u_d->func_clear;
+    is_null = 0;
+    Udf_func_clear func = u_d->func_clear;
     func(&initid, &is_null, &error);
   }
   void add(my_bool *null_value)
   {
     if (get_arguments())
     {
-      *null_value=1;
+      *null_value = 1;
       return;
     }
-    Udf_func_add func= u_d->func_add;
+    Udf_func_add func = u_d->func_add;
     func(&initid, &f_args, &is_null, &error);
-    *null_value= (my_bool) (is_null || error);
+    *null_value = (my_bool)(is_null || error);
   }
-  bool supports_removal() const
-  { return MY_TEST(u_d->func_remove); }
+  bool supports_removal() const { return MY_TEST(u_d->func_remove); }
   void remove(my_bool *null_value)
   {
     DBUG_ASSERT(u_d->func_remove);
     if (get_arguments())
     {
-      *null_value=1;
+      *null_value = 1;
       return;
     }
-    Udf_func_add func= u_d->func_remove;
+    Udf_func_add func = u_d->func_remove;
     func(&initid, &f_args, &is_null, &error);
-    *null_value= (my_bool) (is_null || error);
+    *null_value = (my_bool)(is_null || error);
   }
-  String *val_str(String *str,String *save_str);
+  String *val_str(String *str, String *save_str);
 };
 
-
 #ifdef HAVE_DLOPEN
-void udf_init(void),udf_free(void);
-udf_func *find_udf(const char *name, size_t size, bool mark_used=0);
+void udf_init(void), udf_free(void);
+udf_func *find_udf(const char *name, size_t size, bool mark_used = 0);
 void free_udf(udf_func *udf);
-int mysql_create_function(THD *thd,udf_func *udf);
+int mysql_create_function(THD *thd, udf_func *udf);
 enum drop_udf_result
 {
   UDF_DEL_RESULT_ABSENT,
@@ -163,7 +159,7 @@ enum drop_udf_result
 };
 enum drop_udf_result mysql_drop_function(THD *thd, const LEX_CSTRING *name);
 #else
-static inline void udf_init(void) { }
-static inline void udf_free(void) { }
+static inline void udf_init(void) {}
+static inline void udf_free(void) {}
 #endif
 #endif /* SQL_UDF_INCLUDED */

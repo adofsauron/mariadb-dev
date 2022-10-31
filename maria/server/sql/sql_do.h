@@ -16,7 +16,7 @@
 #ifndef SQL_DO_INCLUDED
 #define SQL_DO_INCLUDED
 
-#include "sql_list.h"                           /* List */
+#include "sql_list.h" /* List */
 
 class THD;
 class Item;

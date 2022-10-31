@@ -23,21 +23,28 @@
 #include "slave.h"
 
 extern Atomic_counter<uint32_t> binlog_dump_thread_count;
-typedef enum {RPL_AUTH_MASTER=0,RPL_IDLE_SLAVE,RPL_ACTIVE_SLAVE,
-	      RPL_LOST_SOLDIER,RPL_TROOP_SOLDIER,
-	      RPL_RECOVERY_CAPTAIN,RPL_NULL /* inactive */,
-	      RPL_ANY /* wild card used by change_rpl_status */ } RPL_STATUS;
+typedef enum
+{
+  RPL_AUTH_MASTER = 0,
+  RPL_IDLE_SLAVE,
+  RPL_ACTIVE_SLAVE,
+  RPL_LOST_SOLDIER,
+  RPL_TROOP_SOLDIER,
+  RPL_RECOVERY_CAPTAIN,
+  RPL_NULL /* inactive */,
+  RPL_ANY /* wild card used by change_rpl_status */
+} RPL_STATUS;
 extern ulong rpl_status;
 
 extern mysql_mutex_t LOCK_rpl_status;
 extern mysql_cond_t COND_rpl_status;
 extern TYPELIB rpl_role_typelib;
-extern const char* rpl_role_type[], *rpl_status_type[];
+extern const char *rpl_role_type[], *rpl_status_type[];
 
 void change_rpl_status(ulong from_status, ulong to_status);
-int find_recovery_captain(THD* thd, MYSQL* mysql);
+int find_recovery_captain(THD *thd, MYSQL *mysql);
 
-bool show_slave_hosts(THD* thd);
+bool show_slave_hosts(THD *thd);
 
 #endif /* HAVE_REPLICATION */
 #endif /* REPL_FAILSAFE_INCLUDED */

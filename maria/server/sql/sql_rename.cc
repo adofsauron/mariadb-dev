@@ -23,12 +23,12 @@
 #include "sql_priv.h"
 #include "unireg.h"
 #include "sql_rename.h"
-#include "sql_cache.h"                          // query_cache_*
-#include "sql_table.h"                         // write_bin_log
-#include "sql_view.h"             // mysql_frm_type, mysql_rename_view
+#include "sql_cache.h"  // query_cache_*
+#include "sql_table.h"  // write_bin_log
+#include "sql_view.h"   // mysql_frm_type, mysql_rename_view
 #include "sql_trigger.h"
-#include "sql_base.h"   // tdc_remove_table, lock_table_names,
-#include "sql_handler.h"                        // mysql_ha_rm_tables
+#include "sql_base.h"     // tdc_remove_table, lock_table_names,
+#include "sql_handler.h"  // mysql_ha_rm_tables
 #include "sql_statistics.h"
 #include "ddl_log.h"
 #include "wsrep_mysqld.h"
@@ -40,25 +40,21 @@ struct TABLE_PAIR
   TABLE_LIST *from, *to;
 };
 
-
-static bool rename_tables(THD *thd, TABLE_LIST *table_list,
-                          DDL_LOG_STATE *ddl_log_state,
-                          bool skip_error, bool if_exits,
-                          bool *force_if_exists);
+static bool rename_tables(THD *thd, TABLE_LIST *table_list, DDL_LOG_STATE *ddl_log_state, bool skip_error,
+                          bool if_exits, bool *force_if_exists);
 
 /*
   Every two entries in the table_list form a pair of original name and
   the new name.
 */
 
-bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
-                          bool if_exists)
+bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent, bool if_exists)
 {
-  bool error= 1;
-  bool binlog_error= 0, force_if_exists;
-  TABLE_LIST *ren_table= 0;
+  bool error = 1;
+  bool binlog_error = 0, force_if_exists;
+  TABLE_LIST *ren_table = 0;
   int to_table;
-  const char *rename_log_table[2]= {NULL, NULL};
+  const char *rename_log_table[2] = {NULL, NULL};
   DDL_LOG_STATE ddl_log_state;
   DBUG_ENTER("mysql_rename_tables");
 
@@ -69,17 +65,14 @@ bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
 
   if (thd->locked_tables_mode || thd->in_active_multi_stmt_transaction())
   {
-    my_message(ER_LOCK_OR_ACTIVE_TRANSACTION,
-               ER_THD(thd, ER_LOCK_OR_ACTIVE_TRANSACTION), MYF(0));
+    my_message(ER_LOCK_OR_ACTIVE_TRANSACTION, ER_THD(thd, ER_LOCK_OR_ACTIVE_TRANSACTION), MYF(0));
     DBUG_RETURN(1);
   }
 
   mysql_ha_rm_tables(thd, table_list);
 
-  if (logger.is_log_table_enabled(QUERY_LOG_GENERAL) ||
-      logger.is_log_table_enabled(QUERY_LOG_SLOW))
+  if (logger.is_log_table_enabled(QUERY_LOG_GENERAL) || logger.is_log_table_enabled(QUERY_LOG_SLOW))
   {
-
     /*
       Rules for rename of a log table:
 
@@ -90,11 +83,10 @@ bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
       ELSE 4. Perform rename.
     */
 
-    for (to_table= 0, ren_table= table_list; ren_table;
-         to_table= 1 - to_table, ren_table= ren_table->next_local)
+    for (to_table = 0, ren_table = table_list; ren_table; to_table = 1 - to_table, ren_table = ren_table->next_local)
     {
       int log_table_rename;
-      if ((log_table_rename= check_if_log_table(ren_table, TRUE, NullS)))
+      if ((log_table_rename = check_if_log_table(ren_table, TRUE, NullS)))
       {
         /*
           as we use log_table_rename as an array index, we need it to start
@@ -105,16 +97,14 @@ bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
         if (rename_log_table[log_table_rename])
         {
           if (to_table)
-            rename_log_table[log_table_rename]= NULL;
+            rename_log_table[log_table_rename] = NULL;
           else
           {
             /*
               Two renames of "log_table TO" w/o rename "TO log_table" in
               between.
             */
-            my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0),
-                     ren_table->table_name.str,
-                     ren_table->table_name.str);
+            my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0), ren_table->table_name.str, ren_table->table_name.str);
             goto err;
           }
         }
@@ -126,15 +116,13 @@ bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
               Attempt to rename a table TO log_table w/o renaming
               log_table TO some table.
             */
-            my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0),
-                     ren_table->table_name.str,
-                     ren_table->table_name.str);
+            my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0), ren_table->table_name.str, ren_table->table_name.str);
             goto err;
           }
           else
           {
             /* save the name of the log table to report an error */
-            rename_log_table[log_table_rename]= ren_table->table_name.str;
+            rename_log_table[log_table_rename] = ren_table->table_name.str;
           }
         }
       }
@@ -142,36 +130,32 @@ bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
     if (rename_log_table[0] || rename_log_table[1])
     {
       if (rename_log_table[0])
-        my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0), rename_log_table[0],
-                 rename_log_table[0]);
+        my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0), rename_log_table[0], rename_log_table[0]);
       else
-        my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0), rename_log_table[1],
-                 rename_log_table[1]);
+        my_error(ER_CANT_RENAME_LOG_TABLE, MYF(0), rename_log_table[1], rename_log_table[1]);
       goto err;
     }
   }
 
-  if (lock_table_names(thd, table_list, 0, thd->variables.lock_wait_timeout,
-                       0))
+  if (lock_table_names(thd, table_list, 0, thd->variables.lock_wait_timeout, 0))
     goto err;
 
-  error=0;
+  error = 0;
   bzero(&ddl_log_state, sizeof(ddl_log_state));
 
   /*
     An exclusive lock on table names is satisfactory to ensure
     no other thread accesses this table.
   */
-  error= rename_tables(thd, table_list, &ddl_log_state,
-                       0, if_exists, &force_if_exists);
+  error = rename_tables(thd, table_list, &ddl_log_state, 0, if_exists, &force_if_exists);
 
   if (likely(!silent && !error))
   {
-    ulonglong save_option_bits= thd->variables.option_bits;
-    if (force_if_exists && ! if_exists)
+    ulonglong save_option_bits = thd->variables.option_bits;
+    if (force_if_exists && !if_exists)
     {
       /* Add IF EXISTS to binary log */
-      thd->variables.option_bits|= OPTION_IF_EXISTS;
+      thd->variables.option_bits |= OPTION_IF_EXISTS;
     }
 
     debug_crash_here("ddl_log_rename_before_binlog");
@@ -179,13 +163,13 @@ bool mysql_rename_tables(THD *thd, TABLE_LIST *table_list, bool silent,
       Store xid in ddl log and binary log so that we can check on ddl recovery
       if the item is in the binary log (and thus the operation was complete
     */
-    thd->binlog_xid= thd->query_id;
+    thd->binlog_xid = thd->query_id;
     ddl_log_update_xid(&ddl_log_state, thd->binlog_xid);
-    binlog_error= write_bin_log(thd, TRUE, thd->query(), thd->query_length());
+    binlog_error = write_bin_log(thd, TRUE, thd->query(), thd->query_length());
     if (binlog_error)
-      error= 1;
-    thd->binlog_xid= 0;
-    thd->variables.option_bits= save_option_bits;
+      error = 1;
+    thd->binlog_xid = 0;
+    thd->variables.option_bits = save_option_bits;
     debug_crash_here("ddl_log_rename_after_binlog");
 
     if (likely(!binlog_error))
@@ -207,26 +191,21 @@ err:
   DBUG_RETURN(error || binlog_error);
 }
 
-
-static bool
-do_rename_temporary(THD *thd, TABLE_LIST *ren_table, TABLE_LIST *new_table)
+static bool do_rename_temporary(THD *thd, TABLE_LIST *ren_table, TABLE_LIST *new_table)
 {
   LEX_CSTRING *new_alias;
   DBUG_ENTER("do_rename_temporary");
 
-  new_alias= (lower_case_table_names == 2) ? &new_table->alias :
-                                             &new_table->table_name;
+  new_alias = (lower_case_table_names == 2) ? &new_table->alias : &new_table->table_name;
 
   if (thd->find_temporary_table(new_table, THD::TMP_TABLE_ANY))
   {
     my_error(ER_TABLE_EXISTS_ERROR, MYF(0), new_alias->str);
-    DBUG_RETURN(1);                     // This can't be skipped
+    DBUG_RETURN(1);  // This can't be skipped
   }
 
-  DBUG_RETURN(thd->rename_temporary_table(ren_table->table,
-                                          &new_table->db, new_alias));
+  DBUG_RETURN(thd->rename_temporary_table(ren_table->table, &new_table->db, new_alias));
 }
-
 
 /**
    Parameters for do_rename
@@ -238,7 +217,6 @@ struct rename_param
   LEX_CUSTRING old_version;
   handlerton *from_table_hton;
 };
-
 
 /**
   check_rename()
@@ -258,37 +236,28 @@ struct rename_param
   @retval <0  Can't do rename, but no error
 */
 
-static int
-check_rename(THD *thd, rename_param *param,
-             TABLE_LIST *ren_table,
-             const LEX_CSTRING *new_db,
-             const LEX_CSTRING *new_table_name,
-             const LEX_CSTRING *new_table_alias,
-             bool if_exists)
+static int check_rename(THD *thd, rename_param *param, TABLE_LIST *ren_table, const LEX_CSTRING *new_db,
+                        const LEX_CSTRING *new_table_name, const LEX_CSTRING *new_table_alias, bool if_exists)
 {
   DBUG_ENTER("check_rename");
-  DBUG_PRINT("enter", ("if_exists: %d", (int) if_exists));
-
+  DBUG_PRINT("enter", ("if_exists: %d", (int)if_exists));
 
   if (lower_case_table_names == 2)
   {
-    param->old_alias= ren_table->alias;
-    param->new_alias= *new_table_alias;
+    param->old_alias = ren_table->alias;
+    param->new_alias = *new_table_alias;
   }
   else
   {
-    param->old_alias= ren_table->table_name;
-    param->new_alias= *new_table_name;
+    param->old_alias = ren_table->table_name;
+    param->new_alias = *new_table_name;
   }
   DBUG_ASSERT(param->new_alias.str);
 
-  if (!ha_table_exists(thd, &ren_table->db, &param->old_alias,
-                       &param->old_version, NULL,
-                       &param->from_table_hton) ||
+  if (!ha_table_exists(thd, &ren_table->db, &param->old_alias, &param->old_version, NULL, &param->from_table_hton) ||
       !param->from_table_hton)
   {
-    my_error(ER_NO_SUCH_TABLE, MYF(if_exists ? ME_NOTE : 0),
-             ren_table->db.str, param->old_alias.str);
+    my_error(ER_NO_SUCH_TABLE, MYF(if_exists ? ME_NOTE : 0), ren_table->db.str, param->old_alias.str);
     DBUG_RETURN(if_exists ? -1 : 1);
   }
 
@@ -307,11 +276,10 @@ check_rename(THD *thd, rename_param *param,
   if (ha_table_exists(thd, new_db, &param->new_alias, NULL, NULL, 0))
   {
     my_error(ER_TABLE_EXISTS_ERROR, MYF(0), param->new_alias.str);
-    DBUG_RETURN(1);                     // This can't be skipped
+    DBUG_RETURN(1);  // This can't be skipped
   }
   DBUG_RETURN(0);
 }
-
 
 /*
   Rename a single table or a view
@@ -334,27 +302,24 @@ check_rename(THD *thd, rename_param *param,
     true      rename failed
 */
 
-static bool
-do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
-          TABLE_LIST *ren_table, const LEX_CSTRING *new_db,
-          bool skip_error, bool *force_if_exists)
+static bool do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state, TABLE_LIST *ren_table,
+                      const LEX_CSTRING *new_db, bool skip_error, bool *force_if_exists)
 {
-  int rc= 1;
+  int rc = 1;
   handlerton *hton;
   LEX_CSTRING *old_alias, *new_alias;
   TRIGGER_RENAME_PARAM rename_param;
   DBUG_ENTER("do_rename");
-  DBUG_PRINT("enter", ("skip_error: %d", (int) skip_error));
+  DBUG_PRINT("enter", ("skip_error: %d", (int)skip_error));
 
-  old_alias= &param->old_alias;
-  new_alias= &param->new_alias;
-  hton=      param->from_table_hton;
+  old_alias = &param->old_alias;
+  new_alias = &param->new_alias;
+  hton = param->from_table_hton;
 
   DBUG_ASSERT(!thd->locked_tables_mode);
 
 #ifdef WITH_WSREP
-  if (WSREP(thd) && hton && hton != view_pseudo_hton &&
-      !wsrep_should_replicate_ddl(thd, hton))
+  if (WSREP(thd) && hton && hton != view_pseudo_hton && !wsrep_should_replicate_ddl(thd, hton))
     DBUG_RETURN(1);
 #endif
 
@@ -363,26 +328,20 @@ do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
   if (hton != view_pseudo_hton)
   {
     if (hton->flags & HTON_TABLE_MAY_NOT_EXIST_ON_SLAVE)
-      *force_if_exists= 1;
+      *force_if_exists = 1;
 
     /* Check if we can rename triggers */
-    if (Table_triggers_list::prepare_for_rename(thd, &rename_param,
-                                                &ren_table->db,
-                                                old_alias,
-                                                &ren_table->table_name,
-                                                new_db,
-                                                new_alias))
+    if (Table_triggers_list::prepare_for_rename(thd, &rename_param, &ren_table->db, old_alias, &ren_table->table_name,
+                                                new_db, new_alias))
       DBUG_RETURN(!skip_error);
 
-    thd->replication_flags= 0;
+    thd->replication_flags = 0;
 
-    if (ddl_log_rename_table(ddl_log_state, hton,
-                             &ren_table->db, old_alias, new_db, new_alias))
+    if (ddl_log_rename_table(ddl_log_state, hton, &ren_table->db, old_alias, new_db, new_alias))
       DBUG_RETURN(1);
 
     debug_crash_here("ddl_log_rename_before_rename_table");
-    if (!(rc= mysql_rename_table(hton, &ren_table->db, old_alias,
-                                 new_db, new_alias, &param->old_version, 0)))
+    if (!(rc = mysql_rename_table(hton, &ren_table->db, old_alias, new_db, new_alias, &param->old_version, 0)))
     {
       /* Table rename succeded.
          It's safe to start recovery at rename trigger phase
@@ -392,18 +351,11 @@ do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
 
       debug_crash_here("ddl_log_rename_before_rename_trigger");
 
-      if (!(rc= Table_triggers_list::change_table_name(thd,
-                                                       &rename_param,
-                                                       &ren_table->db,
-                                                       old_alias,
-                                                       &ren_table->table_name,
-                                                       new_db,
-                                                       new_alias)))
+      if (!(rc = Table_triggers_list::change_table_name(thd, &rename_param, &ren_table->db, old_alias,
+                                                        &ren_table->table_name, new_db, new_alias)))
       {
         debug_crash_here("ddl_log_rename_before_stat_tables");
-        (void) rename_table_in_stat_tables(thd, &ren_table->db,
-                                           &ren_table->table_name,
-                                           new_db, new_alias);
+        (void)rename_table_in_stat_tables(thd, &ren_table->db, &ren_table->table_name, new_db, new_alias);
         debug_crash_here("ddl_log_rename_after_stat_tables");
       }
       else
@@ -415,16 +367,14 @@ do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
           and handler's data and report about failure to rename table.
         */
         debug_crash_here("ddl_log_rename_after_failed_rename_trigger");
-        (void) mysql_rename_table(hton, new_db, new_alias,
-                                  &ren_table->db, old_alias, &param->old_version,
-                                  NO_FK_CHECKS);
+        (void)mysql_rename_table(hton, new_db, new_alias, &ren_table->db, old_alias, &param->old_version, NO_FK_CHECKS);
         debug_crash_here("ddl_log_rename_after_revert_rename_table");
         ddl_log_disable_entry(ddl_log_state);
         debug_crash_here("ddl_log_rename_after_disable_entry");
       }
     }
     if (thd->replication_flags & OPTION_IF_EXISTS)
-      *force_if_exists= 1;
+      *force_if_exists = 1;
   }
   else
   {
@@ -433,18 +383,15 @@ do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
       except of ALTER ...UPGRADE DATA DIRECTORY NAME command
       because a view has valid internal db&table names in this case.
     */
-    if (thd->lex->sql_command != SQLCOM_ALTER_DB_UPGRADE &&
-        cmp(&ren_table->db, new_db))
+    if (thd->lex->sql_command != SQLCOM_ALTER_DB_UPGRADE && cmp(&ren_table->db, new_db))
     {
       my_error(ER_FORBID_SCHEMA_CHANGE, MYF(0), ren_table->db.str, new_db->str);
       DBUG_RETURN(1);
     }
 
-    ddl_log_rename_view(ddl_log_state, &ren_table->db,
-                        &ren_table->table_name, new_db, new_alias);
+    ddl_log_rename_view(ddl_log_state, &ren_table->db, &ren_table->table_name, new_db, new_alias);
     debug_crash_here("ddl_log_rename_before_rename_view");
-    rc= mysql_rename_view(thd, new_db, new_alias, &ren_table->db,
-                          &ren_table->table_name);
+    rc = mysql_rename_view(thd, new_db, new_alias, &ren_table->db, &ren_table->table_name);
     debug_crash_here("ddl_log_rename_after_rename_view");
     if (rc)
     {
@@ -457,7 +404,6 @@ do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
   }
   DBUG_RETURN(rc && !skip_error ? 1 : 0);
 }
-
 
 /*
   Rename all tables in list; Return pointer to wrong entry if something goes
@@ -488,19 +434,18 @@ do_rename(THD *thd, rename_param *param, DDL_LOG_STATE *ddl_log_state,
               All tables are reverted to their original names
 */
 
-static bool
-rename_tables(THD *thd, TABLE_LIST *table_list, DDL_LOG_STATE *ddl_log_state,
-              bool skip_error, bool if_exists, bool *force_if_exists)
+static bool rename_tables(THD *thd, TABLE_LIST *table_list, DDL_LOG_STATE *ddl_log_state, bool skip_error,
+                          bool if_exists, bool *force_if_exists)
 {
   TABLE_LIST *ren_table, *new_table;
   List<TABLE_PAIR> tmp_tables;
   DBUG_ENTER("rename_tables");
 
-  *force_if_exists= 0;
+  *force_if_exists = 0;
 
-  for (ren_table= table_list; ren_table; ren_table= new_table->next_local)
+  for (ren_table = table_list; ren_table; ren_table = new_table->next_local)
   {
-    new_table= ren_table->next_local;
+    new_table = ren_table->next_local;
 
     if (is_temporary_table(ren_table))
     {
@@ -510,11 +455,11 @@ rename_tables(THD *thd, TABLE_LIST *table_list, DDL_LOG_STATE *ddl_log_state,
         when only using temporary tables.  We don't need the log as
         all temporary tables will disappear anyway in a crash.
       */
-      TABLE_PAIR *pair= (TABLE_PAIR*) thd->alloc(sizeof(*pair));
-      if (! pair || tmp_tables.push_front(pair, thd->mem_root))
+      TABLE_PAIR *pair = (TABLE_PAIR *)thd->alloc(sizeof(*pair));
+      if (!pair || tmp_tables.push_front(pair, thd->mem_root))
         goto revert_rename;
-      pair->from= ren_table;
-      pair->to=   new_table;
+      pair->from = ren_table;
+      pair->to = new_table;
 
       if (do_rename_temporary(thd, ren_table, new_table))
         goto revert_rename;
@@ -523,17 +468,14 @@ rename_tables(THD *thd, TABLE_LIST *table_list, DDL_LOG_STATE *ddl_log_state,
     {
       int error;
       rename_param param;
-      error= check_rename(thd, &param, ren_table, &new_table->db,
-                          &new_table->table_name,
-                          &new_table->alias, (skip_error || if_exists));
+      error = check_rename(thd, &param, ren_table, &new_table->db, &new_table->table_name, &new_table->alias,
+                           (skip_error || if_exists));
       if (error < 0)
-        continue;                               // Ignore rename (if exists)
+        continue;  // Ignore rename (if exists)
       if (error > 0)
         goto revert_rename;
 
-      if (do_rename(thd, &param, ddl_log_state,
-                    ren_table, &new_table->db,
-                    skip_error, force_if_exists))
+      if (do_rename(thd, &param, ddl_log_state, ren_table, &new_table->db, skip_error, force_if_exists))
         goto revert_rename;
     }
   }
@@ -542,8 +484,7 @@ rename_tables(THD *thd, TABLE_LIST *table_list, DDL_LOG_STATE *ddl_log_state,
 revert_rename:
   /* Revert temporary tables. Normal tables are reverted in the caller */
   List_iterator_fast<TABLE_PAIR> it(tmp_tables);
-  while (TABLE_PAIR *pair= it++)
-    do_rename_temporary(thd, pair->to, pair->from);
+  while (TABLE_PAIR *pair = it++) do_rename_temporary(thd, pair->to, pair->from);
 
   DBUG_RETURN(1);
 }

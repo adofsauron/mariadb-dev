@@ -17,8 +17,8 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-#include "my_base.h"                            /* ha_rows */
-#include <my_sys.h>                             /* qsort2_cmp */
+#include "my_base.h" /* ha_rows */
+#include <my_sys.h>  /* qsort2_cmp */
 #include "queues.h"
 #include "sql_class.h"
 
@@ -27,19 +27,19 @@ struct TABLE;
 
 /* Defines used by filesort and uniques */
 
-#define MERGEBUFF		7
-#define MERGEBUFF2		15
+#define MERGEBUFF 7
+#define MERGEBUFF2 15
 
 /*
    The structure SORT_ADDON_FIELD describes a fixed layout
    for field values appended to sorted values in records to be sorted
    in the sort buffer.
    Only fixed layout is supported now.
-   Null bit maps for the appended values is placed before the values 
+   Null bit maps for the appended values is placed before the values
    themselves. Offsets are from the last sorted field, that is from the
    record referefence, which is still last component of sorted records.
    It is preserved for backward compatiblility.
-   The structure is used tp store values of the additional fields 
+   The structure is used tp store values of the additional fields
    in the sort buffer. It is used also when these values are read
    from a temporary file/buffer. As the reading procedures are beyond the
    scope of the 'filesort' code the values have to be retrieved via
@@ -49,11 +49,11 @@ struct TABLE;
 typedef struct st_sort_addon_field
 {
   /* Sort addon packed field */
-  Field *field;          /* Original field */
-  uint   offset;         /* Offset from the last sorted field */
-  uint   null_offset;    /* Offset to to null bit from the last sorted field */
-  uint   length;         /* Length in the sort buffer */
-  uint8  null_bit;       /* Null bit mask for the field */
+  Field *field;     /* Original field */
+  uint offset;      /* Offset from the last sorted field */
+  uint null_offset; /* Offset to to null bit from the last sorted field */
+  uint length;      /* Length in the sort buffer */
+  uint8 null_bit;   /* Null bit mask for the field */
 } SORT_ADDON_FIELD;
 
 struct BUFFPEK_COMPARE_CONTEXT
@@ -61,7 +61,6 @@ struct BUFFPEK_COMPARE_CONTEXT
   qsort_cmp2 key_compare;
   void *key_compare_arg;
 };
-
 
 /**
   Descriptor for a merge chunk to be sort-merged.
@@ -75,46 +74,44 @@ struct BUFFPEK_COMPARE_CONTEXT
   We have accessors (getters/setters) for all struct members.
  */
 
-struct Merge_chunk {
-public:
+struct Merge_chunk
+{
+ public:
   my_off_t file_position() const { return m_file_position; }
-  void set_file_position(my_off_t val) { m_file_position= val; }
-  void advance_file_position(my_off_t val) { m_file_position+= val; }
+  void set_file_position(my_off_t val) { m_file_position = val; }
+  void advance_file_position(my_off_t val) { m_file_position += val; }
 
   uchar *buffer_start() { return m_buffer_start; }
   const uchar *buffer_end() const { return m_buffer_end; }
 
   void set_buffer(uchar *start, uchar *end)
   {
-    m_buffer_start= start;
-    m_buffer_end= end;
+    m_buffer_start = start;
+    m_buffer_end = end;
   }
-  void set_buffer_start(uchar *start)
-  {
-    m_buffer_start= start;
-  }
+  void set_buffer_start(uchar *start) { m_buffer_start = start; }
   void set_buffer_end(uchar *end)
   {
     DBUG_ASSERT(m_buffer_end == NULL || end <= m_buffer_end);
-    m_buffer_end= end;
+    m_buffer_end = end;
   }
 
-  void init_current_key() { m_current_key= m_buffer_start; }
+  void init_current_key() { m_current_key = m_buffer_start; }
   uchar *current_key() { return m_current_key; }
-  void advance_current_key(uint val) { m_current_key+= val; }
+  void advance_current_key(uint val) { m_current_key += val; }
 
-  void decrement_rowcount(ha_rows val) { m_rowcount-= val; }
-  void set_rowcount(ha_rows val)       { m_rowcount= val; }
-  ha_rows rowcount() const             { return m_rowcount; }
+  void decrement_rowcount(ha_rows val) { m_rowcount -= val; }
+  void set_rowcount(ha_rows val) { m_rowcount = val; }
+  ha_rows rowcount() const { return m_rowcount; }
 
   ha_rows mem_count() const { return m_mem_count; }
-  void set_mem_count(ha_rows val) { m_mem_count= val; }
+  void set_mem_count(ha_rows val) { m_mem_count = val; }
   ha_rows decrement_mem_count() { return --m_mem_count; }
 
   ha_rows max_keys() const { return m_max_keys; }
-  void set_max_keys(ha_rows val) { m_max_keys= val; }
+  void set_max_keys(ha_rows val) { m_max_keys = val; }
 
-  size_t  buffer_size() const { return m_buffer_end - m_buffer_start; }
+  size_t buffer_size() const { return m_buffer_end - m_buffer_start; }
 
   /**
     Tries to merge *this with *mc, returns true if successful.
@@ -126,33 +123,33 @@ public:
   {
     if (mc->m_buffer_end == m_buffer_start)
     {
-      mc->m_buffer_end= m_buffer_end;
-      mc->m_max_keys+= m_max_keys;
+      mc->m_buffer_end = m_buffer_end;
+      mc->m_max_keys += m_max_keys;
       return true;
     }
     else if (mc->m_buffer_start == m_buffer_end)
     {
-      mc->m_buffer_start= m_buffer_start;
-      mc->m_max_keys+= m_max_keys;
+      mc->m_buffer_start = m_buffer_start;
+      mc->m_max_keys += m_max_keys;
       return true;
     }
     return false;
   }
 
   /// The current key for this chunk
-  uchar *m_current_key= nullptr;
+  uchar *m_current_key = nullptr;
   /// Current position in the file to be sorted.
-  my_off_t m_file_position= 0;
+  my_off_t m_file_position = 0;
   /// Start of main-memory buffer for this chunk.
-  uchar *m_buffer_start= nullptr;
+  uchar *m_buffer_start = nullptr;
   /// End of main-memory buffer for this chunk.
-  uchar *m_buffer_end= nullptr;
+  uchar *m_buffer_end = nullptr;
   /// Number of unread rows in this chunk.
-  ha_rows m_rowcount= 0;
+  ha_rows m_rowcount = 0;
   /// Number of rows in the main-memory buffer.
-  ha_rows m_mem_count= 0;
+  ha_rows m_mem_count = 0;
   /// If we have fixed-size rows: max number of rows in buffer.
-  ha_rows m_max_keys= 0;
+  ha_rows m_max_keys = 0;
 };
 
 typedef Bounds_checked_array<SORT_ADDON_FIELD> Addon_fields_array;
@@ -166,62 +163,48 @@ typedef Bounds_checked_array<SORT_FIELD> Sort_keys_array;
   @see documentation for the Sort_addon_field struct.
   @see documentation for get_addon_fields()
  */
-class Addon_fields {
-public:
+class Addon_fields
+{
+ public:
   Addon_fields(Addon_fields_array arr)
-    : m_field_descriptors(arr),
-      m_addon_buf(),
-      m_addon_buf_length(),
-      m_using_packed_addons(false)
+      : m_field_descriptors(arr), m_addon_buf(), m_addon_buf_length(), m_using_packed_addons(false)
   {
     DBUG_ASSERT(!arr.is_null());
   }
 
   SORT_ADDON_FIELD *begin() { return m_field_descriptors.begin(); }
-  SORT_ADDON_FIELD *end()   { return m_field_descriptors.end(); }
+  SORT_ADDON_FIELD *end() { return m_field_descriptors.end(); }
 
-    /// rr_unpack_from_tempfile needs an extra buffer when unpacking.
+  /// rr_unpack_from_tempfile needs an extra buffer when unpacking.
   uchar *allocate_addon_buf(uint sz)
   {
-    m_addon_buf= (uchar *)my_malloc(PSI_INSTRUMENT_ME, sz, MYF(MY_WME | MY_THREAD_SPECIFIC));
+    m_addon_buf = (uchar *)my_malloc(PSI_INSTRUMENT_ME, sz, MYF(MY_WME | MY_THREAD_SPECIFIC));
     if (m_addon_buf)
-      m_addon_buf_length= sz;
+      m_addon_buf_length = sz;
     return m_addon_buf;
   }
 
   void free_addon_buff()
   {
     my_free(m_addon_buf);
-    m_addon_buf= NULL;
-    m_addon_buf_length= 0;
+    m_addon_buf = NULL;
+    m_addon_buf_length = 0;
   }
 
   uchar *get_addon_buf() { return m_addon_buf; }
-  uint   get_addon_buf_length() const { return m_addon_buf_length; }
+  uint get_addon_buf_length() const { return m_addon_buf_length; }
 
-  void set_using_packed_addons(bool val)
-  {
-    m_using_packed_addons= val;
-  }
+  void set_using_packed_addons(bool val) { m_using_packed_addons = val; }
 
-  bool using_packed_addons() const
-  {
-    return m_using_packed_addons;
-  }
+  bool using_packed_addons() const { return m_using_packed_addons; }
 
-  static bool can_pack_addon_fields(uint record_length)
-  {
-    return (record_length <= (0xFFFF));
-  }
+  static bool can_pack_addon_fields(uint record_length) { return (record_length <= (0xFFFF)); }
 
   /**
     @returns Total number of bytes used for packed addon fields.
     the size of the length field + size of null bits + sum of field sizes.
    */
-  static uint read_addon_length(uchar *p)
-  {
-    return size_of_length_field + uint2korr(p);
-  }
+  static uint read_addon_length(uchar *p) { return size_of_length_field + uint2korr(p); }
 
   /**
     Stores the number of bytes used for packed addon fields.
@@ -232,14 +215,14 @@ public:
     int2store(p, sz - size_of_length_field);
   }
 
-  static const uint size_of_length_field= 2;
+  static const uint size_of_length_field = 2;
 
-private:
+ private:
   Addon_fields_array m_field_descriptors;
 
-  uchar    *m_addon_buf;            ///< Buffer for unpacking addon fields.
-  uint      m_addon_buf_length;     ///< Length of the buffer.
-  bool      m_using_packed_addons;  ///< Are we packing the addon fields?
+  uchar *m_addon_buf;          ///< Buffer for unpacking addon fields.
+  uint m_addon_buf_length;     ///< Length of the buffer.
+  bool m_using_packed_addons;  ///< Are we packing the addon fields?
 };
 
 /**
@@ -250,86 +233,51 @@ private:
   @see SORT_FIELD struct.
 */
 
-class Sort_keys :public Sql_alloc,
-                 public Sort_keys_array
+class Sort_keys : public Sql_alloc, public Sort_keys_array
 {
-public:
-  Sort_keys(SORT_FIELD* arr, size_t count):
-    Sort_keys_array(arr, count),
-    m_using_packed_sortkeys(false),
-    size_of_packable_fields(0),
-    sort_length_with_original_values(0),
-    sort_length_with_memcmp_values(0),
-    parameters_computed(false)
+ public:
+  Sort_keys(SORT_FIELD *arr, size_t count)
+      : Sort_keys_array(arr, count),
+        m_using_packed_sortkeys(false),
+        size_of_packable_fields(0),
+        sort_length_with_original_values(0),
+        sort_length_with_memcmp_values(0),
+        parameters_computed(false)
   {
     DBUG_ASSERT(!is_null());
   }
 
-  bool using_packed_sortkeys() const
-  { return m_using_packed_sortkeys; }
+  bool using_packed_sortkeys() const { return m_using_packed_sortkeys; }
 
-  void set_using_packed_sortkeys(bool val)
-  {
-    m_using_packed_sortkeys= val;
-  }
-  void set_size_of_packable_fields(uint len)
-  {
-    size_of_packable_fields= len;
-  }
+  void set_using_packed_sortkeys(bool val) { m_using_packed_sortkeys = val; }
+  void set_size_of_packable_fields(uint len) { size_of_packable_fields = len; }
 
-  uint get_size_of_packable_fields()
-  {
-    return size_of_packable_fields;
-  }
+  uint get_size_of_packable_fields() { return size_of_packable_fields; }
 
-  void set_sort_length_with_original_values(uint len)
-  {
-    sort_length_with_original_values= len;
-  }
+  void set_sort_length_with_original_values(uint len) { sort_length_with_original_values = len; }
 
-  uint get_sort_length_with_original_values()
-  {
-    return sort_length_with_original_values;
-  }
+  uint get_sort_length_with_original_values() { return sort_length_with_original_values; }
 
-  void set_sort_length_with_memcmp_values(uint len)
-  {
-    sort_length_with_memcmp_values= len;
-  }
+  void set_sort_length_with_memcmp_values(uint len) { sort_length_with_memcmp_values = len; }
 
-  uint get_sort_length_with_memcmp_values()
-  {
-    return sort_length_with_memcmp_values;
-  }
+  uint get_sort_length_with_memcmp_values() { return sort_length_with_memcmp_values; }
 
-  static void store_sortkey_length(uchar *p, uint sz)
-  {
-    int4store(p, sz - size_of_length_field);
-  }
+  static void store_sortkey_length(uchar *p, uint sz) { int4store(p, sz - size_of_length_field); }
 
-  static uint read_sortkey_length(uchar *p)
-  {
-    return size_of_length_field + uint4korr(p);
-  }
+  static uint read_sortkey_length(uchar *p) { return size_of_length_field + uint4korr(p); }
 
-  void increment_size_of_packable_fields(uint len)
-  {
-    size_of_packable_fields+= len;
-  }
+  void increment_size_of_packable_fields(uint len) { size_of_packable_fields += len; }
 
-  void increment_original_sort_length(uint len)
-  {
-    sort_length_with_original_values+= len;
-  }
+  void increment_original_sort_length(uint len) { sort_length_with_original_values += len; }
 
   bool is_parameters_computed() { return parameters_computed; }
-  void set_parameters_computed(bool val) { parameters_computed= val; }
+  void set_parameters_computed(bool val) { parameters_computed = val; }
 
-  static const uint size_of_length_field= 4;
+  static const uint size_of_length_field = 4;
 
-private:
-  bool m_using_packed_sortkeys;     // Are we packing sort keys
-  uint size_of_packable_fields;     // Total length bytes for packable columns
+ private:
+  bool m_using_packed_sortkeys;  // Are we packing sort keys
+  uint size_of_packable_fields;  // Total length bytes for packable columns
 
   /*
     The sort length for all the keyparts storing the original values
@@ -348,7 +296,6 @@ private:
   */
   bool parameters_computed;
 };
-
 
 /**
 PACKED SORT KEYS
@@ -539,26 +486,27 @@ to be fixed later
 
 */
 
-class Sort_param {
-public:
-  uint rec_length;            // Length of sorted records.
-  uint sort_length;           // Length of sorted columns.
-  uint ref_length;            // Length of record ref.
-  uint addon_length;          // Length of addon_fields
-  uint res_length;            // Length of records in final sorted file/buffer.
-  uint max_keys_per_buffer;   // Max keys / buffer.
+class Sort_param
+{
+ public:
+  uint rec_length;           // Length of sorted records.
+  uint sort_length;          // Length of sorted columns.
+  uint ref_length;           // Length of record ref.
+  uint addon_length;         // Length of addon_fields
+  uint res_length;           // Length of records in final sorted file/buffer.
+  uint max_keys_per_buffer;  // Max keys / buffer.
   uint min_dupl_count;
-  ha_rows max_rows;           // Select limit, or HA_POS_ERROR if unlimited.
-  ha_rows examined_rows;      // Number of examined rows.
-  TABLE *sort_form;           // For quicker make_sortkey.
+  ha_rows max_rows;       // Select limit, or HA_POS_ERROR if unlimited.
+  ha_rows examined_rows;  // Number of examined rows.
+  TABLE *sort_form;       // For quicker make_sortkey.
   /**
     ORDER BY list with some precalculated info for filesort.
     Array is created and owned by a Filesort instance.
    */
   Bounds_checked_array<SORT_FIELD> local_sortorder;
-  Addon_fields *addon_fields;     // Descriptors for companion fields.
+  Addon_fields *addon_fields;  // Descriptors for companion fields.
   Sort_keys *sort_keys;
-  ha_rows *accepted_rows;         /* For ROWNUM */
+  ha_rows *accepted_rows; /* For ROWNUM */
   bool using_pq;
   bool set_all_read_bits;
 
@@ -571,7 +519,7 @@ public:
 
   Sort_param()
   {
-    memset(reinterpret_cast<void*>(this), 0, sizeof(*this));
+    memset(reinterpret_cast<void *>(this), 0, sizeof(*this));
     tmp_buffer.set_thread_specific();
     /*
       Fix memset() clearing the charset.
@@ -579,34 +527,27 @@ public:
     */
     tmp_buffer.set_charset(&my_charset_bin);
   }
-  void init_for_filesort(uint sortlen, TABLE *table,
-                         ha_rows maxrows, Filesort *filesort);
+  void init_for_filesort(uint sortlen, TABLE *table, ha_rows maxrows, Filesort *filesort);
 
-   void  (*unpack)(TABLE *);
+  void (*unpack)(TABLE *);
   /// Enables the packing of addons if possible.
   void try_to_pack_addons(ulong max_length_for_sort_data);
 
   /// Are we packing the "addon fields"?
   bool using_packed_addons() const
   {
-    DBUG_ASSERT(m_using_packed_addons ==
-                (addon_fields != NULL &&
-                 addon_fields->using_packed_addons()));
+    DBUG_ASSERT(m_using_packed_addons == (addon_fields != NULL && addon_fields->using_packed_addons()));
     return m_using_packed_addons;
   }
 
   bool using_packed_sortkeys() const
   {
-    DBUG_ASSERT(m_using_packed_sortkeys ==
-                (sort_keys != NULL && sort_keys->using_packed_sortkeys()));
+    DBUG_ASSERT(m_using_packed_sortkeys == (sort_keys != NULL && sort_keys->using_packed_sortkeys()));
     return m_using_packed_sortkeys;
   }
 
   /// Are we using "addon fields"?
-  bool using_addon_fields() const
-  {
-    return addon_fields != NULL;
-  }
+  bool using_addon_fields() const { return addon_fields != NULL; }
 
   uint32 get_result_length(uchar *plen)
   {
@@ -627,12 +568,12 @@ public:
   {
     if (using_packed_sortkeys())
       return Sort_keys::read_sortkey_length(plen) +
-              /*
-                when addon fields are not present, then the sort_length also
-                includes the res_length. For packed keys here we add
-                the res_length
-              */
-             (using_addon_fields() ? 0: res_length);
+             /*
+               when addon fields are not present, then the sort_length also
+               includes the res_length. For packed keys here we add
+               the res_length
+             */
+             (using_addon_fields() ? 0 : res_length);
     else
       return sort_length;
   }
@@ -641,7 +582,7 @@ public:
   {
     if (m_packed_format)
     {
-      uint sort_len= get_sort_length(plen);
+      uint sort_len = get_sort_length(plen);
       return sort_len + get_addon_length(plen + sort_len);
     }
     else
@@ -658,15 +599,15 @@ public:
   {
     if (m_packed_format)
     {
-      uint sort_len= get_sort_length(record_start);
-      uint addon_len= get_addon_length(record_start + sort_len);
-      *recl= sort_len + addon_len;
-      *resl= using_addon_fields() ? addon_len : res_length;
+      uint sort_len = get_sort_length(record_start);
+      uint addon_len = get_addon_length(record_start + sort_len);
+      *recl = sort_len + addon_len;
+      *resl = using_addon_fields() ? addon_len : res_length;
     }
     else
     {
-      *recl= rec_length;
-      *resl= res_length;
+      *recl = rec_length;
+      *resl = res_length;
     }
   }
 
@@ -674,25 +615,18 @@ public:
 
   qsort2_cmp get_compare_function() const
   {
-    return using_packed_sortkeys() ?
-           get_packed_keys_compare_ptr() :
-           get_ptr_compare(sort_length);
+    return using_packed_sortkeys() ? get_packed_keys_compare_ptr() : get_ptr_compare(sort_length);
   }
-  void* get_compare_argument(size_t *sort_len) const
+  void *get_compare_argument(size_t *sort_len) const
   {
-    return using_packed_sortkeys() ?
-           (void*) this :
-           (void*) sort_len;
+    return using_packed_sortkeys() ? (void *)this : (void *)sort_len;
   }
 
-  bool is_packed_format() const
-  {
-    return m_packed_format;
-  }
+  bool is_packed_format() const { return m_packed_format; }
 
-private:
+ private:
   uint m_packable_length;
-  bool m_using_packed_addons; ///< caches the value of using_packed_addons()
+  bool m_using_packed_addons;  ///< caches the value of using_packed_addons()
   /* caches the value of using_packed_sortkeys() */
   bool m_using_packed_sortkeys;
   bool m_packed_format;
@@ -700,17 +634,13 @@ private:
 
 typedef Bounds_checked_array<uchar> Sort_buffer;
 
-int merge_many_buff(Sort_param *param, Sort_buffer sort_buffer,
-                    Merge_chunk *buffpek, uint *maxbuffer, IO_CACHE *t_file);
-ulong read_to_buffer(IO_CACHE *fromfile, Merge_chunk *buffpek,
-                     Sort_param *param, bool packing_format);
-bool merge_buffers(Sort_param *param,IO_CACHE *from_file,
-                   IO_CACHE *to_file, Sort_buffer sort_buffer,
-                   Merge_chunk *lastbuff, Merge_chunk *Fb,
-                   Merge_chunk *Tb, int flag);
-int merge_index(Sort_param *param, Sort_buffer sort_buffer,
-                Merge_chunk *buffpek, uint maxbuffer,
-                IO_CACHE *tempfile, IO_CACHE *outfile);
+int merge_many_buff(Sort_param *param, Sort_buffer sort_buffer, Merge_chunk *buffpek, uint *maxbuffer,
+                    IO_CACHE *t_file);
+ulong read_to_buffer(IO_CACHE *fromfile, Merge_chunk *buffpek, Sort_param *param, bool packing_format);
+bool merge_buffers(Sort_param *param, IO_CACHE *from_file, IO_CACHE *to_file, Sort_buffer sort_buffer,
+                   Merge_chunk *lastbuff, Merge_chunk *Fb, Merge_chunk *Tb, int flag);
+int merge_index(Sort_param *param, Sort_buffer sort_buffer, Merge_chunk *buffpek, uint maxbuffer, IO_CACHE *tempfile,
+                IO_CACHE *outfile);
 void reuse_freed_buff(QUEUE *queue, Merge_chunk *reuse, uint key_length);
 
 #endif /* SQL_SORT_INCLUDED */

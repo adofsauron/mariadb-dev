@@ -31,7 +31,7 @@
 
 enum enum_events_table_field
 {
-  ET_FIELD_DB = 0, 
+  ET_FIELD_DB = 0,
   ET_FIELD_NAME,
   ET_FIELD_BODY,
   ET_FIELD_DEFINER,
@@ -56,70 +56,45 @@ enum enum_events_table_field
   ET_FIELD_COUNT /* a cool trick to count the number of fields :) */
 };
 
+int events_table_index_read_for_db(THD *thd, TABLE *schema_table, TABLE *event_table);
 
-int
-events_table_index_read_for_db(THD *thd, TABLE *schema_table,
-                               TABLE *event_table);
-
-int
-events_table_scan_all(THD *thd, TABLE *schema_table, TABLE *event_table);
-
+int events_table_scan_all(THD *thd, TABLE *schema_table, TABLE *event_table);
 
 class Event_basic;
 class Event_parse_data;
 
 class Event_db_repository
 {
-public:
-  Event_db_repository(){}
+ public:
+  Event_db_repository() {}
 
-  bool
-  create_event(THD *thd, Event_parse_data *parse_data,
-               bool *event_already_exists);
-  bool
-  update_event(THD *thd, Event_parse_data *parse_data, LEX_CSTRING *new_dbname,
-               LEX_CSTRING *new_name);
+  bool create_event(THD *thd, Event_parse_data *parse_data, bool *event_already_exists);
+  bool update_event(THD *thd, Event_parse_data *parse_data, LEX_CSTRING *new_dbname, LEX_CSTRING *new_name);
 
-  bool
-  drop_event(THD *thd, const LEX_CSTRING *db, const LEX_CSTRING *name,
-             bool drop_if_exists);
+  bool drop_event(THD *thd, const LEX_CSTRING *db, const LEX_CSTRING *name, bool drop_if_exists);
 
-  void
-  drop_schema_events(THD *thd, const LEX_CSTRING *schema);
+  void drop_schema_events(THD *thd, const LEX_CSTRING *schema);
 
-  bool
-  find_named_event(const LEX_CSTRING *db, const LEX_CSTRING *name,
-                   TABLE *table);
+  bool find_named_event(const LEX_CSTRING *db, const LEX_CSTRING *name, TABLE *table);
 
-  bool
-  load_named_event(THD *thd, const LEX_CSTRING *dbname,
-                   const LEX_CSTRING *name,
-                   Event_basic *et);
+  bool load_named_event(THD *thd, const LEX_CSTRING *dbname, const LEX_CSTRING *name, Event_basic *et);
 
-  static bool
-  open_event_table(THD *thd, enum thr_lock_type lock_type, TABLE **table);
+  static bool open_event_table(THD *thd, enum thr_lock_type lock_type, TABLE **table);
 
-  bool
-  fill_schema_events(THD *thd, TABLE_LIST *tables, const char *db);
+  bool fill_schema_events(THD *thd, TABLE_LIST *tables, const char *db);
 
-  bool
-  update_timing_fields_for_event(THD *thd,
-                                 const LEX_CSTRING *event_db_name,
-                                 const LEX_CSTRING *event_name,
-                                 my_time_t last_executed,
-                                 ulonglong status);
-public:
-  static bool
-  check_system_tables(THD *thd);
-private:
-  bool
-  index_read_for_db_for_i_s(THD *thd, TABLE *schema_table, TABLE *event_table,
-                            const char *db);
+  bool update_timing_fields_for_event(THD *thd, const LEX_CSTRING *event_db_name, const LEX_CSTRING *event_name,
+                                      my_time_t last_executed, ulonglong status);
 
-  bool
-  table_scan_all_for_i_s(THD *thd, TABLE *schema_table, TABLE *event_table);
+ public:
+  static bool check_system_tables(THD *thd);
 
-private:
+ private:
+  bool index_read_for_db_for_i_s(THD *thd, TABLE *schema_table, TABLE *event_table, const char *db);
+
+  bool table_scan_all_for_i_s(THD *thd, TABLE *schema_table, TABLE *event_table);
+
+ private:
   /* Prevent use of these */
   Event_db_repository(const Event_db_repository &);
   void operator=(Event_db_repository &);

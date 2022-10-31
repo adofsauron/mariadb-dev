@@ -26,25 +26,21 @@
 
 class THD;
 
-void wsrep_commit_empty(THD* thd, bool all);
+void wsrep_commit_empty(THD *thd, bool all);
 
 /*
    Return true if THD has active wsrep transaction.
  */
-static inline bool wsrep_is_active(THD* thd)
+static inline bool wsrep_is_active(THD *thd)
 {
-  return (thd->wsrep_cs().state() != wsrep::client_state::s_none  &&
-          thd->wsrep_cs().transaction().active() &&
+  return (thd->wsrep_cs().state() != wsrep::client_state::s_none && thd->wsrep_cs().transaction().active() &&
           !thd->internal_transaction());
 }
 
 /*
   Return true if transaction is ordered.
  */
-static inline bool wsrep_is_ordered(THD* thd)
-{
-  return thd->wsrep_trx().ordered();
-}
+static inline bool wsrep_is_ordered(THD *thd) { return thd->wsrep_trx().ordered(); }
 
 /*
   Return true if transaction has been BF aborted but has not been
@@ -52,7 +48,7 @@ static inline bool wsrep_is_ordered(THD* thd)
 
   It is required that the caller holds thd->LOCK_thd_data.
 */
-static inline bool wsrep_must_abort(THD* thd)
+static inline bool wsrep_must_abort(THD *thd)
 {
   mysql_mutex_assert_owner(&thd->LOCK_thd_data);
   return (thd->wsrep_trx().state() == wsrep::transaction::s_must_abort);
@@ -61,7 +57,7 @@ static inline bool wsrep_must_abort(THD* thd)
 /*
   Return true if the transaction must be replayed.
  */
-static inline bool wsrep_must_replay(THD* thd)
+static inline bool wsrep_must_replay(THD *thd)
 {
   return (thd->wsrep_trx().state() == wsrep::transaction::s_must_replay);
 }
@@ -72,7 +68,7 @@ static inline bool wsrep_must_replay(THD* thd)
   makes sense only from codepaths which are past ordered_commit state
   and the wsrep transaction is immune to BF aborts at that point.
 */
-static inline bool wsrep_not_committed(THD* thd)
+static inline bool wsrep_not_committed(THD *thd)
 {
   return (thd->wsrep_trx().state() != wsrep::transaction::s_committed);
 }
@@ -81,37 +77,30 @@ static inline bool wsrep_not_committed(THD* thd)
   Return true if THD is either committing a transaction or statement
   is autocommit.
  */
-static inline bool wsrep_is_real(THD* thd, bool all)
-{
-  return (all || thd->transaction->all.ha_list == 0);
-}
+static inline bool wsrep_is_real(THD *thd, bool all) { return (all || thd->transaction->all.ha_list == 0); }
 
 /*
   Check if a transaction has generated changes.
  */
-static inline bool wsrep_has_changes(THD* thd)
-{
-  return (thd->wsrep_trx().is_empty() == false);
-}
+static inline bool wsrep_has_changes(THD *thd) { return (thd->wsrep_trx().is_empty() == false); }
 
 /*
   Check if an active transaction has been BF aborted.
  */
-static inline bool wsrep_is_bf_aborted(THD* thd)
+static inline bool wsrep_is_bf_aborted(THD *thd)
 {
   return (thd->wsrep_trx().active() && thd->wsrep_trx().bf_aborted());
 }
 
-static inline int wsrep_check_pk(THD* thd)
+static inline int wsrep_check_pk(THD *thd)
 {
   if (!wsrep_certify_nonPK)
   {
-    for (TABLE* table= thd->open_tables; table != NULL; table= table->next)
+    for (TABLE *table = thd->open_tables; table != NULL; table = table->next)
     {
       if (table->key_info == NULL || table->s->primary_key == MAX_KEY)
       {
-        WSREP_DEBUG("No primary key found for table %s.%s",
-                    table->s->db.str, table->s->table_name.str);
+        WSREP_DEBUG("No primary key found for table %s.%s", table->s->db.str, table->s->table_name.str);
         wsrep_override_error(thd, ER_LOCK_DEADLOCK);
         return 1;
       }
@@ -120,23 +109,21 @@ static inline int wsrep_check_pk(THD* thd)
   return 0;
 }
 
-static inline bool wsrep_streaming_enabled(THD* thd)
-{
-  return (thd->wsrep_sr().fragment_size() > 0);
-}
+static inline bool wsrep_streaming_enabled(THD *thd) { return (thd->wsrep_sr().fragment_size() > 0); }
 
 /*
   Return number of fragments successfully certified for the
   current statement.
  */
-static inline size_t wsrep_fragments_certified_for_stmt(THD* thd)
+static inline size_t wsrep_fragments_certified_for_stmt(THD *thd)
 {
-    return thd->wsrep_trx().fragments_certified_for_statement();
+  return thd->wsrep_trx().fragments_certified_for_statement();
 }
 
-static inline int wsrep_start_transaction(THD* thd, wsrep_trx_id_t trx_id)
+static inline int wsrep_start_transaction(THD *thd, wsrep_trx_id_t trx_id)
 {
-  if (thd->wsrep_cs().state() != wsrep::client_state::s_none) {
+  if (thd->wsrep_cs().state() != wsrep::client_state::s_none)
+  {
     if (wsrep_is_active(thd) == false)
       return thd->wsrep_cs().start_transaction(wsrep::transaction_id(trx_id));
   }
@@ -144,14 +131,14 @@ static inline int wsrep_start_transaction(THD* thd, wsrep_trx_id_t trx_id)
 }
 
 /**/
-static inline int wsrep_start_trx_if_not_started(THD* thd)
+static inline int wsrep_start_trx_if_not_started(THD *thd)
 {
-  int ret= 0;
+  int ret = 0;
   DBUG_ASSERT(thd->wsrep_next_trx_id() != WSREP_UNDEFINED_TRX_ID);
   DBUG_ASSERT(thd->wsrep_cs().mode() == Wsrep_client_state::m_local);
   if (thd->wsrep_trx().active() == false)
   {
-    ret= wsrep_start_transaction(thd, thd->wsrep_next_trx_id());
+    ret = wsrep_start_transaction(thd, thd->wsrep_next_trx_id());
   }
   return ret;
 }
@@ -161,10 +148,9 @@ static inline int wsrep_start_trx_if_not_started(THD* thd)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_after_row_internal(THD* thd)
+static inline int wsrep_after_row_internal(THD *thd)
 {
-  if (thd->wsrep_cs().state() != wsrep::client_state::s_none  &&
-      wsrep_thd_is_local(thd))
+  if (thd->wsrep_cs().state() != wsrep::client_state::s_none && wsrep_thd_is_local(thd))
   {
     if (wsrep_check_pk(thd))
     {
@@ -188,32 +174,30 @@ static inline int wsrep_after_row_internal(THD* thd)
   - Is running in high priority mode and is ordered. This can be replayer,
     applier or storage access.
  */
-static inline bool wsrep_run_commit_hook(THD* thd, bool all)
+static inline bool wsrep_run_commit_hook(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_run_commit_hook");
   DBUG_PRINT("wsrep", ("Is_active: %d is_real %d has_changes %d is_applying %d "
                        "is_ordered: %d",
-                       wsrep_is_active(thd), wsrep_is_real(thd, all),
-                       wsrep_has_changes(thd), wsrep_thd_is_applying(thd),
-                       wsrep_is_ordered(thd)));
+                       wsrep_is_active(thd), wsrep_is_real(thd, all), wsrep_has_changes(thd),
+                       wsrep_thd_is_applying(thd), wsrep_is_ordered(thd)));
   /* Is MST commit or autocommit? */
-  bool ret= wsrep_is_active(thd) && wsrep_is_real(thd, all);
+  bool ret = wsrep_is_active(thd) && wsrep_is_real(thd, all);
   /* Do not commit if we are aborting */
-  ret= ret && (thd->wsrep_trx().state() != wsrep::transaction::s_aborting);
-  if (ret && !(wsrep_has_changes(thd) ||  /* Has generated write set */
+  ret = ret && (thd->wsrep_trx().state() != wsrep::transaction::s_aborting);
+  if (ret && !(wsrep_has_changes(thd) || /* Has generated write set */
                /* Is high priority (replay, applier, storage) and the
                   transaction is scheduled for commit ordering */
                (wsrep_thd_is_applying(thd) && wsrep_is_ordered(thd))))
   {
     mysql_mutex_lock(&thd->LOCK_thd_data);
-    DBUG_PRINT("wsrep", ("state: %s",
-                         wsrep::to_c_string(thd->wsrep_trx().state())));
+    DBUG_PRINT("wsrep", ("state: %s", wsrep::to_c_string(thd->wsrep_trx().state())));
     /* Transaction is local but has no changes, the commit hooks will
        be skipped and the wsrep transaction is terminated in
        wsrep_commit_empty() */
     if (thd->wsrep_trx().state() == wsrep::transaction::s_executing)
     {
-      ret= false;
+      ret = false;
     }
     mysql_mutex_unlock(&thd->LOCK_thd_data);
   }
@@ -226,22 +210,20 @@ static inline bool wsrep_run_commit_hook(THD* thd, bool all)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_before_prepare(THD* thd, bool all)
+static inline int wsrep_before_prepare(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_before_prepare");
   WSREP_DEBUG("wsrep_before_prepare: %d", wsrep_is_real(thd, all));
-  int ret= 0;
+  int ret = 0;
   DBUG_ASSERT(wsrep_run_commit_hook(thd, all));
-  if ((ret= thd->wsrep_parallel_slave_wait_for_prior_commit()))
+  if ((ret = thd->wsrep_parallel_slave_wait_for_prior_commit()))
   {
     DBUG_RETURN(ret);
   }
-  if ((ret= thd->wsrep_cs().before_prepare()) == 0)
+  if ((ret = thd->wsrep_cs().before_prepare()) == 0)
   {
     DBUG_ASSERT(!thd->wsrep_trx().ws_meta().gtid().is_undefined());
-    wsrep_xid_init(&thd->wsrep_xid,
-                   thd->wsrep_trx().ws_meta().gtid(),
-                   wsrep_gtid_server.gtid());
+    wsrep_xid_init(&thd->wsrep_xid, thd->wsrep_trx().ws_meta().gtid(), wsrep_gtid_server.gtid());
   }
   DBUG_RETURN(ret);
 }
@@ -251,12 +233,12 @@ static inline int wsrep_before_prepare(THD* thd, bool all)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_after_prepare(THD* thd, bool all)
+static inline int wsrep_after_prepare(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_after_prepare");
   WSREP_DEBUG("wsrep_after_prepare: %d", wsrep_is_real(thd, all));
   DBUG_ASSERT(wsrep_run_commit_hook(thd, all));
-  int ret= thd->wsrep_cs().after_prepare();
+  int ret = thd->wsrep_cs().after_prepare();
   DBUG_ASSERT(ret == 0 || thd->wsrep_cs().current_error() ||
               thd->wsrep_cs().transaction().state() == wsrep::transaction::s_must_replay);
   DBUG_RETURN(ret);
@@ -270,46 +252,40 @@ static inline int wsrep_after_prepare(THD* thd, bool all)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_before_commit(THD* thd, bool all)
+static inline int wsrep_before_commit(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_before_commit");
-  WSREP_DEBUG("wsrep_before_commit: %d, %lld",
-              wsrep_is_real(thd, all),
-              (long long)wsrep_thd_trx_seqno(thd));
+  WSREP_DEBUG("wsrep_before_commit: %d, %lld", wsrep_is_real(thd, all), (long long)wsrep_thd_trx_seqno(thd));
   THD_STAGE_INFO(thd, stage_waiting_certification);
-  int ret= 0;
+  int ret = 0;
   DBUG_ASSERT(wsrep_run_commit_hook(thd, all));
 
-  if ((ret= thd->wsrep_cs().before_commit()) == 0)
+  if ((ret = thd->wsrep_cs().before_commit()) == 0)
   {
     DBUG_ASSERT(!thd->wsrep_trx().ws_meta().gtid().is_undefined());
-    if (!thd->variables.gtid_seq_no &&
-        (thd->wsrep_trx().ws_meta().flags() & wsrep::provider::flag::commit))
+    if (!thd->variables.gtid_seq_no && (thd->wsrep_trx().ws_meta().flags() & wsrep::provider::flag::commit))
     {
-        uint64 seqno= 0;
-        if (thd->variables.wsrep_gtid_seq_no &&
-            thd->variables.wsrep_gtid_seq_no > wsrep_gtid_server.seqno())
-        {
-          seqno= thd->variables.wsrep_gtid_seq_no;
-          wsrep_gtid_server.seqno(thd->variables.wsrep_gtid_seq_no);
-        }
-        else
-        {
-          seqno= wsrep_gtid_server.seqno_inc();
-        }
-        thd->variables.wsrep_gtid_seq_no= 0;
-        thd->wsrep_current_gtid_seqno= seqno;
-        if (mysql_bin_log.is_open() && wsrep_gtid_mode)
-        {
-          thd->variables.gtid_seq_no= seqno;
-          thd->variables.gtid_domain_id= wsrep_gtid_server.domain_id;
-          thd->variables.server_id= wsrep_gtid_server.server_id;
-        }
+      uint64 seqno = 0;
+      if (thd->variables.wsrep_gtid_seq_no && thd->variables.wsrep_gtid_seq_no > wsrep_gtid_server.seqno())
+      {
+        seqno = thd->variables.wsrep_gtid_seq_no;
+        wsrep_gtid_server.seqno(thd->variables.wsrep_gtid_seq_no);
+      }
+      else
+      {
+        seqno = wsrep_gtid_server.seqno_inc();
+      }
+      thd->variables.wsrep_gtid_seq_no = 0;
+      thd->wsrep_current_gtid_seqno = seqno;
+      if (mysql_bin_log.is_open() && wsrep_gtid_mode)
+      {
+        thd->variables.gtid_seq_no = seqno;
+        thd->variables.gtid_domain_id = wsrep_gtid_server.domain_id;
+        thd->variables.server_id = wsrep_gtid_server.server_id;
+      }
     }
 
-    wsrep_xid_init(&thd->wsrep_xid,
-                   thd->wsrep_trx().ws_meta().gtid(),
-                   wsrep_gtid_server.gtid());
+    wsrep_xid_init(&thd->wsrep_xid, thd->wsrep_trx().ws_meta().gtid(), wsrep_gtid_server.gtid());
     wsrep_register_for_group_commit(thd);
   }
   DBUG_RETURN(ret);
@@ -322,12 +298,12 @@ static inline int wsrep_before_commit(THD* thd, bool all)
   applier contexts after the commit has been ordered.
 
   @param thd Pointer to THD
-  @param all 
+  @param all
   @param err Error buffer in case of applying error
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_ordered_commit(THD* thd, bool all)
+static inline int wsrep_ordered_commit(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_ordered_commit");
   WSREP_DEBUG("wsrep_ordered_commit: %d", wsrep_is_real(thd, all));
@@ -340,21 +316,18 @@ static inline int wsrep_ordered_commit(THD* thd, bool all)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_after_commit(THD* thd, bool all)
+static inline int wsrep_after_commit(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_after_commit");
-  WSREP_DEBUG("wsrep_after_commit: %d, %d, %lld, %d",
-              wsrep_is_real(thd, all),
-              wsrep_is_active(thd),
-              (long long)wsrep_thd_trx_seqno(thd),
-              wsrep_has_changes(thd));
+  WSREP_DEBUG("wsrep_after_commit: %d, %d, %lld, %d", wsrep_is_real(thd, all), wsrep_is_active(thd),
+              (long long)wsrep_thd_trx_seqno(thd), wsrep_has_changes(thd));
   DBUG_ASSERT(wsrep_run_commit_hook(thd, all));
   if (thd->internal_transaction())
     DBUG_RETURN(0);
-  int ret= 0;
+  int ret = 0;
   if (thd->wsrep_trx().state() == wsrep::transaction::s_committing)
   {
-    ret= thd->wsrep_cs().ordered_commit();
+    ret = thd->wsrep_cs().ordered_commit();
   }
   wsrep_unregister_from_group_commit(thd);
   thd->wsrep_xid.null();
@@ -366,10 +339,10 @@ static inline int wsrep_after_commit(THD* thd, bool all)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_before_rollback(THD* thd, bool all)
+static inline int wsrep_before_rollback(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_before_rollback");
-  int ret= 0;
+  int ret = 0;
   if (wsrep_is_active(thd))
   {
     if (!all && thd->in_active_multi_stmt_transaction())
@@ -379,8 +352,7 @@ static inline int wsrep_before_rollback(THD* thd, bool all)
         wsrep_thd_binlog_stmt_rollback(thd);
       }
 
-      if (thd->wsrep_trx().is_streaming() &&
-          (wsrep_fragments_certified_for_stmt(thd) > 0))
+      if (thd->wsrep_trx().is_streaming() && (wsrep_fragments_certified_for_stmt(thd) > 0))
       {
         /* Non-safe statement rollback during SR multi statement
            transaction. A statement rollback is considered unsafe, if
@@ -389,11 +361,10 @@ static inline int wsrep_before_rollback(THD* thd, bool all)
            handling will be done in after statement phase. */
         WSREP_DEBUG("statement rollback is not safe for streaming replication");
         wsrep_thd_self_abort(thd);
-        ret= 0;
+        ret = 0;
       }
     }
-    else if (wsrep_is_real(thd, all) &&
-             thd->wsrep_trx().state() != wsrep::transaction::s_aborted)
+    else if (wsrep_is_real(thd, all) && thd->wsrep_trx().state() != wsrep::transaction::s_aborted)
     {
       /* Real transaction rolling back and wsrep abort not completed
          yet */
@@ -401,7 +372,7 @@ static inline int wsrep_before_rollback(THD* thd, bool all)
          history in InnoDB. This needs to be avoided because rollback
          may happen out of order and replay may follow. */
       thd->wsrep_xid.null();
-      ret= thd->wsrep_cs().before_rollback();
+      ret = thd->wsrep_cs().before_rollback();
     }
   }
   DBUG_RETURN(ret);
@@ -412,39 +383,38 @@ static inline int wsrep_before_rollback(THD* thd, bool all)
 
   Return zero on succes, non-zero on failure.
  */
-static inline int wsrep_after_rollback(THD* thd, bool all)
+static inline int wsrep_after_rollback(THD *thd, bool all)
 {
   DBUG_ENTER("wsrep_after_rollback");
   DBUG_RETURN((wsrep_is_real(thd, all) && wsrep_is_active(thd) &&
-               thd->wsrep_cs().transaction().state() !=
-               wsrep::transaction::s_aborted) ?
-              thd->wsrep_cs().after_rollback() : 0);
+               thd->wsrep_cs().transaction().state() != wsrep::transaction::s_aborted)
+                  ? thd->wsrep_cs().after_rollback()
+                  : 0);
 }
 
-static inline int wsrep_before_statement(THD* thd)
+static inline int wsrep_before_statement(THD *thd)
 {
-  return (thd->wsrep_cs().state() != wsrep::client_state::s_none &&
-          !thd->internal_transaction() ?
-	  thd->wsrep_cs().before_statement() : 0);
+  return (thd->wsrep_cs().state() != wsrep::client_state::s_none && !thd->internal_transaction()
+              ? thd->wsrep_cs().before_statement()
+              : 0);
 }
 
-static inline
-int wsrep_after_statement(THD* thd)
+static inline int wsrep_after_statement(THD *thd)
 {
   DBUG_ENTER("wsrep_after_statement");
-  WSREP_DEBUG("wsrep_after_statement for %lu client_state %s "
-              " client_mode %s trans_state %s",
-              thd_get_thread_id(thd),
-              wsrep::to_c_string(thd->wsrep_cs().state()),
-              wsrep::to_c_string(thd->wsrep_cs().mode()),
-              wsrep::to_c_string(thd->wsrep_cs().transaction().state()));
+  WSREP_DEBUG(
+      "wsrep_after_statement for %lu client_state %s "
+      " client_mode %s trans_state %s",
+      thd_get_thread_id(thd), wsrep::to_c_string(thd->wsrep_cs().state()), wsrep::to_c_string(thd->wsrep_cs().mode()),
+      wsrep::to_c_string(thd->wsrep_cs().transaction().state()));
   DBUG_RETURN((thd->wsrep_cs().state() != wsrep::client_state::s_none &&
                thd->wsrep_cs().mode() == Wsrep_client_state::m_local) &&
-              !thd->internal_transaction() ?
-              thd->wsrep_cs().after_statement() : 0);
+                      !thd->internal_transaction()
+                  ? thd->wsrep_cs().after_statement()
+                  : 0);
 }
 
-static inline void wsrep_after_apply(THD* thd)
+static inline void wsrep_after_apply(THD *thd)
 {
   DBUG_ASSERT(wsrep_thd_is_applying(thd));
   WSREP_DEBUG("wsrep_after_apply %lld", thd->thread_id);
@@ -452,7 +422,7 @@ static inline void wsrep_after_apply(THD* thd)
     thd->wsrep_cs().after_applying();
 }
 
-static inline void wsrep_open(THD* thd)
+static inline void wsrep_open(THD *thd)
 {
   DBUG_ENTER("wsrep_open");
   if (WSREP_ON_)
@@ -463,26 +433,24 @@ static inline void wsrep_open(THD* thd)
     thd->wsrep_cs().debug_log_level(wsrep_debug);
     if (!thd->wsrep_applier && thd->variables.wsrep_trx_fragment_size)
     {
-      thd->wsrep_cs().enable_streaming(
-        wsrep_fragment_unit(thd->variables.wsrep_trx_fragment_unit),
-        size_t(thd->variables.wsrep_trx_fragment_size));
+      thd->wsrep_cs().enable_streaming(wsrep_fragment_unit(thd->variables.wsrep_trx_fragment_unit),
+                                       size_t(thd->variables.wsrep_trx_fragment_size));
     }
   }
   DBUG_VOID_RETURN;
 }
 
-static inline void wsrep_close(THD* thd)
+static inline void wsrep_close(THD *thd)
 {
   DBUG_ENTER("wsrep_close");
-  if (thd->wsrep_cs().state() != wsrep::client_state::s_none &&
-      !thd->internal_transaction())
+  if (thd->wsrep_cs().state() != wsrep::client_state::s_none && !thd->internal_transaction())
   {
     thd->wsrep_cs().close();
   }
   DBUG_VOID_RETURN;
 }
 
-static inline void wsrep_cleanup(THD* thd)
+static inline void wsrep_cleanup(THD *thd)
 {
   DBUG_ENTER("wsrep_cleanup");
   if (thd->wsrep_cs().state() != wsrep::client_state::s_none)
@@ -492,67 +460,56 @@ static inline void wsrep_cleanup(THD* thd)
   DBUG_VOID_RETURN;
 }
 
-static inline void
-wsrep_wait_rollback_complete_and_acquire_ownership(THD *thd)
+static inline void wsrep_wait_rollback_complete_and_acquire_ownership(THD *thd)
 {
   DBUG_ENTER("wsrep_wait_rollback_complete_and_acquire_ownership");
-  if (thd->wsrep_cs().state() != wsrep::client_state::s_none &&
-      !thd->internal_transaction())
+  if (thd->wsrep_cs().state() != wsrep::client_state::s_none && !thd->internal_transaction())
   {
     thd->wsrep_cs().wait_rollback_complete_and_acquire_ownership();
   }
   DBUG_VOID_RETURN;
 }
 
-static inline int wsrep_before_command(THD* thd, bool keep_command_error)
+static inline int wsrep_before_command(THD *thd, bool keep_command_error)
 {
-  return (thd->wsrep_cs().state() != wsrep::client_state::s_none &&
-          !thd->internal_transaction() ?
-          thd->wsrep_cs().before_command(keep_command_error) : 0);
+  return (thd->wsrep_cs().state() != wsrep::client_state::s_none && !thd->internal_transaction()
+              ? thd->wsrep_cs().before_command(keep_command_error)
+              : 0);
 }
 
-static inline int wsrep_before_command(THD* thd)
-{
-  return wsrep_before_command(thd, false);
-}
+static inline int wsrep_before_command(THD *thd) { return wsrep_before_command(thd, false); }
 
 /*
   Called after each command.
 
   Return zero on success, non-zero on failure.
 */
-static inline void wsrep_after_command_before_result(THD* thd)
+static inline void wsrep_after_command_before_result(THD *thd)
 {
-  if (thd->wsrep_cs().state() != wsrep::client_state::s_none &&
-      !thd->internal_transaction())
+  if (thd->wsrep_cs().state() != wsrep::client_state::s_none && !thd->internal_transaction())
   {
     thd->wsrep_cs().after_command_before_result();
   }
 }
 
-static inline void wsrep_after_command_after_result(THD* thd)
+static inline void wsrep_after_command_after_result(THD *thd)
 {
-  if (thd->wsrep_cs().state() != wsrep::client_state::s_none &&
-      !thd->internal_transaction())
+  if (thd->wsrep_cs().state() != wsrep::client_state::s_none && !thd->internal_transaction())
   {
     thd->wsrep_cs().after_command_after_result();
   }
 }
 
-static inline void wsrep_after_command_ignore_result(THD* thd)
+static inline void wsrep_after_command_ignore_result(THD *thd)
 {
   wsrep_after_command_before_result(thd);
   DBUG_ASSERT(!thd->wsrep_cs().current_error());
   wsrep_after_command_after_result(thd);
 }
 
-static inline enum wsrep::client_error wsrep_current_error(THD* thd)
-{
-  return thd->wsrep_cs().current_error();
-}
+static inline enum wsrep::client_error wsrep_current_error(THD *thd) { return thd->wsrep_cs().current_error(); }
 
-static inline enum wsrep::provider::status
-wsrep_current_error_status(THD* thd)
+static inline enum wsrep::provider::status wsrep_current_error_status(THD *thd)
 {
   return thd->wsrep_cs().current_error_status();
 }

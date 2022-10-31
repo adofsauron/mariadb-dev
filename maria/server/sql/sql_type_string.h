@@ -23,26 +23,20 @@ class StringPack
   CHARSET_INFO *charset() const { return m_cs; }
   uint mbmaxlen() const { return m_cs->mbmaxlen; };
   uint32 char_length() const { return m_octet_length / mbmaxlen(); }
-public:
-  StringPack(CHARSET_INFO *cs, uint32 octet_length)
-   :m_cs(cs),
-    m_octet_length(octet_length)
-  { }
+
+ public:
+  StringPack(CHARSET_INFO *cs, uint32 octet_length) : m_cs(cs), m_octet_length(octet_length) {}
   uchar *pack(uchar *to, const uchar *from, uint max_length) const;
-  const uchar *unpack(uchar *to, const uchar *from, const uchar *from_end,
-                      uint param_data) const;
-public:
-  static uint max_packed_col_length(uint max_length)
-  {
-    return (max_length > 255 ? 2 : 1) + max_length;
-  }
+  const uchar *unpack(uchar *to, const uchar *from, const uchar *from_end, uint param_data) const;
+
+ public:
+  static uint max_packed_col_length(uint max_length) { return (max_length > 255 ? 2 : 1) + max_length; }
   static uint packed_col_length(const uchar *data_ptr, uint length)
   {
     if (length > 255)
-      return uint2korr(data_ptr)+2;
-    return (uint) *data_ptr + 1;
+      return uint2korr(data_ptr) + 2;
+    return (uint)*data_ptr + 1;
   }
 };
 
-
-#endif // SQL_TYPE_STRING_INCLUDED
+#endif  // SQL_TYPE_STRING_INCLUDED

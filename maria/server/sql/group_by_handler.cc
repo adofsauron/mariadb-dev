@@ -40,28 +40,28 @@ int Pushdown_query::execute(JOIN *join)
 {
   int err;
   ha_rows max_limit;
-  bool reset_limit= FALSE;
-  Item **reset_item= 0;
-  THD *thd= handler->thd;
-  TABLE *table= handler->table;
+  bool reset_limit = FALSE;
+  Item **reset_item = 0;
+  THD *thd = handler->thd;
+  TABLE *table = handler->table;
   DBUG_ENTER("Pushdown_query::execute");
 
-  if ((err= handler->init_scan()))
+  if ((err = handler->init_scan()))
     goto error;
 
   if (store_data_in_temp_table)
   {
-    max_limit= join->tmp_table_param.end_write_records;
-    reset_limit= TRUE;
+    max_limit = join->tmp_table_param.end_write_records;
+    reset_limit = TRUE;
   }
   else
   {
-    max_limit= join->unit->lim.get_select_limit();
+    max_limit = join->unit->lim.get_select_limit();
     if (join->unit->fake_select_lex)
-      reset_item= &join->unit->fake_select_lex->limit_params.select_limit;
+      reset_item = &join->unit->fake_select_lex->limit_params.select_limit;
   }
 
-  while (!(err= handler->next_row()))
+  while (!(err = handler->next_row()))
   {
     if (unlikely(thd->check_killed()))
     {
@@ -74,18 +74,14 @@ int Pushdown_query::execute(JOIN *join)
     {
       if (store_data_in_temp_table)
       {
-        if ((err= table->file->ha_write_tmp_row(table->record[0])))
+        if ((err = table->file->ha_write_tmp_row(table->record[0])))
         {
           bool is_duplicate;
           if (likely(!table->file->is_fatal_error(err, HA_CHECK_DUP)))
-            continue;                           // Distinct elimination
+            continue;  // Distinct elimination
 
-          if (create_internal_tmp_table_from_heap(thd, table,
-                                                  join->tmp_table_param.
-                                                  start_recinfo,
-                                                  &join->tmp_table_param.
-                                                  recinfo,
-                                                  err, 1, &is_duplicate))
+          if (create_internal_tmp_table_from_heap(thd, table, join->tmp_table_param.start_recinfo,
+                                                  &join->tmp_table_param.recinfo, err, 1, &is_duplicate))
             DBUG_RETURN(1);
           if (is_duplicate)
             continue;
@@ -97,10 +93,7 @@ int Pushdown_query::execute(JOIN *join)
         {
           int error;
           /* result < 0 if row was not accepted and should not be counted */
-          if (unlikely((error=
-                        join->result->send_data_with_check(*join->fields,
-                                                          join->unit,
-                                                          join->send_records))))
+          if (unlikely((error = join->result->send_data_with_check(*join->fields, join->unit, join->send_records))))
           {
             handler->end_scan();
             DBUG_RETURN(error < 0 ? 0 : -1);
@@ -112,22 +105,22 @@ int Pushdown_query::execute(JOIN *join)
       if (++join->send_records >= max_limit && join->do_send_rows)
       {
         if (!(join->select_options & OPTION_FOUND_ROWS))
-          break;                              // LIMIT reached
-        join->do_send_rows= 0;                // Calculate FOUND_ROWS()
+          break;                 // LIMIT reached
+        join->do_send_rows = 0;  // Calculate FOUND_ROWS()
         if (reset_limit)
           join->unit->lim.set_unlimited();
         if (reset_item)
-          *reset_item= 0;
+          *reset_item = 0;
       }
     }
   }
   if (err != 0 && err != HA_ERR_END_OF_FILE)
     goto error;
 
-  if ((err= handler->end_scan()))
+  if ((err = handler->end_scan()))
     goto error_2;
   if (!store_data_in_temp_table && join->result->send_eof())
-    DBUG_RETURN(1);                              // Don't send error to client
+    DBUG_RETURN(1);  // Don't send error to client
 
   DBUG_RETURN(0);
 
@@ -135,9 +128,8 @@ error:
   handler->end_scan();
 error_2:
   handler->print_error(err, MYF(0));
-  DBUG_RETURN(-1);                              // Error not sent to client
+  DBUG_RETURN(-1);  // Error not sent to client
 }
-
 
 void group_by_handler::print_error(int error, myf errflag)
 {

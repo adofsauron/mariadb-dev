@@ -14,6 +14,5 @@ extern bool is_proxy_protocol_allowed(const sockaddr *remote_addr);
 extern int init_proxy_protocol_networks(const char *spec);
 extern void destroy_proxy_protocol_networks();
 
-extern int  set_proxy_protocol_networks(const char *spec);
+extern int set_proxy_protocol_networks(const char *spec);
 extern bool proxy_protocol_networks_valid(const char *spec);
-

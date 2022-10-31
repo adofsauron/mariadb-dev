@@ -44,18 +44,18 @@ struct gen_lex_token_string
 };
 
 gen_lex_token_string compiled_token_array[MY_MAX_TOKEN];
-int max_token_seen= 0;
+int max_token_seen = 0;
 
 char char_tokens[256];
 
-int tok_generic_value= 0;
-int tok_generic_value_list= 0;
-int tok_row_single_value= 0;
-int tok_row_single_value_list= 0;
-int tok_row_multiple_value= 0;
-int tok_row_multiple_value_list= 0;
-int tok_ident= 0;
-int tok_unused= 0;
+int tok_generic_value = 0;
+int tok_generic_value_list = 0;
+int tok_row_single_value = 0;
+int tok_row_single_value_list = 0;
+int tok_row_multiple_value = 0;
+int tok_row_multiple_value_list = 0;
+int tok_ident = 0;
+int tok_unused = 0;
 
 void set_token(int tok, const char *str)
 {
@@ -67,7 +67,7 @@ void set_token(int tok, const char *str)
 
   if (tok > max_token_seen)
   {
-    max_token_seen= tok;
+    max_token_seen = tok;
   }
 
   if (max_token_seen >= MY_MAX_TOKEN)
@@ -76,16 +76,13 @@ void set_token(int tok, const char *str)
     exit(1);
   }
 
-  compiled_token_array[tok].m_token_string= str;
-  compiled_token_array[tok].m_token_length= (int)strlen(str);
-  compiled_token_array[tok].m_append_space= true;
-  compiled_token_array[tok].m_start_expr= false;
+  compiled_token_array[tok].m_token_string = str;
+  compiled_token_array[tok].m_token_length = (int)strlen(str);
+  compiled_token_array[tok].m_append_space = true;
+  compiled_token_array[tok].m_start_expr = false;
 }
 
-void set_start_expr_token(int tok)
-{
-  compiled_token_array[tok].m_start_expr= true;
-}
+void set_start_expr_token(int tok) { compiled_token_array[tok].m_start_expr = true; }
 
 void compute_tokens()
 {
@@ -96,27 +93,27 @@ void compute_tokens()
   /*
     Default value.
   */
-  for (tok= 0; tok < MY_MAX_TOKEN; tok++)
+  for (tok = 0; tok < MY_MAX_TOKEN; tok++)
   {
-    compiled_token_array[tok].m_token_string= "(unknown)";
-    compiled_token_array[tok].m_token_length= 9;
-    compiled_token_array[tok].m_append_space= true;
-    compiled_token_array[tok].m_start_expr= false;
+    compiled_token_array[tok].m_token_string = "(unknown)";
+    compiled_token_array[tok].m_token_length = 9;
+    compiled_token_array[tok].m_append_space = true;
+    compiled_token_array[tok].m_start_expr = false;
   }
 
   /*
     Tokens made of just one terminal character
   */
-  for (tok=0; tok < 256; tok++)
+  for (tok = 0; tok < 256; tok++)
   {
-    str= & char_tokens[tok];
-    str[0]= (char) tok;
-    compiled_token_array[tok].m_token_string= str;
-    compiled_token_array[tok].m_token_length= 1;
-    compiled_token_array[tok].m_append_space= true;
+    str = &char_tokens[tok];
+    str[0] = (char)tok;
+    compiled_token_array[tok].m_token_string = str;
+    compiled_token_array[tok].m_token_length = 1;
+    compiled_token_array[tok].m_append_space = true;
   }
 
-  max_token_seen= 255;
+  max_token_seen = 255;
 
   /*
     String terminal tokens, used in sql_yacc.yy
@@ -173,7 +170,7 @@ void compute_tokens()
   /*
     See symbols[] in sql/lex.h
   */
-  for (i= 0; i< sizeof(symbols)/sizeof(symbols[0]); i++)
+  for (i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++)
   {
     set_token(symbols[i].tok, symbols[i].name);
   }
@@ -181,7 +178,7 @@ void compute_tokens()
   /*
     See sql_functions[] in sql/lex.h
   */
-  for (i= 0; i< sizeof(sql_functions)/sizeof(sql_functions[0]); i++)
+  for (i = 0; i < sizeof(sql_functions) / sizeof(sql_functions[0]); i++)
   {
     set_token(sql_functions[i].tok, sql_functions[i].name);
   }
@@ -192,35 +189,35 @@ void compute_tokens()
   */
 
   max_token_seen++;
-  tok_generic_value= max_token_seen;
+  tok_generic_value = max_token_seen;
   set_token(tok_generic_value, "?");
 
   max_token_seen++;
-  tok_generic_value_list= max_token_seen;
+  tok_generic_value_list = max_token_seen;
   set_token(tok_generic_value_list, "?, ...");
 
   max_token_seen++;
-  tok_row_single_value= max_token_seen;
+  tok_row_single_value = max_token_seen;
   set_token(tok_row_single_value, "(?)");
 
   max_token_seen++;
-  tok_row_single_value_list= max_token_seen;
+  tok_row_single_value_list = max_token_seen;
   set_token(tok_row_single_value_list, "(?) /* , ... */");
 
   max_token_seen++;
-  tok_row_multiple_value= max_token_seen;
+  tok_row_multiple_value = max_token_seen;
   set_token(tok_row_multiple_value, "(...)");
 
   max_token_seen++;
-  tok_row_multiple_value_list= max_token_seen;
+  tok_row_multiple_value_list = max_token_seen;
   set_token(tok_row_multiple_value_list, "(...) /* , ... */");
 
   max_token_seen++;
-  tok_ident= max_token_seen;
+  tok_ident = max_token_seen;
   set_token(tok_ident, "(tok_id)");
 
   max_token_seen++;
-  tok_unused= max_token_seen;
+  tok_unused = max_token_seen;
   set_token(tok_unused, "UNUSED");
 
   /*
@@ -237,7 +234,7 @@ void compute_tokens()
 
     To work around this, digest text are printed as "@@variable".
   */
-  compiled_token_array[(int) '@'].m_append_space= false;
+  compiled_token_array[(int)'@'].m_append_space = false;
 
   /*
     Define additional properties for tokens.
@@ -300,24 +297,19 @@ void print_tokens()
   printf("{\n");
   printf("/* PART 1: character tokens. */\n");
 
-  for (tok= 0; tok<256; tok++)
+  for (tok = 0; tok < 256; tok++)
   {
-    printf("/* %03d */  { \"\\x%02x\", 1, %s, %s},\n",
-           tok,
-           tok,
+    printf("/* %03d */  { \"\\x%02x\", 1, %s, %s},\n", tok, tok,
            compiled_token_array[tok].m_append_space ? "true" : "false",
            compiled_token_array[tok].m_start_expr ? "true" : "false");
   }
 
   printf("/* PART 2: named tokens. */\n");
 
-  for (tok= 256; tok<= max_token_seen; tok++)
+  for (tok = 256; tok <= max_token_seen; tok++)
   {
-    printf("/* %03d */  { \"%s\", %d, %s, %s},\n",
-           tok,
-           compiled_token_array[tok].m_token_string,
-           compiled_token_array[tok].m_token_length,
-           compiled_token_array[tok].m_append_space ? "true" : "false",
+    printf("/* %03d */  { \"%s\", %d, %s, %s},\n", tok, compiled_token_array[tok].m_token_string,
+           compiled_token_array[tok].m_token_length, compiled_token_array[tok].m_append_space ? "true" : "false",
            compiled_token_array[tok].m_start_expr ? "true" : "false");
   }
 
@@ -336,7 +328,7 @@ void print_tokens()
   printf("#define TOK_UNUSED %d\n", tok_unused);
 }
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
   puts("/*");
   puts(ORACLE_WELCOME_COPYRIGHT_NOTICE("2011"));
@@ -360,4 +352,3 @@ int main(int argc,char **argv)
 
   return 0;
 }
-

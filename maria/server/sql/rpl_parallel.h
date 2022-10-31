@@ -3,7 +3,6 @@
 
 #include "log_event.h"
 
-
 struct rpl_parallel;
 struct rpl_parallel_entry;
 struct rpl_parallel_thread_pool;
@@ -11,7 +10,6 @@ extern struct rpl_parallel_thread_pool pool_bkp_for_pfs;
 
 class Relay_log_info;
 struct inuse_relaylog;
-
 
 /*
   Structure used to keep track of the parallel replication of a batch of
@@ -47,7 +45,8 @@ struct inuse_relaylog;
      out-of-order, the thread that frees a given gco can be for any later
      event group, not necessarily an event group from the gco being freed.
 */
-struct group_commit_orderer {
+struct group_commit_orderer
+{
   /* Wakeup condition, used with rpl_parallel_entry::LOCK_parallel_entry. */
   mysql_cond_t COND_group_commit_orderer;
   uint64 wait_count;
@@ -81,20 +80,20 @@ struct group_commit_orderer {
       regardless of current commit_id, as DDL is not safe to
       speculatively apply in parallel with prior event groups.
     */
-    MULTI_BATCH= 1,
+    MULTI_BATCH = 1,
     /*
       This flag is set for a GCO that contains DDL. If set, it forces
       a switch to a new GCO upon seeing a new commit_id, as DDL is not
       safe to speculatively replicate in parallel with subsequent
       transactions.
     */
-    FORCE_SWITCH= 2
+    FORCE_SWITCH = 2
   };
   uint8 flags;
 };
 
-
-struct rpl_parallel_thread {
+struct rpl_parallel_thread
+{
   bool delay_start;
   bool running;
   bool stop;
@@ -115,7 +114,7 @@ struct rpl_parallel_thread {
   mysql_cond_t COND_rpl_thread;
   mysql_cond_t COND_rpl_thread_queue;
   mysql_cond_t COND_rpl_thread_stop;
-  struct rpl_parallel_thread *next;             /* For free list. */
+  struct rpl_parallel_thread *next; /* For free list. */
   struct rpl_parallel_thread_pool *pool;
   THD *thd;
   /*
@@ -125,21 +124,24 @@ struct rpl_parallel_thread {
   struct rpl_parallel_thread **current_owner;
   /* The rpl_parallel_entry of the owner. */
   rpl_parallel_entry *current_entry;
-  struct queued_event {
+  struct queued_event
+  {
     queued_event *next;
     /*
       queued_event can hold either an event to be executed, or just a binlog
       position to be updated without any associated event.
     */
-    enum queued_event_t {
+    enum queued_event_t
+    {
       QUEUED_EVENT,
       QUEUED_POS_UPDATE,
       QUEUED_MASTER_RESTART
     } typ;
-    union {
-      Log_event *ev;                            /* QUEUED_EVENT */
-      rpl_parallel_entry *entry_for_queued;     /* QUEUED_POS_UPDATE and
-                                                   QUEUED_MASTER_RESTART */
+    union
+    {
+      Log_event *ev;                        /* QUEUED_EVENT */
+      rpl_parallel_entry *entry_for_queued; /* QUEUED_POS_UPDATE and
+                                               QUEUED_MASTER_RESTART */
     };
     rpl_group_info *rgi;
     inuse_relaylog *ir;
@@ -149,7 +151,7 @@ struct rpl_parallel_thread {
     ulonglong event_relay_log_pos;
     my_off_t future_event_master_log_pos;
     size_t event_size;
-  } *event_queue, *last_in_queue;
+  } * event_queue, *last_in_queue;
   uint64 queued_size;
   /* These free lists are protected by LOCK_rpl_thread. */
   queued_event *qev_free_list;
@@ -183,18 +185,12 @@ struct rpl_parallel_thread {
   ulonglong worker_idle_time;
   ulong last_trans_retry_count;
   ulonglong start_time;
-  void start_time_tracker()
-  {
-    start_time= microsecond_interval_timer();
-  }
-  ulonglong compute_time_lapsed()
-  {
-    return (ulonglong)((microsecond_interval_timer() - start_time) / 1000000.0);
-  }
+  void start_time_tracker() { start_time = microsecond_interval_timer(); }
+  ulonglong compute_time_lapsed() { return (ulonglong)((microsecond_interval_timer() - start_time) / 1000000.0); }
   void add_to_worker_idle_time_and_reset()
   {
-    worker_idle_time+= compute_time_lapsed();
-    start_time=0;
+    worker_idle_time += compute_time_lapsed();
+    start_time = 0;
   }
   ulonglong get_worker_idle_time()
   {
@@ -206,30 +202,25 @@ struct rpl_parallel_thread {
   void enqueue(queued_event *qev)
   {
     if (last_in_queue)
-      last_in_queue->next= qev;
+      last_in_queue->next = qev;
     else
-      event_queue= qev;
-    last_in_queue= qev;
-    queued_size+= qev->event_size;
+      event_queue = qev;
+    last_in_queue = qev;
+    queued_size += qev->event_size;
   }
 
   void dequeue1(queued_event *list)
   {
     DBUG_ASSERT(list == event_queue);
-    event_queue= last_in_queue= NULL;
+    event_queue = last_in_queue = NULL;
   }
 
-  void dequeue2(size_t dequeue_size)
-  {
-    queued_size-= dequeue_size;
-  }
+  void dequeue2(size_t dequeue_size) { queued_size -= dequeue_size; }
 
   queued_event *get_qev_common(Log_event *ev, ulonglong event_size);
-  queued_event *get_qev(Log_event *ev, ulonglong event_size,
-                        Relay_log_info *rli);
-  queued_event *retry_get_qev(Log_event *ev, queued_event *orig_qev,
-                              const char *relay_log_name,
-                              ulonglong event_pos, ulonglong event_size);
+  queued_event *get_qev(Log_event *ev, ulonglong event_size, Relay_log_info *rli);
+  queued_event *retry_get_qev(Log_event *ev, queued_event *orig_qev, const char *relay_log_name, ulonglong event_pos,
+                              ulonglong event_size);
   /*
     Put a qev on the local free list, to be later released to the global free
     list by batch_free().
@@ -240,8 +231,7 @@ struct rpl_parallel_thread {
     LOCK_rpl_thread mutex.
   */
   void free_qev(queued_event *qev);
-  rpl_group_info *get_rgi(Relay_log_info *rli, Gtid_log_event *gtid_ev,
-                          rpl_parallel_entry *e, ulonglong event_size);
+  rpl_group_info *get_rgi(Relay_log_info *rli, Gtid_log_event *gtid_ev, rpl_parallel_entry *e, ulonglong event_size);
   /*
     Put an gco on the local free list, to be later released to the global free
     list by batch_free().
@@ -252,8 +242,7 @@ struct rpl_parallel_thread {
     LOCK_rpl_thread mutex.
   */
   void free_rgi(rpl_group_info *rgi);
-  group_commit_orderer *get_gco(uint64 wait_count, group_commit_orderer *prev,
-                                uint64 first_sub_id);
+  group_commit_orderer *get_gco(uint64 wait_count, group_commit_orderer *prev, uint64 first_sub_id);
   /*
     Put a gco on the local free list, to be later released to the global free
     list by batch_free().
@@ -269,40 +258,37 @@ struct rpl_parallel_thread {
   rpl_parallel_thread();
 };
 
-
-struct pool_bkp_for_pfs{
+struct pool_bkp_for_pfs
+{
   uint32 count;
   bool inited;
   struct rpl_parallel_thread **rpl_thread_arr;
   void init(uint32 thd_count)
   {
     DBUG_ASSERT(thd_count);
-    rpl_thread_arr= (rpl_parallel_thread **)
-                      my_malloc(PSI_INSTRUMENT_ME,
-                                thd_count * sizeof(rpl_parallel_thread*),
-                                MYF(MY_WME | MY_ZEROFILL));
-    for (uint i=0; i<thd_count; i++)
-      rpl_thread_arr[i]= (rpl_parallel_thread *)
-                          my_malloc(PSI_INSTRUMENT_ME, sizeof(rpl_parallel_thread),
-                                    MYF(MY_WME | MY_ZEROFILL));
-    count= thd_count;
-    inited= true;
+    rpl_thread_arr = (rpl_parallel_thread **)my_malloc(PSI_INSTRUMENT_ME, thd_count * sizeof(rpl_parallel_thread *),
+                                                       MYF(MY_WME | MY_ZEROFILL));
+    for (uint i = 0; i < thd_count; i++)
+      rpl_thread_arr[i] =
+          (rpl_parallel_thread *)my_malloc(PSI_INSTRUMENT_ME, sizeof(rpl_parallel_thread), MYF(MY_WME | MY_ZEROFILL));
+    count = thd_count;
+    inited = true;
   }
 
   void destroy()
   {
     if (inited)
     {
-      for (uint i=0; i<count; i++)
-        my_free(rpl_thread_arr[i]);
+      for (uint i = 0; i < count; i++) my_free(rpl_thread_arr[i]);
 
       my_free(rpl_thread_arr);
-      rpl_thread_arr= NULL;
+      rpl_thread_arr = NULL;
     }
   }
 };
 
-struct rpl_parallel_thread_pool {
+struct rpl_parallel_thread_pool
+{
   struct rpl_parallel_thread **threads;
   struct rpl_parallel_thread *free_list;
   mysql_mutex_t LOCK_rpl_thread_pool;
@@ -329,13 +315,12 @@ struct rpl_parallel_thread_pool {
   void destroy();
   void deactivate();
   void destroy_cond_mutex();
-  struct rpl_parallel_thread *get_thread(rpl_parallel_thread **owner,
-                                         rpl_parallel_entry *entry);
+  struct rpl_parallel_thread *get_thread(rpl_parallel_thread **owner, rpl_parallel_entry *entry);
   void release_thread(rpl_parallel_thread *rpt);
 };
 
-
-struct rpl_parallel_entry {
+struct rpl_parallel_entry
+{
   mysql_mutex_t LOCK_parallel_entry;
   mysql_cond_t COND_parallel_entry;
   uint32 domain_id;
@@ -432,16 +417,14 @@ struct rpl_parallel_entry {
   /* Relay log info of replication source for this entry. */
   Relay_log_info *rli;
 
-  rpl_parallel_thread * choose_thread(rpl_group_info *rgi, bool *did_enter_cond,
-                                      PSI_stage_info *old_stage,
-                                      Gtid_log_event *gtid_ev);
-  rpl_parallel_thread *
-  choose_thread_internal(uint idx, bool *did_enter_cond, rpl_group_info *rgi,
-                         PSI_stage_info *old_stage);
-  int queue_master_restart(rpl_group_info *rgi,
-                           Format_description_log_event *fdev);
+  rpl_parallel_thread *choose_thread(rpl_group_info *rgi, bool *did_enter_cond, PSI_stage_info *old_stage,
+                                     Gtid_log_event *gtid_ev);
+  rpl_parallel_thread *choose_thread_internal(uint idx, bool *did_enter_cond, rpl_group_info *rgi,
+                                              PSI_stage_info *old_stage);
+  int queue_master_restart(rpl_group_info *rgi, Format_description_log_event *fdev);
 };
-struct rpl_parallel {
+struct rpl_parallel
+{
   HASH domain_hash;
   rpl_parallel_entry *current;
   bool sql_thread_stopping;
@@ -457,9 +440,7 @@ struct rpl_parallel {
   int do_event(rpl_group_info *serial_rgi, Log_event *ev, ulonglong event_size);
 };
 
-
 extern struct rpl_parallel_thread_pool global_rpl_thread_pool;
-
 
 extern int rpl_parallel_resize_pool_if_no_slaves(void);
 extern int rpl_parallel_activate_pool(rpl_parallel_thread_pool *pool);
@@ -468,4 +449,4 @@ extern bool process_gtid_for_restart_pos(Relay_log_info *rli, rpl_gtid *gtid);
 extern int rpl_pause_for_ftwrl(THD *thd);
 extern void rpl_unpause_after_ftwrl(THD *thd);
 
-#endif  /* RPL_PARALLEL_H */
+#endif /* RPL_PARALLEL_H */

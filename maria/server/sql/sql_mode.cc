@@ -19,16 +19,14 @@
 
 void Sql_mode_dependency::push_dependency_warnings(THD *thd) const
 {
-  sql_mode_t all= m_hard | m_soft;
-  for (uint i= 0; all ; i++, all >>= 1)
+  sql_mode_t all = m_hard | m_soft;
+  for (uint i = 0; all; i++, all >>= 1)
   {
     if (all & 1)
     {
       // TODO-10.5: add a new error code
-      push_warning_printf(thd,
-                          Sql_condition::WARN_LEVEL_WARN, ER_UNKNOWN_ERROR,
-                          "Expression depends on the @@%s value %s",
-                          "sql_mode", sql_mode_string_representation(i));
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_WARN, ER_UNKNOWN_ERROR,
+                          "Expression depends on the @@%s value %s", "sql_mode", sql_mode_string_representation(i));
     }
   }
 }

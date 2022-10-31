@@ -24,18 +24,18 @@
 #include "mysqld.h"
 #include "sql_priv.h"
 #ifndef _WIN32
-#include <netdb.h>        // getservbyname, servent
+#include <netdb.h>  // getservbyname, servent
 #endif
 #include "sql_audit.h"
 #include "sql_connect.h"
 #include "thread_cache.h"
 #include "probes_mysql.h"
-#include "sql_parse.h"                          // sql_command_flags,
-                                                // execute_init_command,
-                                                // do_command
-#include "sql_db.h"                             // mysql_change_db
-#include "hostname.h" // inc_host_errors, ip_to_hostname,
-                      // reset_host_errors
+#include "sql_parse.h"  // sql_command_flags,
+                        // execute_init_command,
+                        // do_command
+#include "sql_db.h"     // mysql_change_db
+#include "hostname.h"   // inc_host_errors, ip_to_hostname,
+                        // reset_host_errors
 #include "sql_callback.h"
 
 #ifdef WITH_WSREP
@@ -60,60 +60,55 @@ extern vio_keepalive_opts opt_vio_keepalive;
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
 static HASH hash_user_connections;
 
-int get_or_create_user_conn(THD *thd, const char *user,
-                            const char *host,
-                            const USER_RESOURCES *mqh)
+int get_or_create_user_conn(THD *thd, const char *user, const char *host, const USER_RESOURCES *mqh)
 {
-  int return_val= 0;
+  int return_val = 0;
   size_t temp_len, user_len;
   char temp_user[USER_HOST_BUFF_SIZE];
-  struct  user_conn *uc;
+  struct user_conn *uc;
 
   DBUG_ASSERT(user != 0);
   DBUG_ASSERT(host != 0);
   DBUG_ASSERT(thd->user_connect == 0);
 
-  user_len= strlen(user);
-  temp_len= (strmov(strmov(temp_user, user)+1, host) - temp_user)+1;
+  user_len = strlen(user);
+  temp_len = (strmov(strmov(temp_user, user) + 1, host) - temp_user) + 1;
   mysql_mutex_lock(&LOCK_user_conn);
-  if (!(uc = (struct  user_conn *) my_hash_search(&hash_user_connections,
-					       (uchar*) temp_user, temp_len)))
+  if (!(uc = (struct user_conn *)my_hash_search(&hash_user_connections, (uchar *)temp_user, temp_len)))
   {
     /* First connection for user; Create a user connection object */
-    if (!(uc= ((struct user_conn*)
-	       my_malloc(key_memory_user_conn,
-                         sizeof(struct user_conn) + temp_len+1, MYF(MY_WME)))))
+    if (!(uc = ((struct user_conn *)my_malloc(key_memory_user_conn, sizeof(struct user_conn) + temp_len + 1,
+                                              MYF(MY_WME)))))
     {
       /* MY_WME ensures an error is set in THD. */
-      return_val= 1;
+      return_val = 1;
       goto end;
     }
-    uc->user=(char*) (uc+1);
-    memcpy(uc->user,temp_user,temp_len+1);
-    uc->host= uc->user + user_len +  1;
-    uc->len= (uint)temp_len;
-    uc->connections= uc->questions= uc->updates= uc->conn_per_hour= 0;
-    uc->reset_utime= thd->thr_create_utime;
-    if (my_hash_insert(&hash_user_connections, (uchar*) uc))
+    uc->user = (char *)(uc + 1);
+    memcpy(uc->user, temp_user, temp_len + 1);
+    uc->host = uc->user + user_len + 1;
+    uc->len = (uint)temp_len;
+    uc->connections = uc->questions = uc->updates = uc->conn_per_hour = 0;
+    uc->reset_utime = thd->thr_create_utime;
+    if (my_hash_insert(&hash_user_connections, (uchar *)uc))
     {
       /* The only possible error is out of memory, MY_WME sets an error. */
       my_free(uc);
-      return_val= 1;
+      return_val = 1;
       goto end;
     }
   }
-  uc->user_resources= *mqh;
-  thd->user_connect=uc;
+  uc->user_resources = *mqh;
+  thd->user_connect = uc;
   uc->connections++;
 end:
   mysql_mutex_unlock(&LOCK_user_conn);
   return return_val;
 }
 
-
 /*
   check if user has already too many connections
-  
+
   SYNOPSIS
   check_for_max_user_connections()
   thd			Thread handle
@@ -130,57 +125,51 @@ end:
 
 int check_for_max_user_connections(THD *thd, USER_CONN *uc)
 {
-  int error= 1;
+  int error = 1;
   Host_errors errors;
   DBUG_ENTER("check_for_max_user_connections");
 
   mysql_mutex_lock(&LOCK_user_conn);
 
   /* Root is not affected by the value of max_user_connections */
-  if (global_system_variables.max_user_connections &&
-      !uc->user_resources.user_conn &&
+  if (global_system_variables.max_user_connections && !uc->user_resources.user_conn &&
       global_system_variables.max_user_connections < uc->connections &&
       !(thd->security_ctx->master_access & PRIV_IGNORE_MAX_USER_CONNECTIONS))
   {
     my_error(ER_TOO_MANY_USER_CONNECTIONS, MYF(0), uc->user);
-    error=1;
-    errors.m_max_user_connection= 1;
+    error = 1;
+    errors.m_max_user_connection = 1;
     goto end;
   }
   time_out_user_resource_limits(thd, uc);
-  if (uc->user_resources.user_conn &&
-      uc->user_resources.user_conn < uc->connections)
+  if (uc->user_resources.user_conn && uc->user_resources.user_conn < uc->connections)
   {
-    my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user,
-             "max_user_connections",
-             (long) uc->user_resources.user_conn);
-    error= 1;
-    errors.m_max_user_connection= 1;
+    my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user, "max_user_connections", (long)uc->user_resources.user_conn);
+    error = 1;
+    errors.m_max_user_connection = 1;
     goto end;
   }
-  if (uc->user_resources.conn_per_hour &&
-      uc->user_resources.conn_per_hour <= uc->conn_per_hour)
+  if (uc->user_resources.conn_per_hour && uc->user_resources.conn_per_hour <= uc->conn_per_hour)
   {
-    my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user,
-             "max_connections_per_hour",
-             (long) uc->user_resources.conn_per_hour);
-    error=1;
-    errors.m_max_user_connection_per_hour= 1;
+    my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user, "max_connections_per_hour",
+             (long)uc->user_resources.conn_per_hour);
+    error = 1;
+    errors.m_max_user_connection_per_hour = 1;
     goto end;
   }
   uc->conn_per_hour++;
-  error= 0;
+  error = 0;
 
 end:
   if (unlikely(error))
   {
-    uc->connections--; // no need for decrease_user_connections() here
+    uc->connections--;  // no need for decrease_user_connections() here
     /*
       The thread may returned back to the pool and assigned to a user
       that doesn't have a limit. Ensure the user is not using resources
       of someone else.
     */
-    thd->user_connect= NULL;
+    thd->user_connect = NULL;
   }
   mysql_mutex_unlock(&LOCK_user_conn);
   if (unlikely(error))
@@ -189,7 +178,6 @@ end:
   }
   DBUG_RETURN(error);
 }
-
 
 /*
   Decrease user connection count
@@ -217,12 +205,11 @@ void decrease_user_connections(USER_CONN *uc)
   if (!--uc->connections && !mqh_used)
   {
     /* Last connection for user; Delete it */
-    (void) my_hash_delete(&hash_user_connections,(uchar*) uc);
+    (void)my_hash_delete(&hash_user_connections, (uchar *)uc);
   }
   mysql_mutex_unlock(&LOCK_user_conn);
   DBUG_VOID_RETURN;
 }
-
 
 /*
   Reset per-hour user resource limits when it has been more than
@@ -240,16 +227,16 @@ void decrease_user_connections(USER_CONN *uc)
 
 void time_out_user_resource_limits(THD *thd, USER_CONN *uc)
 {
-  ulonglong check_time= thd->start_utime;
+  ulonglong check_time = thd->start_utime;
   DBUG_ENTER("time_out_user_resource_limits");
 
   /* If more than a hour since last check, reset resource checking */
-  if (check_time  - uc->reset_utime >= 3600000000ULL)
+  if (check_time - uc->reset_utime >= 3600000000ULL)
   {
-    uc->questions=0;
-    uc->updates=0;
-    uc->conn_per_hour=0;
-    uc->reset_utime= check_time;
+    uc->questions = 0;
+    uc->updates = 0;
+    uc->conn_per_hour = 0;
+    uc->reset_utime = check_time;
   }
 
   DBUG_VOID_RETURN;
@@ -262,8 +249,8 @@ void time_out_user_resource_limits(THD *thd, USER_CONN *uc)
 
 bool check_mqh(THD *thd, uint check_command)
 {
-  bool error= 0;
-  USER_CONN *uc=thd->user_connect;
+  bool error = 0;
+  USER_CONN *uc = thd->user_connect;
   DBUG_ENTER("check_mqh");
   DBUG_ASSERT(uc != 0);
 
@@ -272,24 +259,20 @@ bool check_mqh(THD *thd, uint check_command)
   time_out_user_resource_limits(thd, uc);
 
   /* Check that we have not done too many questions / hour */
-  if (uc->user_resources.questions &&
-      uc->questions++ >= uc->user_resources.questions)
+  if (uc->user_resources.questions && uc->questions++ >= uc->user_resources.questions)
   {
-    my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user, "max_queries_per_hour",
-             (long) uc->user_resources.questions);
-    error=1;
+    my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user, "max_queries_per_hour", (long)uc->user_resources.questions);
+    error = 1;
     goto end;
   }
-  if (check_command < (uint) SQLCOM_END)
+  if (check_command < (uint)SQLCOM_END)
   {
     /* Check that we have not done too many updates / hour */
-    if (uc->user_resources.updates &&
-        (sql_command_flags[check_command] & CF_CHANGES_DATA) &&
-	uc->updates++ >= uc->user_resources.updates)
+    if (uc->user_resources.updates && (sql_command_flags[check_command] & CF_CHANGES_DATA) &&
+        uc->updates++ >= uc->user_resources.updates)
     {
-      my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user, "max_updates_per_hour",
-               (long) uc->user_resources.updates);
-      error=1;
+      my_error(ER_USER_LIMIT_REACHED, MYF(0), uc->user, "max_updates_per_hour", (long)uc->user_resources.updates);
+      error = 1;
       goto end;
     }
   }
@@ -305,29 +288,21 @@ end:
   started with corresponding variable that is greater then 0.
 */
 
-extern "C" uchar *get_key_conn(user_conn *buff, size_t *length,
-			      my_bool not_used __attribute__((unused)))
+extern "C" uchar *get_key_conn(user_conn *buff, size_t *length, my_bool not_used __attribute__((unused)))
 {
-  *length= buff->len;
-  return (uchar*) buff->user;
+  *length = buff->len;
+  return (uchar *)buff->user;
 }
 
-
-extern "C" void free_user(struct user_conn *uc)
-{
-  my_free(uc);
-}
-
+extern "C" void free_user(struct user_conn *uc) { my_free(uc); }
 
 void init_max_user_conn(void)
 {
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
-  my_hash_init(key_memory_user_conn, &hash_user_connections,
-               system_charset_info, max_connections, 0, 0, (my_hash_get_key)
-               get_key_conn, (my_hash_free_key) free_user, 0);
+  my_hash_init(key_memory_user_conn, &hash_user_connections, system_charset_info, max_connections, 0, 0,
+               (my_hash_get_key)get_key_conn, (my_hash_free_key)free_user, 0);
 #endif
 }
-
 
 void free_max_user_conn(void)
 {
@@ -336,42 +311,39 @@ void free_max_user_conn(void)
 #endif /* NO_EMBEDDED_ACCESS_CHECKS */
 }
 
-
-void reset_mqh(LEX_USER *lu, bool get_them= 0)
+void reset_mqh(LEX_USER *lu, bool get_them = 0)
 {
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   mysql_mutex_lock(&LOCK_user_conn);
   if (lu)  // for GRANT
   {
     USER_CONN *uc;
-    size_t temp_len=lu->user.length+lu->host.length+2;
+    size_t temp_len = lu->user.length + lu->host.length + 2;
     char temp_user[USER_HOST_BUFF_SIZE];
 
-    memcpy(temp_user,lu->user.str,lu->user.length);
-    memcpy(temp_user+lu->user.length+1,lu->host.str,lu->host.length);
-    temp_user[lu->user.length]='\0'; temp_user[temp_len-1]=0;
-    if ((uc = (struct  user_conn *) my_hash_search(&hash_user_connections,
-                                                   (uchar*) temp_user,
-                                                   temp_len)))
+    memcpy(temp_user, lu->user.str, lu->user.length);
+    memcpy(temp_user + lu->user.length + 1, lu->host.str, lu->host.length);
+    temp_user[lu->user.length] = '\0';
+    temp_user[temp_len - 1] = 0;
+    if ((uc = (struct user_conn *)my_hash_search(&hash_user_connections, (uchar *)temp_user, temp_len)))
     {
-      uc->questions=0;
-      get_mqh(temp_user,&temp_user[lu->user.length+1],uc);
-      uc->updates=0;
-      uc->conn_per_hour=0;
+      uc->questions = 0;
+      get_mqh(temp_user, &temp_user[lu->user.length + 1], uc);
+      uc->updates = 0;
+      uc->conn_per_hour = 0;
     }
   }
   else
   {
     /* for FLUSH PRIVILEGES and FLUSH USER_RESOURCES */
-    for (uint idx=0;idx < hash_user_connections.records; idx++)
+    for (uint idx = 0; idx < hash_user_connections.records; idx++)
     {
-      USER_CONN *uc=(struct user_conn *)
-        my_hash_element(&hash_user_connections, idx);
+      USER_CONN *uc = (struct user_conn *)my_hash_element(&hash_user_connections, idx);
       if (get_them)
-	get_mqh(uc->user,uc->host,uc);
-      uc->questions=0;
-      uc->updates=0;
-      uc->conn_per_hour=0;
+        get_mqh(uc->user, uc->host, uc);
+      uc->questions = 0;
+      uc->updates = 0;
+      uc->conn_per_hour = 0;
     }
   }
   mysql_mutex_unlock(&LOCK_user_conn);
@@ -383,13 +355,10 @@ void reset_mqh(LEX_USER *lu, bool get_them= 0)
 *****************************************************************************/
 
 /* 'mysql_system_user' is used for when the user is not defined for a THD. */
-static const char mysql_system_user[]= "#mysql_system#";
+static const char mysql_system_user[] = "#mysql_system#";
 
 // Returns 'user' if it's not NULL.  Returns 'mysql_system_user' otherwise.
-static const char * get_valid_user_string(const char* user)
-{
-  return user ? user : mysql_system_user;
-}
+static const char *get_valid_user_string(const char *user) { return user ? user : mysql_system_user; }
 
 /*
   Returns string as 'IP' for the client-side of the connection represented by
@@ -398,161 +367,113 @@ static const char * get_valid_user_string(const char* user)
 
 static const char *get_client_host(THD *client)
 {
-  return client->security_ctx->host_or_ip[0] ?
-    client->security_ctx->host_or_ip :
-    client->security_ctx->host ? client->security_ctx->host : "";
+  return client->security_ctx->host_or_ip[0] ? client->security_ctx->host_or_ip
+         : client->security_ctx->host        ? client->security_ctx->host
+                                             : "";
 }
 
-extern "C" uchar *get_key_user_stats(USER_STATS *user_stats, size_t *length,
-                                     my_bool not_used __attribute__((unused)))
+extern "C" uchar *get_key_user_stats(USER_STATS *user_stats, size_t *length, my_bool not_used __attribute__((unused)))
 {
-  *length= user_stats->user_name_length;
-  return (uchar*) user_stats->user;
+  *length = user_stats->user_name_length;
+  return (uchar *)user_stats->user;
 }
 
-void free_user_stats(USER_STATS* user_stats)
-{
-  my_free(user_stats);
-}
+void free_user_stats(USER_STATS *user_stats) { my_free(user_stats); }
 
-void init_user_stats(USER_STATS *user_stats,
-                     const char *user,
-                     size_t user_length,
-                     const char *priv_user,
-                     uint total_connections,
-                     uint total_ssl_connections,
-                     uint concurrent_connections,
-                     time_t connected_time,
-                     double busy_time,
-                     double cpu_time,
-                     ulonglong bytes_received,
-                     ulonglong bytes_sent,
-                     ulonglong binlog_bytes_written,
-                     ha_rows rows_sent,
-                     ha_rows rows_read,
-                     ha_rows rows_inserted,
-                     ha_rows rows_deleted,
-                     ha_rows rows_updated,
-                     ulonglong select_commands,
-                     ulonglong update_commands,
-                     ulonglong other_commands,
-                     ulonglong commit_trans,
-                     ulonglong rollback_trans,
-                     ulonglong denied_connections,
-                     ulonglong lost_connections,
-                     ulonglong max_statement_time_exceeded,
-                     ulonglong access_denied_errors,
-                     ulonglong empty_queries)
+void init_user_stats(USER_STATS *user_stats, const char *user, size_t user_length, const char *priv_user,
+                     uint total_connections, uint total_ssl_connections, uint concurrent_connections,
+                     time_t connected_time, double busy_time, double cpu_time, ulonglong bytes_received,
+                     ulonglong bytes_sent, ulonglong binlog_bytes_written, ha_rows rows_sent, ha_rows rows_read,
+                     ha_rows rows_inserted, ha_rows rows_deleted, ha_rows rows_updated, ulonglong select_commands,
+                     ulonglong update_commands, ulonglong other_commands, ulonglong commit_trans,
+                     ulonglong rollback_trans, ulonglong denied_connections, ulonglong lost_connections,
+                     ulonglong max_statement_time_exceeded, ulonglong access_denied_errors, ulonglong empty_queries)
 {
   DBUG_ENTER("init_user_stats");
   DBUG_PRINT("enter", ("user: %s  priv_user: %s", user, priv_user));
 
-  user_length= MY_MIN(user_length, sizeof(user_stats->user)-1);
+  user_length = MY_MIN(user_length, sizeof(user_stats->user) - 1);
   memcpy(user_stats->user, user, user_length);
-  user_stats->user[user_length]= 0;
-  user_stats->user_name_length= (uint)user_length;
+  user_stats->user[user_length] = 0;
+  user_stats->user_name_length = (uint)user_length;
   strmake_buf(user_stats->priv_user, priv_user);
 
-  user_stats->total_connections= total_connections;
-  user_stats->total_ssl_connections=  total_ssl_connections;
-  user_stats->concurrent_connections= concurrent_connections;
-  user_stats->connected_time= connected_time;
-  user_stats->busy_time= busy_time;
-  user_stats->cpu_time= cpu_time;
-  user_stats->bytes_received= bytes_received;
-  user_stats->bytes_sent= bytes_sent;
-  user_stats->binlog_bytes_written= binlog_bytes_written;
-  user_stats->rows_sent= rows_sent;
-  user_stats->rows_read= rows_read;
-  user_stats->rows_inserted= rows_inserted;
-  user_stats->rows_deleted= rows_deleted;
-  user_stats->rows_updated= rows_updated;
-  user_stats->select_commands= select_commands;
-  user_stats->update_commands= update_commands;
-  user_stats->other_commands= other_commands;
-  user_stats->commit_trans= commit_trans;
-  user_stats->rollback_trans= rollback_trans;
-  user_stats->denied_connections= denied_connections;
-  user_stats->lost_connections= lost_connections;
-  user_stats->max_statement_time_exceeded= max_statement_time_exceeded;
-  user_stats->access_denied_errors= access_denied_errors;
-  user_stats->empty_queries= empty_queries;
+  user_stats->total_connections = total_connections;
+  user_stats->total_ssl_connections = total_ssl_connections;
+  user_stats->concurrent_connections = concurrent_connections;
+  user_stats->connected_time = connected_time;
+  user_stats->busy_time = busy_time;
+  user_stats->cpu_time = cpu_time;
+  user_stats->bytes_received = bytes_received;
+  user_stats->bytes_sent = bytes_sent;
+  user_stats->binlog_bytes_written = binlog_bytes_written;
+  user_stats->rows_sent = rows_sent;
+  user_stats->rows_read = rows_read;
+  user_stats->rows_inserted = rows_inserted;
+  user_stats->rows_deleted = rows_deleted;
+  user_stats->rows_updated = rows_updated;
+  user_stats->select_commands = select_commands;
+  user_stats->update_commands = update_commands;
+  user_stats->other_commands = other_commands;
+  user_stats->commit_trans = commit_trans;
+  user_stats->rollback_trans = rollback_trans;
+  user_stats->denied_connections = denied_connections;
+  user_stats->lost_connections = lost_connections;
+  user_stats->max_statement_time_exceeded = max_statement_time_exceeded;
+  user_stats->access_denied_errors = access_denied_errors;
+  user_stats->empty_queries = empty_queries;
   DBUG_VOID_RETURN;
 }
 
-
 void init_global_user_stats(void)
 {
-  my_hash_init(PSI_INSTRUMENT_ME, &global_user_stats, system_charset_info, max_connections,
-               0, 0, (my_hash_get_key) get_key_user_stats,
-               (my_hash_free_key) free_user_stats, 0);
+  my_hash_init(PSI_INSTRUMENT_ME, &global_user_stats, system_charset_info, max_connections, 0, 0,
+               (my_hash_get_key)get_key_user_stats, (my_hash_free_key)free_user_stats, 0);
 }
 
 void init_global_client_stats(void)
 {
-  my_hash_init(PSI_INSTRUMENT_ME, &global_client_stats, system_charset_info, max_connections,
-               0, 0, (my_hash_get_key) get_key_user_stats,
-               (my_hash_free_key) free_user_stats, 0);
+  my_hash_init(PSI_INSTRUMENT_ME, &global_client_stats, system_charset_info, max_connections, 0, 0,
+               (my_hash_get_key)get_key_user_stats, (my_hash_free_key)free_user_stats, 0);
 }
 
 extern "C" uchar *get_key_table_stats(TABLE_STATS *table_stats, size_t *length,
                                       my_bool not_used __attribute__((unused)))
 {
-  *length= table_stats->table_name_length;
-  return (uchar*) table_stats->table;
+  *length = table_stats->table_name_length;
+  return (uchar *)table_stats->table;
 }
 
-extern "C" void free_table_stats(TABLE_STATS* table_stats)
-{
-  my_free(table_stats);
-}
+extern "C" void free_table_stats(TABLE_STATS *table_stats) { my_free(table_stats); }
 
 void init_global_table_stats(void)
 {
-  my_hash_init(PSI_INSTRUMENT_ME, &global_table_stats, system_charset_info,
-               max_connections, 0, 0, (my_hash_get_key) get_key_table_stats,
-               (my_hash_free_key) free_table_stats, 0);
+  my_hash_init(PSI_INSTRUMENT_ME, &global_table_stats, system_charset_info, max_connections, 0, 0,
+               (my_hash_get_key)get_key_table_stats, (my_hash_free_key)free_table_stats, 0);
 }
 
 extern "C" uchar *get_key_index_stats(INDEX_STATS *index_stats, size_t *length,
-                                     my_bool not_used __attribute__((unused)))
+                                      my_bool not_used __attribute__((unused)))
 {
-  *length= index_stats->index_name_length;
-  return (uchar*) index_stats->index;
+  *length = index_stats->index_name_length;
+  return (uchar *)index_stats->index;
 }
 
-extern "C" void free_index_stats(INDEX_STATS* index_stats)
-{
-  my_free(index_stats);
-}
+extern "C" void free_index_stats(INDEX_STATS *index_stats) { my_free(index_stats); }
 
 void init_global_index_stats(void)
 {
-  my_hash_init(PSI_INSTRUMENT_ME, &global_index_stats, system_charset_info,
-               max_connections, 0, 0, (my_hash_get_key) get_key_index_stats,
-               (my_hash_free_key) free_index_stats, 0);
+  my_hash_init(PSI_INSTRUMENT_ME, &global_index_stats, system_charset_info, max_connections, 0, 0,
+               (my_hash_get_key)get_key_index_stats, (my_hash_free_key)free_index_stats, 0);
 }
 
+void free_global_user_stats(void) { my_hash_free(&global_user_stats); }
 
-void free_global_user_stats(void)
-{
-  my_hash_free(&global_user_stats);
-}
+void free_global_table_stats(void) { my_hash_free(&global_table_stats); }
 
-void free_global_table_stats(void)
-{
-  my_hash_free(&global_table_stats);
-}
+void free_global_index_stats(void) { my_hash_free(&global_index_stats); }
 
-void free_global_index_stats(void)
-{
-  my_hash_free(&global_index_stats);
-}
-
-void free_global_client_stats(void)
-{
-  my_hash_free(&global_client_stats);
-}
+void free_global_client_stats(void) { my_hash_free(&global_client_stats); }
 
 /*
   Increments the global stats connection count for an entry from
@@ -560,39 +481,34 @@ void free_global_client_stats(void)
   and 1 on error.
 */
 
-static bool increment_count_by_name(const char *name, size_t name_length,
-                                   const char *role_name,
-                                   HASH *users_or_clients, THD *thd)
+static bool increment_count_by_name(const char *name, size_t name_length, const char *role_name, HASH *users_or_clients,
+                                    THD *thd)
 {
   USER_STATS *user_stats;
 
-  if (!(user_stats= (USER_STATS*) my_hash_search(users_or_clients, (uchar*) name,
-                                              name_length)))
+  if (!(user_stats = (USER_STATS *)my_hash_search(users_or_clients, (uchar *)name, name_length)))
   {
     /* First connection for this user or client */
-    if (!(user_stats= ((USER_STATS*)
-                       my_malloc(PSI_INSTRUMENT_ME, sizeof(USER_STATS),
-                                 MYF(MY_WME | MY_ZEROFILL)))))
-      return TRUE;                              // Out of memory
+    if (!(user_stats = ((USER_STATS *)my_malloc(PSI_INSTRUMENT_ME, sizeof(USER_STATS), MYF(MY_WME | MY_ZEROFILL)))))
+      return TRUE;  // Out of memory
 
-    init_user_stats(user_stats, name, name_length, role_name,
-                    0, 0, 0,   // connections
-                    0, 0, 0,   // time
-                    0, 0, 0,   // bytes sent, received and written
-                    0, 0,      // rows sent and read
-                    0, 0, 0,   // rows inserted, deleted and updated
-                    0, 0, 0,   // select, update and other commands
-                    0, 0,      // commit and rollback trans
+    init_user_stats(user_stats, name, name_length, role_name, 0, 0, 0,  // connections
+                    0, 0, 0,                                            // time
+                    0, 0, 0,                                            // bytes sent, received and written
+                    0, 0,                                               // rows sent and read
+                    0, 0, 0,                                            // rows inserted, deleted and updated
+                    0, 0, 0,                                            // select, update and other commands
+                    0, 0,                                               // commit and rollback trans
                     thd->status_var.access_denied_errors,
-                    0,         // lost connections
-                    0,         // max query timeouts
-                    0,         // access denied errors
-                    0);        // empty queries
+                    0,   // lost connections
+                    0,   // max query timeouts
+                    0,   // access denied errors
+                    0);  // empty queries
 
-    if (my_hash_insert(users_or_clients, (uchar*)user_stats))
+    if (my_hash_insert(users_or_clients, (uchar *)user_stats))
     {
       my_free(user_stats);
-      return TRUE;                              // Out of memory
+      return TRUE;  // Out of memory
     }
   }
   user_stats->total_connections++;
@@ -600,7 +516,6 @@ static bool increment_count_by_name(const char *name, size_t name_length,
     user_stats->total_ssl_connections++;
   return FALSE;
 }
-
 
 /*
   Increments the global user and client stats connection count.
@@ -612,11 +527,11 @@ static bool increment_count_by_name(const char *name, size_t name_length,
 */
 
 #ifndef EMBEDDED_LIBRARY
-static bool increment_connection_count(THD* thd, bool use_lock)
+static bool increment_connection_count(THD *thd, bool use_lock)
 {
-  const char *user_string= get_valid_user_string(thd->main_security_ctx.user);
-  const char *client_string= get_client_host(thd);
-  bool return_value= FALSE;
+  const char *user_string = get_valid_user_string(thd->main_security_ctx.user);
+  const char *client_string = get_client_host(thd);
+  bool return_value = FALSE;
 
   if (!thd->userstat_running)
     return FALSE;
@@ -624,16 +539,14 @@ static bool increment_connection_count(THD* thd, bool use_lock)
   if (use_lock)
     mysql_mutex_lock(&LOCK_global_user_client_stats);
 
-  if (increment_count_by_name(user_string, strlen(user_string), user_string,
-                              &global_user_stats, thd))
+  if (increment_count_by_name(user_string, strlen(user_string), user_string, &global_user_stats, thd))
   {
-    return_value= TRUE;
+    return_value = TRUE;
     goto end;
   }
-  if (increment_count_by_name(client_string, strlen(client_string),
-                              user_string, &global_client_stats, thd))
+  if (increment_count_by_name(client_string, strlen(client_string), user_string, &global_client_stats, thd))
   {
-    return_value= TRUE;
+    return_value = TRUE;
     goto end;
   }
 
@@ -648,61 +561,41 @@ end:
   Used to update the global user and client stats
 */
 
-static void update_global_user_stats_with_user(THD *thd,
-                                               USER_STATS *user_stats,
-                                               time_t now)
+static void update_global_user_stats_with_user(THD *thd, USER_STATS *user_stats, time_t now)
 {
   DBUG_ASSERT(thd->userstat_running);
 
-  user_stats->connected_time+= now - thd->last_global_update_time;
-  user_stats->busy_time+=  (thd->status_var.busy_time -
-                            thd->org_status_var.busy_time);
-  user_stats->cpu_time+=   (thd->status_var.cpu_time -
-                            thd->org_status_var.cpu_time); 
+  user_stats->connected_time += now - thd->last_global_update_time;
+  user_stats->busy_time += (thd->status_var.busy_time - thd->org_status_var.busy_time);
+  user_stats->cpu_time += (thd->status_var.cpu_time - thd->org_status_var.cpu_time);
   /*
     This is handle specially as bytes_received is incremented BEFORE
     org_status_var is copied.
   */
-  user_stats->bytes_received+= (thd->org_status_var.bytes_received-
-                                thd->start_bytes_received);
-  user_stats->bytes_sent+= (thd->status_var.bytes_sent -
-                            thd->org_status_var.bytes_sent);
-  user_stats->binlog_bytes_written+=
-    (thd->status_var.binlog_bytes_written -
-     thd->org_status_var.binlog_bytes_written);
+  user_stats->bytes_received += (thd->org_status_var.bytes_received - thd->start_bytes_received);
+  user_stats->bytes_sent += (thd->status_var.bytes_sent - thd->org_status_var.bytes_sent);
+  user_stats->binlog_bytes_written += (thd->status_var.binlog_bytes_written - thd->org_status_var.binlog_bytes_written);
   /* We are not counting rows in internal temporary tables here ! */
-  user_stats->rows_read+=      (thd->status_var.rows_read -
-                                thd->org_status_var.rows_read);
-  user_stats->rows_sent+=      (thd->status_var.rows_sent -
-                                thd->org_status_var.rows_sent);
-  user_stats->rows_inserted+=  (thd->status_var.ha_write_count -
-                                thd->org_status_var.ha_write_count);
-  user_stats->rows_deleted+=   (thd->status_var.ha_delete_count -
-                                thd->org_status_var.ha_delete_count);
-  user_stats->rows_updated+=   (thd->status_var.ha_update_count -
-                                thd->org_status_var.ha_update_count);
-  user_stats->select_commands+= thd->select_commands;
-  user_stats->update_commands+= thd->update_commands;
-  user_stats->other_commands+=  thd->other_commands;
-  user_stats->commit_trans+=   (thd->status_var.ha_commit_count -
-                                thd->org_status_var.ha_commit_count);
-  user_stats->rollback_trans+= (thd->status_var.ha_rollback_count +
-                                thd->status_var.ha_savepoint_rollback_count -
-                                thd->org_status_var.ha_rollback_count -
-                                thd->org_status_var.
-                                ha_savepoint_rollback_count);
-  user_stats->access_denied_errors+=
-    (thd->status_var.access_denied_errors -
-     thd->org_status_var.access_denied_errors);
-  user_stats->empty_queries+=   (thd->status_var.empty_queries -
-                                 thd->org_status_var.empty_queries);
+  user_stats->rows_read += (thd->status_var.rows_read - thd->org_status_var.rows_read);
+  user_stats->rows_sent += (thd->status_var.rows_sent - thd->org_status_var.rows_sent);
+  user_stats->rows_inserted += (thd->status_var.ha_write_count - thd->org_status_var.ha_write_count);
+  user_stats->rows_deleted += (thd->status_var.ha_delete_count - thd->org_status_var.ha_delete_count);
+  user_stats->rows_updated += (thd->status_var.ha_update_count - thd->org_status_var.ha_update_count);
+  user_stats->select_commands += thd->select_commands;
+  user_stats->update_commands += thd->update_commands;
+  user_stats->other_commands += thd->other_commands;
+  user_stats->commit_trans += (thd->status_var.ha_commit_count - thd->org_status_var.ha_commit_count);
+  user_stats->rollback_trans +=
+      (thd->status_var.ha_rollback_count + thd->status_var.ha_savepoint_rollback_count -
+       thd->org_status_var.ha_rollback_count - thd->org_status_var.ha_savepoint_rollback_count);
+  user_stats->access_denied_errors += (thd->status_var.access_denied_errors - thd->org_status_var.access_denied_errors);
+  user_stats->empty_queries += (thd->status_var.empty_queries - thd->org_status_var.empty_queries);
 
   /* The following can only contain 0 or 1 and then connection ends */
-  user_stats->denied_connections+= thd->status_var.access_denied_errors;
-  user_stats->lost_connections+=   thd->status_var.lost_connections;
-  user_stats->max_statement_time_exceeded+= thd->status_var.max_statement_time_exceeded;
+  user_stats->denied_connections += thd->status_var.access_denied_errors;
+  user_stats->lost_connections += thd->status_var.lost_connections;
+  user_stats->max_statement_time_exceeded += thd->status_var.max_statement_time_exceeded;
 }
-
 
 /*  Updates the global stats of a user or client */
 void update_global_user_stats(THD *thd, bool create_user, time_t now)
@@ -712,17 +605,15 @@ void update_global_user_stats(THD *thd, bool create_user, time_t now)
   size_t user_string_length, client_string_length;
   DBUG_ASSERT(thd->userstat_running);
 
-  user_string= get_valid_user_string(thd->main_security_ctx.user);
-  user_string_length= strlen(user_string);
-  client_string= get_client_host(thd);
-  client_string_length= strlen(client_string);
+  user_string = get_valid_user_string(thd->main_security_ctx.user);
+  user_string_length = strlen(user_string);
+  client_string = get_client_host(thd);
+  client_string_length = strlen(client_string);
 
   mysql_mutex_lock(&LOCK_global_user_client_stats);
 
   // Update by user name
-  if ((user_stats= (USER_STATS*) my_hash_search(&global_user_stats,
-                                             (uchar*) user_string,
-                                             user_string_length)))
+  if ((user_stats = (USER_STATS *)my_hash_search(&global_user_stats, (uchar *)user_string, user_string_length)))
   {
     /* Found user. */
     update_global_user_stats_with_user(thd, user_stats, now);
@@ -732,15 +623,12 @@ void update_global_user_stats(THD *thd, bool create_user, time_t now)
     /* Create the entry */
     if (create_user)
     {
-      increment_count_by_name(user_string, user_string_length, user_string,
-                              &global_user_stats, thd);
+      increment_count_by_name(user_string, user_string_length, user_string, &global_user_stats, thd);
     }
   }
 
   /* Update by client IP */
-  if ((user_stats= (USER_STATS*)my_hash_search(&global_client_stats,
-                                            (uchar*) client_string,
-                                            client_string_length)))
+  if ((user_stats = (USER_STATS *)my_hash_search(&global_client_stats, (uchar *)client_string, client_string_length)))
   {
     // Found by client IP
     update_global_user_stats_with_user(thd, user_stats, now);
@@ -750,17 +638,15 @@ void update_global_user_stats(THD *thd, bool create_user, time_t now)
     // Create the entry
     if (create_user)
     {
-      increment_count_by_name(client_string, client_string_length,
-                              user_string, &global_client_stats, thd);
+      increment_count_by_name(client_string, client_string_length, user_string, &global_client_stats, thd);
     }
   }
   /* Reset variables only used for counting */
-  thd->select_commands= thd->update_commands= thd->other_commands= 0;
-  thd->last_global_update_time= now;
+  thd->select_commands = thd->update_commands = thd->other_commands = 0;
+  thd->last_global_update_time = now;
 
   mysql_mutex_unlock(&LOCK_global_user_client_stats);
 }
-
 
 /**
   Set thread character set variables from the given ID
@@ -785,11 +671,9 @@ bool thd_init_client_charset(THD *thd, uint cs_number)
    - client has not specified a character set
    - client character set doesn't exists in server
   */
-  if (!opt_character_set_client_handshake ||
-      !(cs= get_charset(cs_number, MYF(0))))
+  if (!opt_character_set_client_handshake || !(cs = get_charset(cs_number, MYF(0))))
   {
-    thd->update_charset(global_system_variables.character_set_client,
-                        global_system_variables.collation_connection,
+    thd->update_charset(global_system_variables.character_set_client, global_system_variables.collation_connection,
                         global_system_variables.character_set_results);
   }
   else
@@ -797,16 +681,14 @@ bool thd_init_client_charset(THD *thd, uint cs_number)
     if (!is_supported_parser_charset(cs))
     {
       /* Disallow non-supported parser character sets: UCS2, UTF16, UTF32 */
-      my_error(ER_WRONG_VALUE_FOR_VAR, MYF(0), "character_set_client",
-               cs->cs_name.str);
+      my_error(ER_WRONG_VALUE_FOR_VAR, MYF(0), "character_set_client", cs->cs_name.str);
       return true;
     }
-    thd->org_charset= cs;
-    thd->update_charset(cs,cs,cs);
+    thd->org_charset = cs;
+    thd->update_charset(cs, cs, cs);
   }
   return false;
 }
-
 
 /*
   Initialize connection threads
@@ -818,11 +700,11 @@ bool init_new_connection_handler_thread()
   pthread_detach_this_thread();
   if (my_thread_init())
   {
-    statistic_increment(aborted_connects,&LOCK_status);
+    statistic_increment(aborted_connects, &LOCK_status);
     statistic_increment(connection_errors_internal, &LOCK_status);
     return 1;
   }
-  DBUG_EXECUTE_IF("simulate_failed_connection_1", return(1); );
+  DBUG_EXECUTE_IF("simulate_failed_connection_1", return (1););
   return 0;
 }
 
@@ -844,16 +726,12 @@ bool init_new_connection_handler_thread()
 
   @retval 0 ok, 1 error
 */
-int thd_set_peer_addr(THD *thd,
-  sockaddr_storage *addr,
-  const char *ip,
-  uint port,
-  bool check_proxy_networks,
-  uint *host_errors)
+int thd_set_peer_addr(THD *thd, sockaddr_storage *addr, const char *ip, uint port, bool check_proxy_networks,
+                      uint *host_errors)
 {
-  *host_errors= 0;
+  *host_errors = 0;
 
-  thd->peer_port= port;
+  thd->peer_port = port;
 
   char ip_string[128];
   if (!ip)
@@ -861,22 +739,22 @@ int thd_set_peer_addr(THD *thd,
     void *addr_data;
     if (addr->ss_family == AF_UNIX)
     {
-        /* local connection */
-        my_free((void *)thd->main_security_ctx.ip);
-        thd->main_security_ctx.host_or_ip= thd->main_security_ctx.host = my_localhost;
-        thd->main_security_ctx.ip= 0;
-        return 0;
+      /* local connection */
+      my_free((void *)thd->main_security_ctx.ip);
+      thd->main_security_ctx.host_or_ip = thd->main_security_ctx.host = my_localhost;
+      thd->main_security_ctx.ip = 0;
+      return 0;
     }
     else if (addr->ss_family == AF_INET)
-      addr_data= &((struct sockaddr_in *)addr)->sin_addr;
+      addr_data = &((struct sockaddr_in *)addr)->sin_addr;
     else
-      addr_data= &((struct sockaddr_in6 *)addr)->sin6_addr;
-    if (!inet_ntop(addr->ss_family,addr_data, ip_string, sizeof(ip_string)))
+      addr_data = &((struct sockaddr_in6 *)addr)->sin6_addr;
+    if (!inet_ntop(addr->ss_family, addr_data, ip_string, sizeof(ip_string)))
     {
       DBUG_ASSERT(0);
       return 1;
     }
-    ip= ip_string;
+    ip = ip_string;
   }
 
   my_free((void *)thd->main_security_ctx.ip);
@@ -896,17 +774,13 @@ int thd_set_peer_addr(THD *thd,
   {
     int rc;
 
-    rc = ip_to_hostname(addr,
-      thd->main_security_ctx.ip,
-      &thd->main_security_ctx.host,
-      host_errors);
+    rc = ip_to_hostname(addr, thd->main_security_ctx.ip, &thd->main_security_ctx.host, host_errors);
 
     /* Cut very long hostnames to avoid possible overflows */
     if (thd->main_security_ctx.host)
     {
       if (thd->main_security_ctx.host != my_localhost)
-        ((char*)thd->main_security_ctx.host)[MY_MIN(strlen(thd->main_security_ctx.host),
-          HOSTNAME_LENGTH)] = 0;
+        ((char *)thd->main_security_ctx.host)[MY_MIN(strlen(thd->main_security_ctx.host), HOSTNAME_LENGTH)] = 0;
       thd->main_security_ctx.host_or_ip = thd->main_security_ctx.host;
     }
 
@@ -917,17 +791,13 @@ int thd_set_peer_addr(THD *thd,
       return 1;
     }
   }
-  DBUG_PRINT("info", ("Host: %s  ip: %s",
-    (thd->main_security_ctx.host ?
-      thd->main_security_ctx.host : "unknown host"),
-      (thd->main_security_ctx.ip ?
-        thd->main_security_ctx.ip : "unknown ip")));
-  if ((!check_proxy_networks || !is_proxy_protocol_allowed((struct sockaddr *) addr)) 
-      && acl_check_host(thd->main_security_ctx.host, thd->main_security_ctx.ip))
+  DBUG_PRINT("info", ("Host: %s  ip: %s", (thd->main_security_ctx.host ? thd->main_security_ctx.host : "unknown host"),
+                      (thd->main_security_ctx.ip ? thd->main_security_ctx.ip : "unknown ip")));
+  if ((!check_proxy_networks || !is_proxy_protocol_allowed((struct sockaddr *)addr)) &&
+      acl_check_host(thd->main_security_ctx.host, thd->main_security_ctx.ip))
   {
     /* HOST_CACHE stats updated by acl_check_host(). */
-    my_error(ER_HOST_NOT_PRIVILEGED, MYF(0),
-      thd->main_security_ctx.host_or_ip);
+    my_error(ER_HOST_NOT_PRIVILEGED, MYF(0), thd->main_security_ctx.host_or_ip);
     return 1;
   }
   return 0;
@@ -947,24 +817,23 @@ int thd_set_peer_addr(THD *thd,
 
 static int check_connection(THD *thd)
 {
-  uint connect_errors= 0;
+  uint connect_errors = 0;
   int auth_rc;
-  NET *net= &thd->net;
+  NET *net = &thd->net;
 
-  DBUG_PRINT("info",
-             ("New connection received on %s", vio_description(net->vio)));
+  DBUG_PRINT("info", ("New connection received on %s", vio_description(net->vio)));
 
 #ifdef SIGNAL_WITH_VIO_CLOSE
   thd->set_active_vio(net->vio);
 #endif
 
-  if (!thd->main_security_ctx.host)         // If TCP/IP connection
+  if (!thd->main_security_ctx.host)  // If TCP/IP connection
   {
     my_bool peer_rc;
     char ip[NI_MAXHOST];
     uint16 peer_port;
 
-    peer_rc= vio_peer_addr(net->vio, ip, &peer_port, NI_MAXHOST);
+    peer_rc = vio_peer_addr(net->vio, ip, &peer_port, NI_MAXHOST);
 
     /*
     ===========================================================================
@@ -973,53 +842,45 @@ static int check_connection(THD *thd)
     ===========================================================================
     */
 
-    DBUG_EXECUTE_IF("vio_peer_addr_error",
-                    {
-                      peer_rc= 1;
-                    }
-                    );
-    DBUG_EXECUTE_IF("vio_peer_addr_fake_ipv4",
-                    {
-                      struct sockaddr *sa= (sockaddr *) &net->vio->remote;
-                      sa->sa_family= AF_INET;
-                      struct in_addr *ip4= &((struct sockaddr_in *) sa)->sin_addr;
-                      /* See RFC 5737, 192.0.2.0/24 is reserved. */
-                      const char* fake= "192.0.2.4";
-                      inet_pton(AF_INET,fake, ip4);
-                      strcpy(ip, fake);
-                      peer_rc= 0;
-                    }
-                    );
+    DBUG_EXECUTE_IF("vio_peer_addr_error", { peer_rc = 1; });
+    DBUG_EXECUTE_IF("vio_peer_addr_fake_ipv4", {
+      struct sockaddr *sa = (sockaddr *)&net->vio->remote;
+      sa->sa_family = AF_INET;
+      struct in_addr *ip4 = &((struct sockaddr_in *)sa)->sin_addr;
+      /* See RFC 5737, 192.0.2.0/24 is reserved. */
+      const char *fake = "192.0.2.4";
+      inet_pton(AF_INET, fake, ip4);
+      strcpy(ip, fake);
+      peer_rc = 0;
+    });
 
 #ifdef HAVE_IPV6
-    DBUG_EXECUTE_IF("vio_peer_addr_fake_ipv6",
-                    {
-                      struct sockaddr_in6 *sa= (sockaddr_in6 *) &net->vio->remote;
-                      sa->sin6_family= AF_INET6;
-                      struct in6_addr *ip6= & sa->sin6_addr;
-                      /* See RFC 3849, ipv6 2001:DB8::/32 is reserved. */
-                      const char* fake= "2001:db8::6:6";
-                      /* inet_pton(AF_INET6, fake, ip6); not available on Windows XP. */
-                      ip6->s6_addr[ 0] = 0x20;
-                      ip6->s6_addr[ 1] = 0x01;
-                      ip6->s6_addr[ 2] = 0x0d;
-                      ip6->s6_addr[ 3] = 0xb8;
-                      ip6->s6_addr[ 4] = 0x00;
-                      ip6->s6_addr[ 5] = 0x00;
-                      ip6->s6_addr[ 6] = 0x00;
-                      ip6->s6_addr[ 7] = 0x00;
-                      ip6->s6_addr[ 8] = 0x00;
-                      ip6->s6_addr[ 9] = 0x00;
-                      ip6->s6_addr[10] = 0x00;
-                      ip6->s6_addr[11] = 0x00;
-                      ip6->s6_addr[12] = 0x00;
-                      ip6->s6_addr[13] = 0x06;
-                      ip6->s6_addr[14] = 0x00;
-                      ip6->s6_addr[15] = 0x06;
-                      strcpy(ip, fake);
-                      peer_rc= 0;
-                    }
-                    );
+    DBUG_EXECUTE_IF("vio_peer_addr_fake_ipv6", {
+      struct sockaddr_in6 *sa = (sockaddr_in6 *)&net->vio->remote;
+      sa->sin6_family = AF_INET6;
+      struct in6_addr *ip6 = &sa->sin6_addr;
+      /* See RFC 3849, ipv6 2001:DB8::/32 is reserved. */
+      const char *fake = "2001:db8::6:6";
+      /* inet_pton(AF_INET6, fake, ip6); not available on Windows XP. */
+      ip6->s6_addr[0] = 0x20;
+      ip6->s6_addr[1] = 0x01;
+      ip6->s6_addr[2] = 0x0d;
+      ip6->s6_addr[3] = 0xb8;
+      ip6->s6_addr[4] = 0x00;
+      ip6->s6_addr[5] = 0x00;
+      ip6->s6_addr[6] = 0x00;
+      ip6->s6_addr[7] = 0x00;
+      ip6->s6_addr[8] = 0x00;
+      ip6->s6_addr[9] = 0x00;
+      ip6->s6_addr[10] = 0x00;
+      ip6->s6_addr[11] = 0x00;
+      ip6->s6_addr[12] = 0x00;
+      ip6->s6_addr[13] = 0x06;
+      ip6->s6_addr[14] = 0x00;
+      ip6->s6_addr[15] = 0x06;
+      strcpy(ip, fake);
+      peer_rc = 0;
+    });
 #endif /* HAVE_IPV6 */
 
     /*
@@ -1041,8 +902,7 @@ static int check_connection(THD *thd)
       return 1;
     }
 
-    if (thd_set_peer_addr(thd, &net->vio->remote, ip, peer_port,
-                          true, &connect_errors))
+    if (thd_set_peer_addr(thd, &net->vio->remote, ip, peer_port, true, &connect_errors))
     {
       statistic_increment(aborted_connects_preauth, &LOCK_status);
       return 1;
@@ -1050,11 +910,11 @@ static int check_connection(THD *thd)
   }
   else /* Hostname given means that the connection was on a socket */
   {
-    DBUG_PRINT("info",("Host: %s", thd->main_security_ctx.host));
-    thd->main_security_ctx.host_or_ip= thd->main_security_ctx.host;
-    thd->main_security_ctx.ip= 0;
+    DBUG_PRINT("info", ("Host: %s", thd->main_security_ctx.host));
+    thd->main_security_ctx.host_or_ip = thd->main_security_ctx.host;
+    thd->main_security_ctx.ip = 0;
     /* Reset sin_addr */
-    bzero((char*) &net->vio->remote, sizeof(net->vio->remote));
+    bzero((char *)&net->vio->remote, sizeof(net->vio->remote));
   }
   vio_keepalive(net->vio, TRUE);
   vio_set_keepalive_options(net->vio, &opt_vio_keepalive);
@@ -1072,13 +932,13 @@ static int check_connection(THD *thd)
       Hence, there is no reason to account on OOM conditions per client IP,
       we count failures in the global server status instead.
     */
-    statistic_increment(aborted_connects,&LOCK_status);
+    statistic_increment(aborted_connects, &LOCK_status);
     statistic_increment(connection_errors_internal, &LOCK_status);
     statistic_increment(aborted_connects_preauth, &LOCK_status);
     return 1; /* The error is set by alloc(). */
   }
 
-  auth_rc= acl_authenticate(thd, 0);
+  auth_rc = acl_authenticate(thd, 0);
   if (auth_rc == 0 && connect_errors != 0)
   {
     /*
@@ -1091,7 +951,6 @@ static int check_connection(THD *thd)
 
   return auth_rc;
 }
-
 
 /*
   Setup thread to be used with the current thread
@@ -1111,12 +970,10 @@ void setup_connection_thread_globals(THD *thd)
   DBUG_EXECUTE_IF("CONNECT_wait", {
     extern Dynamic_array<MYSQL_SOCKET> listen_sockets;
     DBUG_ASSERT(listen_sockets.size());
-    while (listen_sockets.size())
-      my_sleep(1000);
+    while (listen_sockets.size()) my_sleep(1000);
   });
   thd->store_globals();
 }
-
 
 /*
   Autenticate user, with error reporting
@@ -1135,27 +992,26 @@ void setup_connection_thread_globals(THD *thd)
 
 bool login_connection(THD *thd)
 {
-  NET *net= &thd->net;
-  int error= 0;
+  NET *net = &thd->net;
+  int error = 0;
   DBUG_ENTER("login_connection");
-  DBUG_PRINT("info", ("login_connection called by thread %lu",
-                      (ulong) thd->thread_id));
+  DBUG_PRINT("info", ("login_connection called by thread %lu", (ulong)thd->thread_id));
 
   /* Use "connect_timeout" value during connection phase */
   my_net_set_read_timeout(net, connect_timeout);
   my_net_set_write_timeout(net, connect_timeout);
 
-  error= check_connection(thd);
+  error = check_connection(thd);
   thd->protocol->end_statement();
 
   if (unlikely(error))
-  {						// Wrong permissions
+  {  // Wrong permissions
 #ifdef _WIN32
     if (vio_type(net->vio) == VIO_TYPE_NAMEDPIPE)
-      my_sleep(1000);				/* must wait after eof() */
+      my_sleep(1000); /* must wait after eof() */
 #endif
-    statistic_increment(aborted_connects,&LOCK_status);
-    error=1;
+    statistic_increment(aborted_connects, &LOCK_status);
+    error = 1;
     goto exit;
   }
   /* Connect completed, set read/write timeouts back to default */
@@ -1165,8 +1021,8 @@ bool login_connection(THD *thd)
   /*  Updates global user connection stats. */
   if (increment_connection_count(thd, TRUE))
   {
-    my_error(ER_OUTOFMEMORY, MYF(0), (int) (2*sizeof(USER_STATS)));
-    error= 1;
+    my_error(ER_OUTOFMEMORY, MYF(0), (int)(2 * sizeof(USER_STATS)));
+    error = 1;
     goto exit;
   }
 
@@ -1174,7 +1030,6 @@ exit:
   mysql_audit_notify_connection_connect(thd);
   DBUG_RETURN(error);
 }
-
 
 /*
   Close an established connection
@@ -1185,7 +1040,7 @@ exit:
 
 void end_connection(THD *thd)
 {
-  NET *net= &thd->net;
+  NET *net = &thd->net;
 
 #ifdef WITH_WSREP
   if (thd->wsrep_cs().state() == wsrep::client_state::s_exec)
@@ -1210,43 +1065,41 @@ void end_connection(THD *thd)
       that doesn't have a limit. Ensure the user is not using resources
       of someone else.
     */
-    thd->user_connect= NULL;
+    thd->user_connect = NULL;
   }
 
   if (unlikely(thd->killed) || (net->error && net->vio != 0))
   {
-    statistic_increment(aborted_threads,&LOCK_status);
+    statistic_increment(aborted_threads, &LOCK_status);
     status_var_increment(thd->status_var.lost_connections);
   }
 
   if (likely(!thd->killed) && (net->error && net->vio != 0))
-    thd->print_aborted_warning(1, thd->get_stmt_da()->is_error()
-             ? thd->get_stmt_da()->message() : ER_THD(thd, ER_UNKNOWN_ERROR));
+    thd->print_aborted_warning(
+        1, thd->get_stmt_da()->is_error() ? thd->get_stmt_da()->message() : ER_THD(thd, ER_UNKNOWN_ERROR));
 }
-
 
 /*
   Initialize THD to handle queries
 */
 
-void prepare_new_connection_state(THD* thd)
+void prepare_new_connection_state(THD *thd)
 {
-  Security_context *sctx= thd->security_ctx;
+  Security_context *sctx = thd->security_ctx;
 
   if (thd->client_capabilities & CLIENT_COMPRESS)
-    thd->net.compress=1;				// Use compression
+    thd->net.compress = 1;  // Use compression
 
   /*
     Much of this is duplicated in create_embedded_thd() for the
     embedded server library.
     TODO: refactor this to avoid code duplication there
   */
-  thd->proc_info= 0;
+  thd->proc_info = 0;
   thd->set_command(COM_SLEEP);
   thd->init_for_queries();
 
-  if (opt_init_connect.length &&
-      !(sctx->master_access & PRIV_IGNORE_INIT_CONNECT))
+  if (opt_init_connect.length && !(sctx->master_access & PRIV_IGNORE_INIT_CONNECT))
   {
     execute_init_command(thd, &opt_init_connect, &LOCK_sys_init_connect);
     if (unlikely(thd->is_error()))
@@ -1260,34 +1113,30 @@ void prepare_new_connection_state(THD* thd)
         now let client to send its first command,
         to be able to send the error back
       */
-      NET *net= &thd->net;
-      thd->lex->current_select= 0;
+      NET *net = &thd->net;
+      thd->lex->current_select = 0;
       my_net_set_read_timeout(net, thd->variables.net_wait_timeout);
       thd->clear_error();
       net_new_transaction(net);
-      ulong packet_length= my_net_read(net);
+      ulong packet_length = my_net_read(net);
       /*
         If my_net_read() failed, my_error() has been already called,
         and the main Diagnostics Area contains an error condition.
       */
       if (packet_length != packet_error)
-        my_error(ER_NEW_ABORTING_CONNECTION, MYF(0),
-                 thd->thread_id,
-                 thd->db.str ? thd->db.str : "unconnected",
-                 sctx->user ? sctx->user : "unauthenticated",
-                 sctx->host_or_ip, "init_connect command failed");
-      thd->server_status&= ~SERVER_STATUS_CLEAR_SET;
+        my_error(ER_NEW_ABORTING_CONNECTION, MYF(0), thd->thread_id, thd->db.str ? thd->db.str : "unconnected",
+                 sctx->user ? sctx->user : "unauthenticated", sctx->host_or_ip, "init_connect command failed");
+      thd->server_status &= ~SERVER_STATUS_CLEAR_SET;
       thd->protocol->end_statement();
       thd->killed = KILL_CONNECTION;
-      errors.m_init_connect= 1;
+      errors.m_init_connect = 1;
       inc_host_errors(thd->main_security_ctx.ip, &errors);
       return;
     }
 
-    thd->proc_info=0;
+    thd->proc_info = 0;
   }
 }
-
 
 /*
   Thread handler for a connection
@@ -1308,7 +1157,7 @@ void prepare_new_connection_state(THD* thd)
 
 pthread_handler_t handle_one_connection(void *arg)
 {
-  CONNECT *connect= (CONNECT*) arg;
+  CONNECT *connect = (CONNECT *)arg;
 
   mysql_thread_set_psi_id(connect->thread_id);
 
@@ -1329,16 +1178,15 @@ bool thd_prepare_connection(THD *thd)
 {
   bool rc;
   lex_start(thd);
-  rc= login_connection(thd);
+  rc = login_connection(thd);
   if (rc)
     return rc;
 
-  MYSQL_CONNECTION_START(thd->thread_id, &thd->security_ctx->priv_user[0],
-                         (char *) thd->security_ctx->host_or_ip);
+  MYSQL_CONNECTION_START(thd->thread_id, &thd->security_ctx->priv_user[0], (char *)thd->security_ctx->host_or_ip);
 
   prepare_new_connection_state(thd);
 #ifdef WITH_WSREP
-  thd->wsrep_client_thread= true;
+  thd->wsrep_client_thread = true;
   wsrep_open(thd);
 #endif /* WITH_WSREP */
   return FALSE;
@@ -1346,20 +1194,17 @@ bool thd_prepare_connection(THD *thd)
 
 bool thd_is_connection_alive(THD *thd)
 {
-  NET *net= &thd->net;
-  if (likely(!net->error &&
-             net->vio != 0 &&
-             thd->killed < KILL_CONNECTION))
+  NET *net = &thd->net;
+  if (likely(!net->error && net->vio != 0 && thd->killed < KILL_CONNECTION))
     return TRUE;
   return FALSE;
 }
 
-
 void do_handle_one_connection(CONNECT *connect, bool put_in_cache)
 {
-  ulonglong thr_create_utime= microsecond_interval_timer();
+  ulonglong thr_create_utime = microsecond_interval_timer();
   THD *thd;
-  if (!(thd= connect->create_thd(NULL)))
+  if (!(thd = connect->create_thd(NULL)))
   {
     connect->close_and_delete();
     return;
@@ -1373,19 +1218,18 @@ void do_handle_one_connection(CONNECT *connect, bool put_in_cache)
 
   if (connect->prior_thr_create_utime)
   {
-    ulong launch_time= (ulong) (thr_create_utime -
-                                connect->prior_thr_create_utime);
-    if (launch_time >= slow_launch_time*1000000L)
+    ulong launch_time = (ulong)(thr_create_utime - connect->prior_thr_create_utime);
+    if (launch_time >= slow_launch_time * 1000000L)
       statistic_increment(slow_launch_threads, &LOCK_status);
   }
 
-  server_threads.insert(thd); // Make THD visible in show processlist
+  server_threads.insert(thd);  // Make THD visible in show processlist
 
-  delete connect; // must be after server_threads.insert, see close_connections()
-  
-  thd->thr_create_utime= thr_create_utime;
+  delete connect;  // must be after server_threads.insert, see close_connections()
+
+  thd->thr_create_utime = thr_create_utime;
   /* We need to set this because of time_out_user_resource_limits */
-  thd->start_utime= thr_create_utime;
+  thd->start_utime = thr_create_utime;
 
   /*
     handle_one_connection() is normally the only way a thread would
@@ -1395,43 +1239,41 @@ void do_handle_one_connection(CONNECT *connect, bool put_in_cache)
     need to know the start of the stack so that we could check for
     stack overruns.
   */
-  thd->thread_stack= (char*) &thd;
+  thd->thread_stack = (char *)&thd;
   setup_connection_thread_globals(thd);
 
   for (;;)
   {
-    bool create_user= TRUE;
+    bool create_user = TRUE;
 
     mysql_socket_set_thread_owner(thd->net.vio->mysql_socket);
     if (thd_prepare_connection(thd))
     {
-      create_user= FALSE;
+      create_user = FALSE;
       goto end_thread;
-    }      
+    }
 
     while (thd_is_connection_alive(thd))
     {
       if (mysql_audit_release_required(thd))
         mysql_audit_release(thd);
       if (do_command(thd))
-	break;
+        break;
     }
     end_connection(thd);
 
-end_thread:
+  end_thread:
     close_connection(thd);
 
     if (thd->userstat_running)
       update_global_user_stats(thd, create_user, time(NULL));
 
     unlink_thd(thd);
-    if (IF_WSREP(thd->wsrep_applier, false) || !put_in_cache ||
-        !(connect= thread_cache.park()))
+    if (IF_WSREP(thd->wsrep_applier, false) || !put_in_cache || !(connect = thread_cache.park()))
       break;
 
     /* Create new instrumentation for the new THD job */
-    PSI_CALL_set_thread(PSI_CALL_new_thread(key_thread_one_connection, thd,
-                                            thd->thread_id));
+    PSI_CALL_set_thread(PSI_CALL_new_thread(key_thread_one_connection, thd, thd->thread_id));
 
     if (!(connect->create_thd(thd)))
     {
@@ -1448,16 +1290,15 @@ end_thread:
     thd->store_globals();
 
     /* reset abort flag for the thread */
-    thd->mysys_var->abort= 0;
-    thd->thr_create_utime= microsecond_interval_timer();
-    thd->start_utime= thd->thr_create_utime;
+    thd->mysys_var->abort = 0;
+    thd->thr_create_utime = microsecond_interval_timer();
+    thd->start_utime = thd->thr_create_utime;
 
     server_threads.insert(thd);
   }
   delete thd;
 }
 #endif /* EMBEDDED_LIBRARY */
-
 
 /* Handling of CONNECT objects */
 
@@ -1476,13 +1317,13 @@ void CONNECT::close_and_delete()
     CloseHandle(pipe);
   else
 #endif
-  if (vio_type != VIO_CLOSED)
+      if (vio_type != VIO_CLOSED)
     mysql_socket_close(sock);
-  vio_type= VIO_CLOSED;
+  vio_type = VIO_CLOSED;
 
   --*scheduler->connection_count;
   statistic_increment(connection_errors_internal, &LOCK_status);
-  statistic_increment(aborted_connects,&LOCK_status);
+  statistic_increment(aborted_connects, &LOCK_status);
 
   delete this;
   DBUG_VOID_RETURN;
@@ -1493,10 +1334,9 @@ void CONNECT::close_and_delete()
   Alse deletes the connection object, like close_and_delete()
 */
 
-void CONNECT::close_with_error(uint sql_errno,
-                               const char *message, uint close_error)
+void CONNECT::close_with_error(uint sql_errno, const char *message, uint close_error)
 {
-  THD *thd= create_thd(NULL);
+  THD *thd = create_thd(NULL);
   if (thd)
   {
     if (sql_errno)
@@ -1508,16 +1348,15 @@ void CONNECT::close_with_error(uint sql_errno,
   close_and_delete();
 }
 
-
 /* Reuse or create a THD based on a CONNECT object */
 
 THD *CONNECT::create_thd(THD *thd)
 {
-  bool res, thd_reused= thd != 0;
+  bool res, thd_reused = thd != 0;
   Vio *vio;
   DBUG_ENTER("create_thd");
 
-  DBUG_EXECUTE_IF("simulate_failed_connection_2", DBUG_RETURN(0); );
+  DBUG_EXECUTE_IF("simulate_failed_connection_2", DBUG_RETURN(0););
 
   if (thd)
   {
@@ -1528,18 +1367,17 @@ THD *CONNECT::create_thd(THD *thd)
       to change as there is already structures in thd marked with the old
       value.
     */
-    thd->thread_id= thd->variables.pseudo_thread_id= thread_id;
+    thd->thread_id = thd->variables.pseudo_thread_id = thread_id;
   }
-  else if (!(thd= new THD(thread_id)))
+  else if (!(thd = new THD(thread_id)))
     DBUG_RETURN(0);
 
 #if _WIN32
   if (vio_type == VIO_TYPE_NAMEDPIPE)
-    vio= vio_new_win32pipe(pipe);
+    vio = vio_new_win32pipe(pipe);
   else
 #endif
-  vio= mysql_socket_vio_new(sock, vio_type, vio_type == VIO_TYPE_SOCKET ?
-                                                        VIO_LOCALHOST : 0);
+    vio = mysql_socket_vio_new(sock, vio_type, vio_type == VIO_TYPE_SOCKET ? VIO_LOCALHOST : 0);
   if (!vio)
   {
     if (!thd_reused)
@@ -1548,8 +1386,8 @@ THD *CONNECT::create_thd(THD *thd)
   }
 
   set_current_thd(thd);
-  res= my_net_init(&thd->net, vio, thd, MYF(MY_THREAD_SPECIFIC));
-  vio_type= VIO_CLOSED;                // Vio now handled by thd
+  res = my_net_init(&thd->net, vio, thd, MYF(MY_THREAD_SPECIFIC));
+  vio_type = VIO_CLOSED;  // Vio now handled by thd
 
   if (unlikely(res || thd->is_error()))
   {
@@ -1561,16 +1399,15 @@ THD *CONNECT::create_thd(THD *thd)
 
   init_net_server_extension(thd);
 
-  thd->security_ctx->host= thd->net.vio->type == VIO_TYPE_NAMEDPIPE ||
-                           thd->net.vio->type == VIO_TYPE_SOCKET ?
-                           my_localhost : 0;
+  thd->security_ctx->host =
+      thd->net.vio->type == VIO_TYPE_NAMEDPIPE || thd->net.vio->type == VIO_TYPE_SOCKET ? my_localhost : 0;
 
-  thd->scheduler=          scheduler;
-  thd->real_id= pthread_self(); /* Duplicates THD::store_globals() setting. */
+  thd->scheduler = scheduler;
+  thd->real_id = pthread_self(); /* Duplicates THD::store_globals() setting. */
 
   /* Attach PSI instrumentation to the new THD */
 
-  PSI_thread *psi= PSI_CALL_get_thread();
+  PSI_thread *psi = PSI_CALL_get_thread();
   PSI_CALL_set_thread_os_id(psi);
   PSI_CALL_set_thread_THD(psi, thd);
   PSI_CALL_set_thread_id(psi, thd->thread_id);

@@ -39,10 +39,7 @@ class Sort_param;
     See also comments get_merge_many_buffs_cost().
 */
 
-double get_merge_many_buffs_cost_fast(ha_rows num_rows,
-                                      ha_rows num_keys_per_buffer,
-                                      uint    elem_size);
-
+double get_merge_many_buffs_cost_fast(ha_rows num_rows, ha_rows num_keys_per_buffer, uint elem_size);
 
 /**
   A wrapper class around the buffer used by filesort().
@@ -72,14 +69,19 @@ double get_merge_many_buffs_cost_fast(ha_rows num_rows,
 
 class Filesort_buffer
 {
-public:
-  Filesort_buffer() :
-    m_next_rec_ptr(NULL), m_rawmem(NULL), m_record_pointers(NULL),
-    m_sort_keys(NULL),
-    m_num_records(0), m_record_length(0),
-    m_sort_length(0),
-    m_size_in_bytes(0), m_idx(0)
-  {}
+ public:
+  Filesort_buffer()
+      : m_next_rec_ptr(NULL),
+        m_rawmem(NULL),
+        m_record_pointers(NULL),
+        m_sort_keys(NULL),
+        m_num_records(0),
+        m_record_length(0),
+        m_sort_length(0),
+        m_size_in_bytes(0),
+        m_idx(0)
+  {
+  }
 
   /** Sort me... */
   void sort_buffer(const Sort_param *param, uint count);
@@ -90,15 +92,15 @@ public:
   */
   void reverse_record_pointers()
   {
-    if (m_idx < 2) // There is nothing to swap.
+    if (m_idx < 2)  // There is nothing to swap.
       return;
-    uchar **keys= get_sort_keys();
-    const longlong count= m_idx - 1;
-    for (longlong ix= 0; ix <= count/2; ++ix)
+    uchar **keys = get_sort_keys();
+    const longlong count = m_idx - 1;
+    for (longlong ix = 0; ix <= count / 2; ++ix)
     {
-      uchar *tmp= keys[count - ix];
+      uchar *tmp = keys[count - ix];
       keys[count - ix] = keys[ix];
-      keys[ix]= tmp;
+      keys[ix] = tmp;
     }
   }
 
@@ -108,8 +110,7 @@ public:
   void init_record_pointers()
   {
     init_next_record_pointer();
-    while (m_idx < m_num_records)
-      (void) get_next_record_pointer();
+    while (m_idx < m_num_records) (void)get_next_record_pointer();
     reverse_record_pointers();
   }
 
@@ -118,18 +119,15 @@ public:
    */
   void init_next_record_pointer()
   {
-    m_idx= 0;
-    m_next_rec_ptr= m_rawmem;
-    m_sort_keys= NULL;
+    m_idx = 0;
+    m_next_rec_ptr = m_rawmem;
+    m_sort_keys = NULL;
   }
 
   /**
     @returns the number of bytes currently in use for data.
    */
-  size_t space_used_for_data() const
-  {
-    return m_next_rec_ptr ? m_next_rec_ptr - m_rawmem : 0;
-  }
+  size_t space_used_for_data() const { return m_next_rec_ptr ? m_next_rec_ptr - m_rawmem : 0; }
 
   /**
     @returns the number of bytes left in the buffer.
@@ -137,9 +135,7 @@ public:
   size_t spaceleft() const
   {
     DBUG_ASSERT(m_next_rec_ptr >= m_rawmem);
-    const size_t spaceused=
-      (m_next_rec_ptr - m_rawmem) +
-      (static_cast<size_t>(m_idx) * sizeof(uchar*));
+    const size_t spaceused = (m_next_rec_ptr - m_rawmem) + (static_cast<size_t>(m_idx) * sizeof(uchar *));
     return m_size_in_bytes - spaceused;
   }
 
@@ -150,7 +146,7 @@ public:
   {
     if (m_idx < m_num_records)
       return false;
-    return spaceleft() < (m_record_length + sizeof(uchar*));
+    return spaceleft() < (m_record_length + sizeof(uchar *));
   }
 
   /**
@@ -158,12 +154,12 @@ public:
    */
   uchar *get_next_record_pointer()
   {
-    uchar *retval= m_next_rec_ptr;
+    uchar *retval = m_next_rec_ptr;
     // Save the return value in the record pointer array.
-    m_record_pointers[-m_idx]= m_next_rec_ptr;
+    m_record_pointers[-m_idx] = m_next_rec_ptr;
     // Prepare for the subsequent request.
     m_idx++;
-    m_next_rec_ptr+= m_record_length;
+    m_next_rec_ptr += m_record_length;
     return retval;
   }
 
@@ -171,21 +167,12 @@ public:
     Adjusts for actual record length. get_next_record_pointer() above was
     pessimistic, and assumed that the record could not be packed.
    */
-  void adjust_next_record_pointer(uint val)
-  {
-    m_next_rec_ptr-= (m_record_length - val);
-  }
+  void adjust_next_record_pointer(uint val) { m_next_rec_ptr -= (m_record_length - val); }
 
   /// Returns total size: pointer array + record buffers.
-  size_t sort_buffer_size() const
-  {
-    return m_size_in_bytes;
-  }
+  size_t sort_buffer_size() const { return m_size_in_bytes; }
 
-  bool is_allocated() const
-  {
-    return m_rawmem;
-  }
+  bool is_allocated() const { return m_rawmem; }
 
   /**
     Allocates the buffer, but does *not* initialize pointers.
@@ -202,10 +189,7 @@ public:
   /// Frees the buffer.
   void free_sort_buffer();
 
-  void reset()
-  {
-    m_rawmem= NULL;
-  }
+  void reset() { m_rawmem = NULL; }
   /**
     Used to access the "right-to-left" array of record pointers as an ordinary
     "left-to-right" array, so that we can pass it directly on to std::sort().
@@ -221,19 +205,13 @@ public:
     Gets sorted record number ix. @see get_sort_keys()
     Only valid after buffer has been sorted!
   */
-  uchar *get_sorted_record(uint ix)
-  {
-    return m_sort_keys[ix];
-  }
+  uchar *get_sorted_record(uint ix) { return m_sort_keys[ix]; }
 
   /**
     @returns The entire buffer, as a character array.
     This is for reusing the memory for merge buffers.
    */
-  Bounds_checked_array<uchar> get_raw_buf()
-  {
-    return Bounds_checked_array<uchar>(m_rawmem, m_size_in_bytes);
-  }
+  Bounds_checked_array<uchar> get_raw_buf() { return Bounds_checked_array<uchar>(m_rawmem, m_size_in_bytes); }
 
   /**
     We need an assignment operator, see filesort().
@@ -243,30 +221,30 @@ public:
   */
   Filesort_buffer &operator=(const Filesort_buffer &rhs)
   {
-    m_next_rec_ptr= rhs.m_next_rec_ptr;
-    m_rawmem= rhs.m_rawmem;
-    m_record_pointers= rhs.m_record_pointers;
-    m_sort_keys= rhs.m_sort_keys;
-    m_num_records= rhs.m_num_records;
-    m_record_length= rhs.m_record_length;
-    m_sort_length= rhs.m_sort_length;
-    m_size_in_bytes= rhs.m_size_in_bytes;
-    m_idx= rhs.m_idx;
+    m_next_rec_ptr = rhs.m_next_rec_ptr;
+    m_rawmem = rhs.m_rawmem;
+    m_record_pointers = rhs.m_record_pointers;
+    m_sort_keys = rhs.m_sort_keys;
+    m_num_records = rhs.m_num_records;
+    m_record_length = rhs.m_record_length;
+    m_sort_length = rhs.m_sort_length;
+    m_size_in_bytes = rhs.m_size_in_bytes;
+    m_idx = rhs.m_idx;
     return *this;
   }
 
   uint get_sort_length() const { return m_sort_length; }
-  void set_sort_length(uint val) { m_sort_length= val; }
+  void set_sort_length(uint val) { m_sort_length = val; }
 
-private:
-  uchar  *m_next_rec_ptr;    /// The next record will be inserted here.
-  uchar  *m_rawmem;          /// The raw memory buffer.
-  uchar **m_record_pointers; /// The "right-to-left" array of record pointers.
-  uchar **m_sort_keys;       /// Caches the value of get_sort_keys()
-  uint    m_num_records;     /// Saved value from alloc_sort_buffer()
-  uint    m_record_length;   /// Saved value from alloc_sort_buffer()
-  uint    m_sort_length;     /// The length of the sort key.
-  size_t  m_size_in_bytes;   /// Size of raw buffer, in bytes.
+ private:
+  uchar *m_next_rec_ptr;      /// The next record will be inserted here.
+  uchar *m_rawmem;            /// The raw memory buffer.
+  uchar **m_record_pointers;  /// The "right-to-left" array of record pointers.
+  uchar **m_sort_keys;        /// Caches the value of get_sort_keys()
+  uint m_num_records;         /// Saved value from alloc_sort_buffer()
+  uint m_record_length;       /// Saved value from alloc_sort_buffer()
+  uint m_sort_length;         /// The length of the sort key.
+  size_t m_size_in_bytes;     /// Size of raw buffer, in bytes.
 
   /**
     This is the index in the "right-to-left" array of the next record to
@@ -279,8 +257,7 @@ private:
   longlong m_idx;
 };
 
-int compare_packed_sort_keys(void *sort_keys, unsigned char **a,
-                             unsigned char **b);
+int compare_packed_sort_keys(void *sort_keys, unsigned char **a, unsigned char **b);
 qsort2_cmp get_packed_keys_compare_ptr();
 
 #endif  // FILESORT_UTILS_INCLUDED

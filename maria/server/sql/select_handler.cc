@@ -19,7 +19,6 @@
 #include "sql_select.h"
 #include "select_handler.h"
 
-
 /**
   The methods of the select_handler class.
 
@@ -35,19 +34,16 @@
   The constructor of the class gets the select_handler interface as a parameter.
 */
 
-
 select_handler::select_handler(THD *thd_arg, handlerton *ht_arg)
- : thd(thd_arg), ht(ht_arg), table(NULL),
-   is_analyze(thd_arg->lex->analyze_stmt)
-{}
-
+    : thd(thd_arg), ht(ht_arg), table(NULL), is_analyze(thd_arg->lex->analyze_stmt)
+{
+}
 
 select_handler::~select_handler()
 {
   if (table)
     free_tmp_table(thd, table);
 }
-
 
 TABLE *select_handler::create_tmp_table(THD *thd, SELECT_LEX *select)
 {
@@ -57,15 +53,12 @@ TABLE *select_handler::create_tmp_table(THD *thd, SELECT_LEX *select)
   if (select->master_unit()->join_union_item_types(thd, types, 1))
     DBUG_RETURN(NULL);
   tmp_table_param.init();
-  tmp_table_param.field_count= types.elements;
+  tmp_table_param.field_count = types.elements;
 
-  TABLE *table= ::create_tmp_table(thd, &tmp_table_param, types,
-                                   (ORDER *) 0, false, 0,
-                                   TMP_TABLE_ALL_COLUMNS, 1,
-                                   &empty_clex_str, true, false);
+  TABLE *table = ::create_tmp_table(thd, &tmp_table_param, types, (ORDER *)0, false, 0, TMP_TABLE_ALL_COLUMNS, 1,
+                                    &empty_clex_str, true, false);
   DBUG_RETURN(table);
 }
-
 
 bool select_handler::prepare()
 {
@@ -74,11 +67,10 @@ bool select_handler::prepare()
     Some engines (e.g. XPand) initialize "table" on their own.
     So we need to create a temporary table only if "table" is NULL.
   */
-  if (!table && !(table= create_tmp_table(thd, select)))
+  if (!table && !(table = create_tmp_table(thd, select)))
     DBUG_RETURN(true);
   DBUG_RETURN(table->fill_item_list(&result_columns));
 }
-
 
 bool select_handler::send_result_set_metadata()
 {
@@ -90,15 +82,12 @@ bool select_handler::send_result_set_metadata()
     WSREP_DEBUG("skipping select metadata");
     DBUG_RETURN(false);
   }
-  #endif /* WITH_WSREP */
-  if (select->join->result->send_result_set_metadata(result_columns,
-                                         Protocol::SEND_NUM_ROWS |
-                                         Protocol::SEND_EOF))
+#endif /* WITH_WSREP */
+  if (select->join->result->send_result_set_metadata(result_columns, Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
     DBUG_RETURN(true);
 
   DBUG_RETURN(false);
 }
-
 
 bool select_handler::send_data()
 {
@@ -110,7 +99,6 @@ bool select_handler::send_data()
   DBUG_RETURN(false);
 }
 
-
 bool select_handler::send_eof()
 {
   DBUG_ENTER("select_handler::send_eof");
@@ -120,14 +108,13 @@ bool select_handler::send_eof()
   DBUG_RETURN(false);
 }
 
-
 int select_handler::execute()
 {
   int err;
 
   DBUG_ENTER("select_handler::execute");
 
-  if ((err= init_scan()))
+  if ((err = init_scan()))
     goto error;
 
   if (is_analyze)
@@ -139,7 +126,7 @@ int select_handler::execute()
   if (send_result_set_metadata())
     DBUG_RETURN(-1);
 
-  while (!(err= next_row()))
+  while (!(err = next_row()))
   {
     if (thd->check_killed() || send_data())
     {
@@ -151,8 +138,8 @@ int select_handler::execute()
   if (err != 0 && err != HA_ERR_END_OF_FILE)
     goto error;
 
-  if ((err= end_scan()))
-   goto error_2;
+  if ((err = end_scan()))
+    goto error_2;
 
   if (send_eof())
     DBUG_RETURN(-1);
@@ -163,10 +150,7 @@ error:
   end_scan();
 error_2:
   print_error(err, MYF(0));
-  DBUG_RETURN(-1);                              // Error not sent to client
+  DBUG_RETURN(-1);  // Error not sent to client
 }
 
-void select_handler::print_error(int error, myf errflag)
-{
-  my_error(ER_GET_ERRNO, MYF(0), error, hton_name(ht)->str);
-}
+void select_handler::print_error(int error, myf errflag) { my_error(ER_GET_ERRNO, MYF(0), error, hton_name(ht)->str); }

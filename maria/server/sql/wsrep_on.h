@@ -28,32 +28,25 @@ extern ulong wsrep_forced_binlog_format;
 /* use xxxxxx_NNULL macros when thd pointer is guaranteed to be non-null to
  * avoid compiler warnings (GCC 6 and later) */
 
-#define WSREP_NNULL(thd) \
-  (WSREP_PROVIDER_EXISTS_ && thd->variables.wsrep_on)
+#define WSREP_NNULL(thd) (WSREP_PROVIDER_EXISTS_ && thd->variables.wsrep_on)
 
-#define WSREP(thd) \
-  (thd && WSREP_NNULL(thd))
+#define WSREP(thd) (thd && WSREP_NNULL(thd))
 
-#define WSREP_CLIENT_NNULL(thd) \
-  (WSREP_NNULL(thd) && thd->wsrep_client_thread)
+#define WSREP_CLIENT_NNULL(thd) (WSREP_NNULL(thd) && thd->wsrep_client_thread)
 
-#define WSREP_CLIENT(thd) \
-    (WSREP(thd) && thd->wsrep_client_thread)
+#define WSREP_CLIENT(thd) (WSREP(thd) && thd->wsrep_client_thread)
 
-#define WSREP_EMULATE_BINLOG_NNULL(thd) \
-  (WSREP_NNULL(thd) && wsrep_emulate_bin_log)
+#define WSREP_EMULATE_BINLOG_NNULL(thd) (WSREP_NNULL(thd) && wsrep_emulate_bin_log)
 
-#define WSREP_EMULATE_BINLOG(thd) \
-  (WSREP(thd) && wsrep_emulate_bin_log)
+#define WSREP_EMULATE_BINLOG(thd) (WSREP(thd) && wsrep_emulate_bin_log)
 
 #define WSREP_BINLOG_FORMAT(my_format) \
-   ((wsrep_forced_binlog_format != BINLOG_FORMAT_UNSPEC) ? \
-   wsrep_forced_binlog_format : my_format)
+  ((wsrep_forced_binlog_format != BINLOG_FORMAT_UNSPEC) ? wsrep_forced_binlog_format : my_format)
 
 #else
 
 #define WSREP_ON false
-#define WSREP(T)  (0)
+#define WSREP(T) (0)
 #define WSREP_NNULL(T) (0)
 #define WSREP_EMULATE_BINLOG(thd) (0)
 #define WSREP_EMULATE_BINLOG_NNULL(thd) (0)

@@ -13,41 +13,38 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /*
 ** A class for static sized hash tables where old entries are deleted in
 ** first-in-last-out to usage.
 */
 
-#ifndef  HASH_FILO_H
-#define  HASH_FILO_H
+#ifndef HASH_FILO_H
+#define HASH_FILO_H
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface			/* gcc class interface */
+#pragma interface /* gcc class interface */
 #endif
 
-#include "hash.h"        /* my_hash_get_key, my_hash_free_key, HASH */
-#include "m_string.h"    /* bzero */
-#include "mysqld.h"      /* key_hash_filo_lock */
+#include "hash.h"     /* my_hash_get_key, my_hash_free_key, HASH */
+#include "m_string.h" /* bzero */
+#include "mysqld.h"   /* key_hash_filo_lock */
 
 class hash_filo_element
 {
-private:
-  hash_filo_element *next_used,*prev_used;
+ private:
+  hash_filo_element *next_used, *prev_used;
+
  public:
   hash_filo_element() {}
-  hash_filo_element *next()
-  { return next_used; }
-  hash_filo_element *prev()
-  { return prev_used; }
+  hash_filo_element *next() { return next_used; }
+  hash_filo_element *prev() { return prev_used; }
 
   friend class hash_filo;
 };
 
-
 class hash_filo
 {
-private:
+ private:
   PSI_memory_key m_psi_key;
   const uint key_offset, key_length;
   const my_hash_get_key get_key;
@@ -57,45 +54,50 @@ private:
   bool init;
   CHARSET_INFO *hash_charset;
 
-  hash_filo_element *first_link,*last_link;
-public:
+  hash_filo_element *first_link, *last_link;
+
+ public:
   mysql_mutex_t lock;
   HASH cache;
 
-  hash_filo(PSI_memory_key psi_key, uint size_arg, uint key_offset_arg,
-            uint key_length_arg, my_hash_get_key get_key_arg,
-            my_hash_free_key free_element_arg, CHARSET_INFO *hash_charset_arg)
-    : m_psi_key(psi_key), key_offset(key_offset_arg),
-    key_length(key_length_arg), get_key(get_key_arg), m_size(size_arg),
-    free_element(free_element_arg),init(0), hash_charset(hash_charset_arg),
-    first_link(NULL), last_link(NULL)
+  hash_filo(PSI_memory_key psi_key, uint size_arg, uint key_offset_arg, uint key_length_arg,
+            my_hash_get_key get_key_arg, my_hash_free_key free_element_arg, CHARSET_INFO *hash_charset_arg)
+      : m_psi_key(psi_key),
+        key_offset(key_offset_arg),
+        key_length(key_length_arg),
+        get_key(get_key_arg),
+        m_size(size_arg),
+        free_element(free_element_arg),
+        init(0),
+        hash_charset(hash_charset_arg),
+        first_link(NULL),
+        last_link(NULL)
   {
-    bzero((char*) &cache,sizeof(cache));
+    bzero((char *)&cache, sizeof(cache));
   }
 
   ~hash_filo()
   {
     if (init)
     {
-      if (cache.array.buffer)	/* Avoid problems with thread library */
-	(void) my_hash_free(&cache);
+      if (cache.array.buffer) /* Avoid problems with thread library */
+        (void)my_hash_free(&cache);
       mysql_mutex_destroy(&lock);
     }
   }
-  void clear(bool locked=0)
+  void clear(bool locked = 0)
   {
     if (!init)
     {
-      init=1;
+      init = 1;
       mysql_mutex_init(key_hash_filo_lock, &lock, MY_MUTEX_INIT_FAST);
     }
     if (!locked)
       mysql_mutex_lock(&lock);
-    first_link= NULL;
-    last_link= NULL;
-    (void) my_hash_free(&cache);
-    (void) my_hash_init(m_psi_key, &cache,hash_charset,m_size,key_offset,
-                        key_length, get_key, free_element, 0);
+    first_link = NULL;
+    last_link = NULL;
+    (void)my_hash_free(&cache);
+    (void)my_hash_init(m_psi_key, &cache, hash_charset, m_size, key_offset, key_length, get_key, free_element, 0);
     if (!locked)
       mysql_mutex_unlock(&lock);
   }
@@ -112,40 +114,39 @@ public:
     return last_link;
   }
 
-  hash_filo_element *search(uchar* key, size_t length)
+  hash_filo_element *search(uchar *key, size_t length)
   {
     mysql_mutex_assert_owner(&lock);
 
-    hash_filo_element *entry=(hash_filo_element*)
-      my_hash_search(&cache,(uchar*) key,length);
+    hash_filo_element *entry = (hash_filo_element *)my_hash_search(&cache, (uchar *)key, length);
     if (entry)
-    {						// Found; link it first
+    {  // Found; link it first
       DBUG_ASSERT(first_link != NULL);
       DBUG_ASSERT(last_link != NULL);
       if (entry != first_link)
-      {						// Relink used-chain
-	if (entry == last_link)
+      {  // Relink used-chain
+        if (entry == last_link)
         {
-	  last_link= last_link->prev_used;
+          last_link = last_link->prev_used;
           /*
             The list must have at least 2 elements,
             otherwise entry would be equal to first_link.
           */
           DBUG_ASSERT(last_link != NULL);
-          last_link->next_used= NULL;
+          last_link->next_used = NULL;
         }
-	else
-	{
+        else
+        {
           DBUG_ASSERT(entry->next_used != NULL);
           DBUG_ASSERT(entry->prev_used != NULL);
-	  entry->next_used->prev_used = entry->prev_used;
-	  entry->prev_used->next_used = entry->next_used;
-	}
-        entry->prev_used= NULL;
-        entry->next_used= first_link;
+          entry->next_used->prev_used = entry->prev_used;
+          entry->prev_used->next_used = entry->next_used;
+        }
+        entry->prev_used = NULL;
+        entry->next_used = first_link;
 
-        first_link->prev_used= entry;
-        first_link=entry;
+        first_link->prev_used = entry;
+        first_link = entry;
       }
     }
     return entry;
@@ -153,62 +154,63 @@ public:
 
   bool add(hash_filo_element *entry)
   {
-    if (!m_size) return 1;
+    if (!m_size)
+      return 1;
     if (cache.records == m_size)
     {
-      hash_filo_element *tmp=last_link;
-      last_link= last_link->prev_used;
+      hash_filo_element *tmp = last_link;
+      last_link = last_link->prev_used;
       if (last_link != NULL)
       {
-        last_link->next_used= NULL;
+        last_link->next_used = NULL;
       }
       else
       {
         /* Pathological case, m_size == 1 */
-        first_link= NULL;
+        first_link = NULL;
       }
-      my_hash_delete(&cache,(uchar*) tmp);
+      my_hash_delete(&cache, (uchar *)tmp);
     }
-    if (my_hash_insert(&cache,(uchar*) entry))
+    if (my_hash_insert(&cache, (uchar *)entry))
     {
       if (free_element)
-	(*free_element)(entry);		// This should never happen
+        (*free_element)(entry);  // This should never happen
       return 1;
     }
-    entry->prev_used= NULL;
-    entry->next_used= first_link;
+    entry->prev_used = NULL;
+    entry->next_used = first_link;
     if (first_link != NULL)
-      first_link->prev_used= entry;
+      first_link->prev_used = entry;
     else
-      last_link= entry;
-    first_link= entry;
+      last_link = entry;
+    first_link = entry;
 
     return 0;
   }
 
-  uint size()
-  { return m_size; }
+  uint size() { return m_size; }
 
   void resize(uint new_size)
   {
     mysql_mutex_lock(&lock);
-    m_size= new_size;
+    m_size = new_size;
     clear(true);
     mysql_mutex_unlock(&lock);
   }
 };
 
-template <class T> class Hash_filo: public hash_filo
+template <class T>
+class Hash_filo : public hash_filo
 {
-public:
-  Hash_filo(PSI_memory_key psi_key, uint size_arg, uint key_offset_arg, uint
-            key_length_arg, my_hash_get_key get_key_arg, my_hash_free_key
-            free_element_arg, CHARSET_INFO *hash_charset_arg) :
-    hash_filo(psi_key, size_arg, key_offset_arg, key_length_arg,
-              get_key_arg, free_element_arg, hash_charset_arg) {}
-  T* first() { return (T*)hash_filo::first(); }
-  T* last()  { return (T*)hash_filo::last(); }
-  T* search(uchar* key, size_t len) { return (T*)hash_filo::search(key, len); }
+ public:
+  Hash_filo(PSI_memory_key psi_key, uint size_arg, uint key_offset_arg, uint key_length_arg,
+            my_hash_get_key get_key_arg, my_hash_free_key free_element_arg, CHARSET_INFO *hash_charset_arg)
+      : hash_filo(psi_key, size_arg, key_offset_arg, key_length_arg, get_key_arg, free_element_arg, hash_charset_arg)
+  {
+  }
+  T *first() { return (T *)hash_filo::first(); }
+  T *last() { return (T *)hash_filo::last(); }
+  T *search(uchar *key, size_t len) { return (T *)hash_filo::search(key, len); }
 };
 
 #endif

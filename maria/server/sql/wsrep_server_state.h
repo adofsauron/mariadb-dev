@@ -27,57 +27,33 @@
 
 class Wsrep_server_state : public wsrep::server_state
 {
-public:
-  static void init_once(const std::string& name,
-                        const std::string& incoming_address,
-                        const std::string& address,
-                        const std::string& working_dir,
-                        const wsrep::gtid& initial_position,
-                        int max_protocol_version);
+ public:
+  static void init_once(const std::string &name, const std::string &incoming_address, const std::string &address,
+                        const std::string &working_dir, const wsrep::gtid &initial_position, int max_protocol_version);
   static void destroy();
 
-  static Wsrep_server_state& instance()
-  {
-    return *m_instance;
-  }
+  static Wsrep_server_state &instance() { return *m_instance; }
 
-  static bool is_inited()
-  {
-    return (m_instance != NULL);
-  }
+  static bool is_inited() { return (m_instance != NULL); }
 
-  static wsrep::provider& get_provider()
-  {
-    return instance().provider();
-  }
+  static wsrep::provider &get_provider() { return instance().provider(); }
 
-  static bool has_capability(int capability)
-  {
-    return (get_provider().capabilities() & capability);
-  }
-  
+  static bool has_capability(int capability) { return (get_provider().capabilities() & capability); }
+
   static void init_provider_services();
   static void deinit_provider_services();
 
-  static const wsrep::provider::services& provider_services()
-  {
-    return m_provider_services;
-  }
+  static const wsrep::provider::services &provider_services() { return m_provider_services; }
 
-private:
-  Wsrep_server_state(const std::string& name,
-                     const std::string& incoming_address,
-                     const std::string& address,
-                     const std::string& working_dir,
-                     const wsrep::gtid& initial_position,
-                     int max_protocol_version);
+ private:
+  Wsrep_server_state(const std::string &name, const std::string &incoming_address, const std::string &address,
+                     const std::string &working_dir, const wsrep::gtid &initial_position, int max_protocol_version);
   ~Wsrep_server_state();
   Wsrep_mutex m_mutex;
   Wsrep_condition_variable m_cond;
   Wsrep_server_service m_service;
   static wsrep::provider::services m_provider_services;
-  static Wsrep_server_state* m_instance;
-
+  static Wsrep_server_state *m_instance;
 };
 
-#endif // WSREP_SERVER_STATE_H
+#endif  // WSREP_SERVER_STATE_H

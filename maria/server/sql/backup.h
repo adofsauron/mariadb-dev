@@ -17,20 +17,25 @@
 
 enum backup_stages
 {
-  BACKUP_START, BACKUP_FLUSH, BACKUP_WAIT_FOR_FLUSH, BACKUP_LOCK_COMMIT,
-  BACKUP_END, BACKUP_FINISHED
+  BACKUP_START,
+  BACKUP_FLUSH,
+  BACKUP_WAIT_FOR_FLUSH,
+  BACKUP_LOCK_COMMIT,
+  BACKUP_END,
+  BACKUP_FINISHED
 };
 
 extern TYPELIB backup_stage_names;
 
-struct backup_log_info {
-  LEX_CSTRING  query;
-  LEX_CUSTRING org_table_id;                         /* Unique id from frm */
-  LEX_CSTRING  org_database, org_table;
-  LEX_CSTRING  org_storage_engine_name;
-  LEX_CSTRING  new_database, new_table;
-  LEX_CSTRING  new_storage_engine_name;
-  LEX_CUSTRING new_table_id;                         /* Unique id from frm */
+struct backup_log_info
+{
+  LEX_CSTRING query;
+  LEX_CUSTRING org_table_id; /* Unique id from frm */
+  LEX_CSTRING org_database, org_table;
+  LEX_CSTRING org_storage_engine_name;
+  LEX_CSTRING new_database, new_table;
+  LEX_CSTRING new_storage_engine_name;
+  LEX_CUSTRING new_table_id; /* Unique id from frm */
   bool org_partitioned;
   bool new_partitioned;
 };

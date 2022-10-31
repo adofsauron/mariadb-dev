@@ -1,5 +1,5 @@
 #ifndef SQL_RECORDS_H
-#define SQL_RECORDS_H 
+#define SQL_RECORDS_H
 /* Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface                      /* gcc class implementation */
+#pragma interface /* gcc class implementation */
 #endif
 
 #include "table.h"
@@ -49,11 +49,11 @@ void free_cache(READ_RECORD *info);
 
 struct READ_RECORD
 {
-  typedef int (*Read_func)(READ_RECORD*);
+  typedef int (*Read_func)(READ_RECORD *);
   typedef void (*Unlock_row_func)(st_join_table *);
-  typedef int (*Setup_func)(struct st_join_table*);
+  typedef int (*Setup_func)(struct st_join_table *);
 
-  TABLE *table;                                 /* Head-form */
+  TABLE *table; /* Head-form */
   Unlock_row_func unlock_row;
   Read_func read_record_func;
   Read_func read_record_func_and_unpack_calls;
@@ -67,9 +67,9 @@ struct READ_RECORD
    */
   ha_rows unpack_counter;
 
-  uchar *ref_pos;				/* pointer to form->refpos */
-  uchar *rec_buf;                /* to read field values  after filesort */
-  uchar	*cache,*cache_pos,*cache_end,*read_positions;
+  uchar *ref_pos; /* pointer to form->refpos */
+  uchar *rec_buf; /* to read field values  after filesort */
+  uchar *cache, *cache_pos, *cache_end, *read_positions;
 
   /*
     Structure storing information about sorting
@@ -81,23 +81,21 @@ struct READ_RECORD
   int read_record() { return read_record_func(this); }
   uchar *record() const { return table->record[0]; }
 
-  /* 
+  /*
     SJ-Materialization runtime may need to read fields from the materialized
     table and unpack them into original table fields:
   */
   Copy_field *copy_field;
   Copy_field *copy_field_end;
-public:
+
+ public:
   READ_RECORD() : table(NULL), cache(NULL) {}
   ~READ_RECORD() { end_read_record(this); }
 };
 
-bool init_read_record(READ_RECORD *info, THD *thd, TABLE *reg_form,
-		      SQL_SELECT *select, SORT_INFO *sort,
-                      int use_record_cache,
-                      bool print_errors, bool disable_rr_cache);
-bool init_read_record_idx(READ_RECORD *info, THD *thd, TABLE *table,
-                          bool print_error, uint idx, bool reverse);
+bool init_read_record(READ_RECORD *info, THD *thd, TABLE *reg_form, SQL_SELECT *select, SORT_INFO *sort,
+                      int use_record_cache, bool print_errors, bool disable_rr_cache);
+bool init_read_record_idx(READ_RECORD *info, THD *thd, TABLE *table, bool print_error, uint idx, bool reverse);
 
 void rr_unlock_row(st_join_table *tab);
 

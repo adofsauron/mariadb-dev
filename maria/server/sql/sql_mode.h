@@ -17,7 +17,7 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface			/* gcc class implementation */
+#pragma interface /* gcc class implementation */
 #endif
 
 #include "sql_basic_types.h"
@@ -116,19 +116,13 @@ class Sql_mode_dependency
 {
   sql_mode_t m_hard;
   sql_mode_t m_soft;
-public:
-  Sql_mode_dependency()
-   :m_hard(0), m_soft(0)
-  { }
-  Sql_mode_dependency(sql_mode_t hard, sql_mode_t soft)
-   :m_hard(hard), m_soft(soft)
-  { }
+
+ public:
+  Sql_mode_dependency() : m_hard(0), m_soft(0) {}
+  Sql_mode_dependency(sql_mode_t hard, sql_mode_t soft) : m_hard(hard), m_soft(soft) {}
   sql_mode_t hard() const { return m_hard; }
   sql_mode_t soft() const { return m_soft; }
-  operator bool () const
-  {
-    return m_hard > 0 || m_soft > 0;
-  }
+  operator bool() const { return m_hard > 0 || m_soft > 0; }
   Sql_mode_dependency operator|(const Sql_mode_dependency &other) const
   {
     return Sql_mode_dependency(m_hard | other.m_hard, m_soft | other.m_soft);
@@ -139,24 +133,23 @@ public:
   }
   Sql_mode_dependency &operator|=(const Sql_mode_dependency &other)
   {
-    m_hard|= other.m_hard;
-    m_soft|= other.m_soft;
+    m_hard |= other.m_hard;
+    m_soft |= other.m_soft;
     return *this;
   }
   Sql_mode_dependency &operator&=(const Sql_mode_dependency &other)
   {
-    m_hard&= other.m_hard;
-    m_soft&= other.m_soft;
+    m_hard &= other.m_hard;
+    m_soft &= other.m_soft;
     return *this;
   }
   Sql_mode_dependency &soft_to_hard()
   {
-    m_hard|= m_soft;
-    m_soft= 0;
+    m_hard |= m_soft;
+    m_soft = 0;
     return *this;
   }
   void push_dependency_warnings(THD *thd) const;
 };
 
-
-#endif // SQL_MODE_H_INCLUDED
+#endif  // SQL_MODE_H_INCLUDED

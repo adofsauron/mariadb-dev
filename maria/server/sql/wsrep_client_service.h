@@ -33,42 +33,35 @@ class Wsrep_high_priority_context;
 
 class Wsrep_client_service : public wsrep::client_service
 {
-public:
-  Wsrep_client_service(THD*, Wsrep_client_state&);
+ public:
+  Wsrep_client_service(THD *, Wsrep_client_state &);
 
-  bool interrupted(wsrep::unique_lock<wsrep::mutex>&) const;
+  bool interrupted(wsrep::unique_lock<wsrep::mutex> &) const;
   void reset_globals();
   void store_globals();
   int prepare_data_for_replication();
   void cleanup_transaction();
   bool statement_allowed_for_streaming() const;
   size_t bytes_generated() const;
-  int prepare_fragment_for_replication(wsrep::mutable_buffer&, size_t&);
+  int prepare_fragment_for_replication(wsrep::mutable_buffer &, size_t &);
   int remove_fragments();
-  void emergency_shutdown()
-  { throw wsrep::not_implemented_error(); }
+  void emergency_shutdown() { throw wsrep::not_implemented_error(); }
   void will_replay();
   void signal_replayed();
   enum wsrep::provider::status replay();
   enum wsrep::provider::status replay_unordered();
-  void wait_for_replayers(wsrep::unique_lock<wsrep::mutex>&);
+  void wait_for_replayers(wsrep::unique_lock<wsrep::mutex> &);
   enum wsrep::provider::status commit_by_xid();
-  bool is_explicit_xa()
-  {
-    return false;
-  }
-  bool is_xa_rollback()
-  {
-    return false;
-  }
-  void debug_sync(const char*);
-  void debug_crash(const char*);
+  bool is_explicit_xa() { return false; }
+  bool is_xa_rollback() { return false; }
+  void debug_sync(const char *);
+  void debug_crash(const char *);
   int bf_rollback();
-private:
-  friend class Wsrep_server_service;
-  THD* m_thd;
-  Wsrep_client_state& m_client_state;
-};
 
+ private:
+  friend class Wsrep_server_service;
+  THD *m_thd;
+  Wsrep_client_state &m_client_state;
+};
 
 #endif /* WSREP_CLIENT_SERVICE_H */

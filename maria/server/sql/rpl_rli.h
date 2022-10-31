@@ -20,15 +20,14 @@
 #include "rpl_tblmap.h"
 #include "rpl_reporting.h"
 #include "rpl_utility.h"
-#include "log.h"                         /* LOG_INFO, MYSQL_BIN_LOG */
-#include "sql_class.h"                   /* THD */
+#include "log.h"       /* LOG_INFO, MYSQL_BIN_LOG */
+#include "sql_class.h" /* THD */
 #include "log_event.h"
 #include "rpl_parallel.h"
 
 struct RPL_TABLE_LIST;
 class Master_info;
 class Rpl_filter;
-
 
 /****************************************************************************
 
@@ -61,16 +60,17 @@ struct inuse_relaylog;
 
 class Relay_log_info : public Slave_reporting_capability
 {
-public:
+ public:
   /**
      Flags for the state of reading the relay log. Note that these are
      bit masks.
   */
-  enum enum_state_flag {
+  enum enum_state_flag
+  {
     /** We are inside a group of events forming a statement */
-    IN_STMT=1,
+    IN_STMT = 1,
     /** We have inside a transaction */
-    IN_TRANSACTION=2
+    IN_TRANSACTION = 2
   };
 
   /*
@@ -102,7 +102,7 @@ public:
     initialization or clean up - safe to read anytime
     cur_log_fd - file descriptor of the current read  relay log
   */
-  File info_fd,cur_log_fd;
+  File info_fd, cur_log_fd;
 
   /*
     Protected with internal locks.
@@ -117,22 +117,22 @@ public:
      &rli->cache_buf, depending on whether the log is hot or there was
      the need to open a cold relay_log.
 
-   cache_buf 
+   cache_buf
      IO_CACHE used when opening cold relay logs.
    */
-  IO_CACHE cache_buf,*cur_log;
+  IO_CACHE cache_buf, *cur_log;
 
   /*
     Keeps track of the number of transactions that commits
-    before fsyncing. The option --sync-relay-log-info determines 
+    before fsyncing. The option --sync-relay-log-info determines
     how many transactions should commit before fsyncing.
-  */ 
+  */
   uint sync_counter;
 
   /*
     Identifies when the recovery process is going on.
     See sql/slave.cc:init_recovery for further details.
-  */ 
+  */
   bool is_relay_log_recovery;
 
   /* The following variables are safe to read any time */
@@ -245,7 +245,7 @@ public:
   bool ignore_log_space_limit;
 
   /*
-    Used by the SQL thread to instructs the IO thread to rotate 
+    Used by the SQL thread to instructs the IO thread to rotate
     the logs when the SQL thread needs to purge to release some
     disk space.
    */
@@ -264,11 +264,7 @@ public:
     Reset the delay.
     This is used by RESET SLAVE to clear the delay.
   */
-  void clear_sql_delay()
-  {
-    sql_delay= 0;
-  }
-
+  void clear_sql_delay() { sql_delay = 0; }
 
   /*
     Needed for problems when slave stops and we want to restart it
@@ -279,8 +275,8 @@ public:
   volatile ulonglong slave_skip_counter;
   ulonglong max_relay_log_size;
 
-  volatile ulong abort_pos_wait;	/* Incremented on change master */
-  volatile ulong slave_run_id;		/* Incremented on slave start */
+  volatile ulong abort_pos_wait; /* Incremented on change master */
+  volatile ulong slave_run_id;   /* Incremented on slave start */
   mysql_mutex_t log_space_lock;
   mysql_cond_t log_space_cond;
   /*
@@ -292,7 +288,7 @@ public:
   THD *sql_driver_thd;
 #ifndef DBUG_OFF
   int events_till_abort;
-#endif  
+#endif
 
   enum_gtid_skip_type gtid_skip_flag;
 
@@ -308,32 +304,38 @@ public:
   volatile bool stop_for_until;
   volatile uint slave_running;
 
-  /* 
+  /*
      Condition and its parameters from START SLAVE UNTIL clause.
-     
-     UNTIL condition is tested with is_until_satisfied() method that is 
+
+     UNTIL condition is tested with is_until_satisfied() method that is
      called by exec_relay_log_event(). is_until_satisfied() caches the result
      of the comparison of log names because log names don't change very often;
      this cache is invalidated by parts of code which change log names with
      notify_*_log_name_updated() methods. (They need to be called only if SQL
      thread is running).
    */
-  
-  enum {
-    UNTIL_NONE= 0, UNTIL_MASTER_POS, UNTIL_RELAY_POS, UNTIL_GTID
+
+  enum
+  {
+    UNTIL_NONE = 0,
+    UNTIL_MASTER_POS,
+    UNTIL_RELAY_POS,
+    UNTIL_GTID
   } until_condition;
   char until_log_name[FN_REFLEN];
   ulonglong until_log_pos;
   /* extension extracted from log_name and converted to int */
-  ulong until_log_name_extension;   
-  /* 
+  ulong until_log_name_extension;
+  /*
      Cached result of comparison of until_log_name and current log name
-     -2 means unitialised, -1,0,1 are comarison results 
+     -2 means unitialised, -1,0,1 are comarison results
   */
-  enum 
-  { 
-    UNTIL_LOG_NAMES_CMP_UNKNOWN= -2, UNTIL_LOG_NAMES_CMP_LESS= -1,
-    UNTIL_LOG_NAMES_CMP_EQUAL= 0, UNTIL_LOG_NAMES_CMP_GREATER= 1
+  enum
+  {
+    UNTIL_LOG_NAMES_CMP_UNKNOWN = -2,
+    UNTIL_LOG_NAMES_CMP_LESS = -1,
+    UNTIL_LOG_NAMES_CMP_EQUAL = 0,
+    UNTIL_LOG_NAMES_CMP_GREATER = 1
   } until_log_names_cmp_result;
   /* Condition for UNTIL master_gtid_pos. */
   slave_connection_state until_gtid_pos;
@@ -363,12 +365,12 @@ public:
   /* Similar for ignored GTID events. */
   slave_connection_state ign_gtids;
 
-  /* 
+  /*
     Indentifies where the SQL Thread should create temporary files for the
     LOAD DATA INFILE. This is used for security reasons.
-   */ 
-  char slave_patternload_file[FN_REFLEN]; 
-  size_t slave_patternload_file_size;  
+   */
+  char slave_patternload_file[FN_REFLEN];
+  size_t slave_patternload_file_size;
 
   rpl_parallel parallel;
   /*
@@ -388,7 +390,7 @@ public:
   */
   slave_connection_state restart_gtid_pos;
 
-  Relay_log_info(bool is_slave_recovery, const char* thread_name= "SQL");
+  Relay_log_info(bool is_slave_recovery, const char *thread_name = "SQL");
   ~Relay_log_info();
 
   /*
@@ -398,42 +400,35 @@ public:
   */
   inline void notify_group_relay_log_name_update()
   {
-    if (until_condition==UNTIL_RELAY_POS)
-      until_log_names_cmp_result= UNTIL_LOG_NAMES_CMP_UNKNOWN;
+    if (until_condition == UNTIL_RELAY_POS)
+      until_log_names_cmp_result = UNTIL_LOG_NAMES_CMP_UNKNOWN;
   }
 
   /*
-    The same as previous but for group_master_log_name. 
+    The same as previous but for group_master_log_name.
   */
   inline void notify_group_master_log_name_update()
   {
-    if (until_condition==UNTIL_MASTER_POS)
-      until_log_names_cmp_result= UNTIL_LOG_NAMES_CMP_UNKNOWN;
+    if (until_condition == UNTIL_MASTER_POS)
+      until_log_names_cmp_result = UNTIL_LOG_NAMES_CMP_UNKNOWN;
   }
 
-  void inc_group_relay_log_pos(ulonglong log_pos,
-			       rpl_group_info *rgi,
-			       bool skip_lock=0);
+  void inc_group_relay_log_pos(ulonglong log_pos, rpl_group_info *rgi, bool skip_lock = 0);
 
-  int wait_for_pos(THD* thd, String* log_name, longlong log_pos, 
-		   longlong timeout);
+  int wait_for_pos(THD *thd, String *log_name, longlong log_pos, longlong timeout);
   void close_temporary_tables();
 
   /* Check if UNTIL condition is satisfied. See slave.cc for more. */
   bool is_until_satisfied(Log_event *ev);
   inline ulonglong until_pos()
   {
-    DBUG_ASSERT(until_condition == UNTIL_MASTER_POS ||
-                until_condition == UNTIL_RELAY_POS);
-    return ((until_condition == UNTIL_MASTER_POS) ? group_master_log_pos :
-	    group_relay_log_pos);
+    DBUG_ASSERT(until_condition == UNTIL_MASTER_POS || until_condition == UNTIL_RELAY_POS);
+    return ((until_condition == UNTIL_MASTER_POS) ? group_master_log_pos : group_relay_log_pos);
   }
   inline char *until_name()
   {
-    DBUG_ASSERT(until_condition == UNTIL_MASTER_POS ||
-                until_condition == UNTIL_RELAY_POS);
-    return ((until_condition == UNTIL_MASTER_POS) ? group_master_log_name :
-	    group_relay_log_name);
+    DBUG_ASSERT(until_condition == UNTIL_MASTER_POS || until_condition == UNTIL_RELAY_POS);
+    return ((until_condition == UNTIL_MASTER_POS) ? group_master_log_name : group_relay_log_name);
   }
   /**
     Helper function to do after statement completion.
@@ -470,19 +465,14 @@ public:
      @retval true Replication thread is currently inside a group
      @retval false Replication thread is currently not inside a group
    */
-  bool is_in_group() const {
-    return (m_flags & (IN_STMT | IN_TRANSACTION));
-  }
+  bool is_in_group() const { return (m_flags & (IN_STMT | IN_TRANSACTION)); }
 
   /**
      Set the value of a replication state flag.
 
      @param flag Flag to set
    */
-  void set_flag(enum_state_flag flag)
-  {
-    m_flags|= flag;
-  }
+  void set_flag(enum_state_flag flag) { m_flags |= flag; }
 
   /**
      Get the value of a replication state flag.
@@ -491,20 +481,14 @@ public:
 
      @return @c true if the flag was set, @c false otherwise.
    */
-  bool get_flag(enum_state_flag flag)
-  {
-    return m_flags & flag;
-  }
+  bool get_flag(enum_state_flag flag) { return m_flags & flag; }
 
   /**
      Clear the value of a replication state flag.
 
      @param flag Flag to clear
    */
-  void clear_flag(enum_state_flag flag)
-  {
-    m_flags&= ~flag;
-  }
+  void clear_flag(enum_state_flag flag) { m_flags &= ~flag; }
 
   /**
     Text used in THD::proc_info when the slave SQL thread is delaying.
@@ -516,7 +500,7 @@ public:
   /**
     Reads the relay_log.info file.
   */
-  int init(const char* info_filename);
+  int init(const char *info_filename);
 
   /**
     Indicate that a delay starts.
@@ -532,18 +516,17 @@ public:
   void start_sql_delay(time_t delay_end)
   {
     mysql_mutex_assert_owner(&data_lock);
-    sql_delay_end= delay_end;
+    sql_delay_end = delay_end;
     thd_proc_info(sql_driver_thd, state_delaying_string);
   }
 
   int32 get_sql_delay() { return sql_delay; }
-  void set_sql_delay(int32 _sql_delay) { sql_delay= _sql_delay; }
+  void set_sql_delay(int32 _sql_delay) { sql_delay = _sql_delay; }
   time_t get_sql_delay_end() { return sql_delay_end; }
   rpl_gtid last_seen_gtid;
   ulong last_trans_retry_count;
-private:
 
-
+ private:
   /**
     Delay slave SQL thread by this amount, compared to master (in
     seconds). This is set with CHANGE MASTER TO MASTER_DELAY=X.
@@ -571,7 +554,7 @@ private:
     Before the MASTER_DELAY parameter was added (WL#344),
     relay_log.info had 4 lines. Now it has 5 lines.
   */
-  static const int LINES_IN_RELAY_LOG_INFO_WITH_DELAY= 5;
+  static const int LINES_IN_RELAY_LOG_INFO_WITH_DELAY = 5;
   /*
     Hint for when to stop event distribution by sql driver thread.
     The flag is set ON by a non-group event when this event is in the middle
@@ -590,7 +573,6 @@ private:
   */
   uint32 m_flags;
 };
-
 
 /*
   In parallel replication, if we need to re-try a transaction due to a
@@ -613,7 +595,8 @@ private:
   multi-thread synchronisation; the completed flag and queued_count fields
   are only accessed by the SQL driver thread and need no synchronisation.
 */
-struct inuse_relaylog {
+struct inuse_relaylog
+{
   inuse_relaylog *next;
   Relay_log_info *rli;
   /*
@@ -630,12 +613,15 @@ struct inuse_relaylog {
   bool completed;
   char name[FN_REFLEN];
 
-  inuse_relaylog(Relay_log_info *rli_arg, rpl_gtid *relay_log_state_arg,
-                 uint32 relay_log_state_count_arg,
-                 const char *name_arg):
-    next(0), rli(rli_arg), relay_log_state(relay_log_state_arg),
-    relay_log_state_count(relay_log_state_count_arg), queued_count(0),
-    dequeued_count(0), completed(false)
+  inuse_relaylog(Relay_log_info *rli_arg, rpl_gtid *relay_log_state_arg, uint32 relay_log_state_count_arg,
+                 const char *name_arg)
+      : next(0),
+        rli(rli_arg),
+        relay_log_state(relay_log_state_arg),
+        relay_log_state_count(relay_log_state_count_arg),
+        queued_count(0),
+        dequeued_count(0),
+        completed(false)
   {
     strmake_buf(name, name_arg);
   }
@@ -643,11 +629,11 @@ struct inuse_relaylog {
 
 enum start_alter_state
 {
-  INVALID= 0,
-  REGISTERED,           // Start Alter exist, Default state
-  COMMIT_ALTER,         // COMMIT the alter
-  ROLLBACK_ALTER,       // Rollback the alter
-  COMPLETED             // COMMIT/ROLLBACK Alter written in binlog
+  INVALID = 0,
+  REGISTERED,      // Start Alter exist, Default state
+  COMMIT_ALTER,    // COMMIT the alter
+  ROLLBACK_ALTER,  // Rollback the alter
+  COMPLETED        // COMMIT/ROLLBACK Alter written in binlog
 };
 
 struct start_alter_info
@@ -655,9 +641,9 @@ struct start_alter_info
   /*
     ALTER id is defined as a pair of GTID's seq_no and domain_id.
   */
-  decltype(rpl_gtid::seq_no) sa_seq_no; // key for searching (SA's id)
+  decltype(rpl_gtid::seq_no) sa_seq_no;  // key for searching (SA's id)
   uint32 domain_id;
-  bool   direct_commit_alter; // when true CA thread executes the whole query
+  bool direct_commit_alter;  // when true CA thread executes the whole query
   /*
     0 prepared and not error from commit and rollback
     >0 error expected in commit/rollback
@@ -685,7 +671,7 @@ struct start_alter_info
 
 struct rpl_group_info
 {
-  rpl_group_info *next;             /* For free list in rpl_parallel_thread */
+  rpl_group_info *next; /* For free list in rpl_parallel_thread */
   Relay_log_info *rli;
   THD *thd;
   /*
@@ -743,15 +729,15 @@ struct rpl_group_info
   Deferred_log_events *deferred_events;
 
   /*
-    State of the container: true stands for IRU events gathering, 
+    State of the container: true stands for IRU events gathering,
     false does for execution, either deferred or direct.
   */
   bool deferred_events_collecting;
 
   Annotate_rows_log_event *m_annotate_event;
 
-  RPL_TABLE_LIST *tables_to_lock;           /* RBR: Tables to lock  */
-  uint tables_to_lock_count;        /* RBR: Count of tables to lock */
+  RPL_TABLE_LIST *tables_to_lock; /* RBR: Tables to lock  */
+  uint tables_to_lock_count;      /* RBR: Count of tables to lock */
   table_mapping m_table_map;      /* RBR: Mapping table-id to table */
   mysql_mutex_t sleep_lock;
   mysql_cond_t sleep_cond;
@@ -792,10 +778,11 @@ struct rpl_group_info
   /* Copy of flags3 from GTID event. */
   uint16 gtid_ev_flags_extra;
   uint64 gtid_ev_sa_seq_no;
-  enum {
-    GTID_DUPLICATE_NULL=0,
-    GTID_DUPLICATE_IGNORE=1,
-    GTID_DUPLICATE_OWNER=2
+  enum
+  {
+    GTID_DUPLICATE_NULL = 0,
+    GTID_DUPLICATE_IGNORE = 1,
+    GTID_DUPLICATE_OWNER = 2
   };
   /*
     When --gtid-ignore-duplicates, this is set to one of the above three
@@ -814,7 +801,7 @@ struct rpl_group_info
   longlong row_stmt_start_timestamp;
   bool long_find_row_note_printed;
   /* Needs room for "Gtid D-S-N\x00". */
-  char gtid_info_buf[5+10+1+10+1+20+1];
+  char gtid_info_buf[5 + 10 + 1 + 10 + 1 + 20 + 1];
 
   /*
     The timestamp, from the master, of the commit event.
@@ -839,7 +826,8 @@ struct rpl_group_info
     duplicate key for example). So in case of _any_ error, we need to roll
     back and retry the event group.
   */
-  enum enum_speculation {
+  enum enum_speculation
+  {
     /*
       This transaction was group-committed together on the master with the
       other transactions with which it is replicated in parallel.
@@ -860,7 +848,8 @@ struct rpl_group_info
     */
     SPECULATE_WAIT
   } speculation;
-  enum enum_retry_killed {
+  enum enum_retry_killed
+  {
     RETRY_KILL_NONE = 0,
     RETRY_KILL_PENDING,
     RETRY_KILL_KILLED
@@ -880,14 +869,11 @@ struct rpl_group_info
   ~rpl_group_info();
   void reinit(Relay_log_info *rli);
 
-  /* 
+  /*
      Returns true if the argument event resides in the containter;
      more specifically, the checking is done against the last added event.
   */
-  bool is_deferred_event(Log_event * ev)
-  {
-    return deferred_events_collecting ? deferred_events->is_last(ev) : false;
-  };
+  bool is_deferred_event(Log_event *ev) { return deferred_events_collecting ? deferred_events->is_last(ev) : false; };
   /* The general cleanup that slave applier may need at the end of query. */
   inline void cleanup_after_query()
   {
@@ -900,7 +886,7 @@ struct rpl_group_info
     if (deferred_events)
     {
       delete deferred_events;
-      deferred_events= NULL;
+      deferred_events = NULL;
     }
   };
 
@@ -912,18 +898,15 @@ struct rpl_group_info
   inline void set_annotate_event(Annotate_rows_log_event *event)
   {
     DBUG_ASSERT(m_annotate_event == NULL);
-    m_annotate_event= event;
-    this->thd->variables.binlog_annotate_row_events= 1;
+    m_annotate_event = event;
+    this->thd->variables.binlog_annotate_row_events = 1;
   }
 
   /**
     Returns pointer to the saved Annotate_rows event or NULL if there is
     no saved event.
   */
-  inline Annotate_rows_log_event* get_annotate_event()
-  {
-    return m_annotate_event;
-  }
+  inline Annotate_rows_log_event *get_annotate_event() { return m_annotate_event; }
 
   /**
     Delete saved Annotate_rows event (if any) and switch off the
@@ -935,24 +918,23 @@ struct rpl_group_info
   {
     if (m_annotate_event)
     {
-      this->thd->variables.binlog_annotate_row_events= 0;
+      this->thd->variables.binlog_annotate_row_events = 0;
       delete m_annotate_event;
-      m_annotate_event= 0;
+      m_annotate_event = 0;
     }
   }
 
   bool get_table_data(TABLE *table_arg, table_def **tabledef_var, TABLE **conv_table_var) const
   {
     DBUG_ASSERT(tabledef_var && conv_table_var);
-    for (TABLE_LIST *ptr= tables_to_lock ; ptr != NULL ; ptr= ptr->next_global)
+    for (TABLE_LIST *ptr = tables_to_lock; ptr != NULL; ptr = ptr->next_global)
       if (ptr->table == table_arg)
       {
-        *tabledef_var= &static_cast<RPL_TABLE_LIST*>(ptr)->m_tabledef;
-        *conv_table_var= static_cast<RPL_TABLE_LIST*>(ptr)->m_conv_table;
+        *tabledef_var = &static_cast<RPL_TABLE_LIST *>(ptr)->m_tabledef;
+        *conv_table_var = static_cast<RPL_TABLE_LIST *>(ptr)->m_conv_table;
         DBUG_PRINT("debug", ("Fetching table data for table %s.%s:"
                              " tabledef: %p, conv_table: %p",
-                             table_arg->s->db.str, table_arg->s->table_name.str,
-                             *tabledef_var, *conv_table_var));
+                             table_arg->s->db.str, table_arg->s->table_name.str, *tabledef_var, *conv_table_var));
         return true;
       }
     return false;
@@ -966,57 +948,34 @@ struct rpl_group_info
   char *gtid_info();
   void unmark_start_commit();
 
-  longlong get_row_stmt_start_timestamp()
-  {
-    return row_stmt_start_timestamp;
-  }
+  longlong get_row_stmt_start_timestamp() { return row_stmt_start_timestamp; }
 
   void set_row_stmt_start_timestamp()
   {
     if (row_stmt_start_timestamp == 0)
-      row_stmt_start_timestamp= microsecond_interval_timer();
+      row_stmt_start_timestamp = microsecond_interval_timer();
   }
 
-  void reset_row_stmt_start_timestamp()
-  {
-    row_stmt_start_timestamp= 0;
-  }
+  void reset_row_stmt_start_timestamp() { row_stmt_start_timestamp = 0; }
 
-  void set_long_find_row_note_printed()
-  {
-    long_find_row_note_printed= true;
-  }
+  void set_long_find_row_note_printed() { long_find_row_note_printed = true; }
 
-  void unset_long_find_row_note_printed()
-  {
-    long_find_row_note_printed= false;
-  }
+  void unset_long_find_row_note_printed() { long_find_row_note_printed = false; }
 
-  bool is_long_find_row_note_printed()
-  {
-    return long_find_row_note_printed;
-  }
+  bool is_long_find_row_note_printed() { return long_find_row_note_printed; }
 
   inline void inc_event_relay_log_pos()
   {
     if (!is_parallel_exec)
-      rli->event_relay_log_pos= future_event_relay_log_pos;
+      rli->event_relay_log_pos = future_event_relay_log_pos;
   }
 
   void finish_start_alter_event_group();
 
-  bool get_finish_event_group_called()
-  {
-    return finish_event_group_called;
-  }
+  bool get_finish_event_group_called() { return finish_event_group_called; }
 
-  void set_finish_event_group_called(bool value)
-  {
-    finish_event_group_called= value;
-  }
-
+  void set_finish_event_group_called(bool value) { finish_event_group_called = value; }
 };
-
 
 /*
   The class rpl_sql_thread_info is the THD::system_thread_info for an SQL
@@ -1025,9 +984,9 @@ struct rpl_group_info
 */
 class rpl_sql_thread_info
 {
-public:
+ public:
   char cached_charset[6];
-  Rpl_filter* rpl_filter;
+  Rpl_filter *rpl_filter;
 
   rpl_sql_thread_info(Rpl_filter *filter);
 
@@ -1041,14 +1000,12 @@ public:
   bool cached_charset_compare(char *charset) const;
 };
 
-
 extern struct rpl_slave_state *rpl_global_gtid_slave_state;
 extern gtid_waiting rpl_global_gtid_waiting;
 
 int rpl_load_gtid_slave_state(THD *thd);
 int find_gtid_slave_pos_tables(THD *thd);
 int event_group_new_gtid(rpl_group_info *rgi, Gtid_log_event *gev);
-void delete_or_keep_event_post_apply(rpl_group_info *rgi,
-                                     Log_event_type typ, Log_event *ev);
+void delete_or_keep_event_post_apply(rpl_group_info *rgi, Log_event_type typ, Log_event *ev);
 
 #endif /* RPL_RLI_H */

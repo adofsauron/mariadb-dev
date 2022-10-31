@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved. 
+/* Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,19 +37,13 @@ class Sort_param;
   The underlying QUEUE implementation needs one extra element for replacing
   the lowest/highest element when pushing into a full queue.
  */
-template<typename Element_type, typename Key_type>
+template <typename Element_type, typename Key_type>
 class Bounded_queue
 {
-public:
-  Bounded_queue()
-  {
-    memset(&m_queue, 0, sizeof(m_queue));
-  }
+ public:
+  Bounded_queue() { memset(&m_queue, 0, sizeof(m_queue)); }
 
-  ~Bounded_queue()
-  {
-    delete_queue(&m_queue);
-  }
+  ~Bounded_queue() { delete_queue(&m_queue); }
 
   /**
      Function for making sort-key from input data.
@@ -57,17 +51,14 @@ public:
      @param to    Where to put the key.
      @param from  The input data.
   */
-  typedef uint (*keymaker_function)(Sort_param *param,
-                                    Key_type *to,
-                                    Element_type *from,
-                                    bool packing_keys);
+  typedef uint (*keymaker_function)(Sort_param *param, Key_type *to, Element_type *from, bool packing_keys);
 
   /**
      Function for comparing two keys.
      @param  n Pointer to number of bytes to compare.
      @param  a First key.
      @param  b Second key.
-     @retval -1, 0, or 1 depending on whether the left argument is 
+     @retval -1, 0, or 1 depending on whether the left argument is
              less than, equal to, or greater than the right argument.
    */
   typedef int (*compare_function)(size_t *n, Key_type **a, Key_type **b);
@@ -92,10 +83,8 @@ public:
 
     We do *not* take ownership of any of the input pointer arguments.
    */
-  int init(ha_rows max_elements, bool max_at_top,
-           compare_function compare, size_t compare_length,
-           keymaker_function keymaker, Sort_param *sort_param,
-           Key_type **sort_keys);
+  int init(ha_rows max_elements, bool max_at_top, compare_function compare, size_t compare_length,
+           keymaker_function keymaker, Sort_param *sort_param, Key_type **sort_keys);
 
   /**
     Pushes an element on the queue.
@@ -123,7 +112,7 @@ public:
     DBUG_ASSERT(m_queue.elements > 0);
     if (m_queue.elements == 0)
       return NULL;
-    return reinterpret_cast<Key_type**>(queue_remove(&m_queue, 0));
+    return reinterpret_cast<Key_type **>(queue_remove(&m_queue, 0));
   }
 
   /**
@@ -136,60 +125,51 @@ public:
    */
   bool is_initialized() const { return m_queue.max_elements > 0; }
 
-private:
-  Key_type         **m_sort_keys;
-  size_t             m_compare_length;
-  keymaker_function  m_keymaker;
-  Sort_param        *m_sort_param;
-  st_queue           m_queue;
+ private:
+  Key_type **m_sort_keys;
+  size_t m_compare_length;
+  keymaker_function m_keymaker;
+  Sort_param *m_sort_param;
+  st_queue m_queue;
 };
 
-
-template<typename Element_type, typename Key_type>
-int Bounded_queue<Element_type, Key_type>::init(ha_rows max_elements,
-                                                bool max_at_top,
-                                                compare_function compare,
-                                                size_t compare_length,
-                                                keymaker_function keymaker,
-                                                Sort_param *sort_param,
-                                                Key_type **sort_keys)
+template <typename Element_type, typename Key_type>
+int Bounded_queue<Element_type, Key_type>::init(ha_rows max_elements, bool max_at_top, compare_function compare,
+                                                size_t compare_length, keymaker_function keymaker,
+                                                Sort_param *sort_param, Key_type **sort_keys)
 {
   DBUG_ASSERT(sort_keys != NULL);
 
-  m_sort_keys=      sort_keys;
-  m_compare_length= compare_length;
-  m_keymaker=       keymaker;
-  m_sort_param=     sort_param;
+  m_sort_keys = sort_keys;
+  m_compare_length = compare_length;
+  m_keymaker = keymaker;
+  m_sort_param = sort_param;
   // init_queue() takes an uint, and also does (max_elements + 1)
   if (max_elements >= (UINT_MAX - 1))
     return 1;
   if (compare == NULL)
-    compare=
-      reinterpret_cast<compare_function>(get_ptr_compare(compare_length));
+    compare = reinterpret_cast<compare_function>(get_ptr_compare(compare_length));
   // We allocate space for one extra element, for replace when queue is full.
-  return init_queue(&m_queue, (uint) max_elements + 1,
-                    0, max_at_top,
-                    reinterpret_cast<queue_compare>(compare),
+  return init_queue(&m_queue, (uint)max_elements + 1, 0, max_at_top, reinterpret_cast<queue_compare>(compare),
                     &m_compare_length, 0, 0);
 }
 
-
-template<typename Element_type, typename Key_type>
+template <typename Element_type, typename Key_type>
 void Bounded_queue<Element_type, Key_type>::push(Element_type *element)
 {
   DBUG_ASSERT(is_initialized());
   if (queue_is_full((&m_queue)))
   {
     // Replace top element with new key, and re-order the queue.
-    Key_type **pq_top= reinterpret_cast<Key_type **>(queue_top(&m_queue));
+    Key_type **pq_top = reinterpret_cast<Key_type **>(queue_top(&m_queue));
     (void)(*m_keymaker)(m_sort_param, *pq_top, element, false);
     queue_replace_top(&m_queue);
-  } else {
+  }
+  else
+  {
     // Insert new key into the queue.
-    (*m_keymaker)(m_sort_param, m_sort_keys[m_queue.elements],
-                  element, false);
-    queue_insert(&m_queue,
-                 reinterpret_cast<uchar*>(&m_sort_keys[m_queue.elements]));
+    (*m_keymaker)(m_sort_param, m_sort_keys[m_queue.elements], element, false);
+    queue_insert(&m_queue, reinterpret_cast<uchar *>(&m_sort_keys[m_queue.elements]));
   }
 }
 

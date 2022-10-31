@@ -27,7 +27,7 @@
   Minimum hit ratio to keep in memory table (do not switch cache off)
   hit_rate = hit / (miss + hit);
 */
-#define EXPCACHE_MIN_HIT_RATE_FOR_MEM_TABLE  0.2
+#define EXPCACHE_MIN_HIT_RATE_FOR_MEM_TABLE 0.2
 /**
   Number of cache miss to check hit ratio (maximum cache performance
   impact in the case when the cache is not applicable)
@@ -40,16 +40,12 @@
 */
 ulong subquery_cache_miss, subquery_cache_hit;
 
-Expression_cache_tmptable::Expression_cache_tmptable(THD *thd,
-                                                     List<Item> &dependants,
-                                                     Item *value)
-  :cache_table(NULL), table_thd(thd), tracker(NULL), items(dependants), val(value),
-   hit(0), miss(0), inited (0)
+Expression_cache_tmptable::Expression_cache_tmptable(THD *thd, List<Item> &dependants, Item *value)
+    : cache_table(NULL), table_thd(thd), tracker(NULL), items(dependants), val(value), hit(0), miss(0), inited(0)
 {
   DBUG_ENTER("Expression_cache_tmptable::Expression_cache_tmptable");
   DBUG_VOID_RETURN;
 };
-
 
 /**
   Disable cache
@@ -60,12 +56,11 @@ void Expression_cache_tmptable::disable_cache()
   if (cache_table->file->inited)
     cache_table->file->ha_index_end();
   free_tmp_table(table_thd, cache_table);
-  cache_table= NULL;
+  cache_table = NULL;
   update_tracker();
   if (tracker)
     tracker->detach_from_cache();
 }
-
 
 /**
   Field enumerator for TABLE::add_tmp_key
@@ -75,11 +70,7 @@ void Expression_cache_tmptable::disable_cache()
   @return field number
 */
 
-static uint field_enumerator(uchar *arg)
-{
-  return ((uint*)arg)[0]++;
-}
-
+static uint field_enumerator(uchar *arg) { return ((uint *)arg)[0]++; }
 
 /**
   Initialize temporary table and auxiliary structures for the expression
@@ -97,11 +88,11 @@ void Expression_cache_tmptable::init()
   List_iterator<Item> li(items);
   Item_iterator_list it(li);
   uint field_counter;
-  LEX_CSTRING cache_table_name= { STRING_WITH_LEN("subquery-cache-table") };
+  LEX_CSTRING cache_table_name = {STRING_WITH_LEN("subquery-cache-table")};
   DBUG_ENTER("Expression_cache_tmptable::init");
   DBUG_ASSERT(!inited);
-  inited= TRUE;
-  cache_table= NULL;
+  inited = TRUE;
+  cache_table = NULL;
 
   if (items.elements == 0)
   {
@@ -114,19 +105,14 @@ void Expression_cache_tmptable::init()
 
   cache_table_param.init();
   /* dependent items and result */
-  cache_table_param.field_count= items.elements;
+  cache_table_param.field_count = items.elements;
   /* postpone table creation to index description */
-  cache_table_param.skip_create_table= 1;
+  cache_table_param.skip_create_table = 1;
 
-  if (!(cache_table= create_tmp_table(table_thd, &cache_table_param,
-                                      items, (ORDER*) NULL,
-                                      FALSE, TRUE,
-                                      ((table_thd->variables.option_bits |
-                                        TMP_TABLE_ALL_COLUMNS) &
-                                        ~TMP_TABLE_FORCE_MYISAM),
-                                      HA_POS_ERROR,
-                                      &cache_table_name,
-                                      TRUE)))
+  if (!(cache_table =
+            create_tmp_table(table_thd, &cache_table_param, items, (ORDER *)NULL, FALSE, TRUE,
+                             ((table_thd->variables.option_bits | TMP_TABLE_ALL_COLUMNS) & ~TMP_TABLE_FORCE_MYISAM),
+                             HA_POS_ERROR, &cache_table_name, TRUE)))
   {
     DBUG_PRINT("error", ("create_tmp_table failed, caching switched off"));
     DBUG_VOID_RETURN;
@@ -138,23 +124,20 @@ void Expression_cache_tmptable::init()
     goto error;
   }
 
-  field_counter= 1;
+  field_counter = 1;
 
   if (cache_table->alloc_keys(1) ||
-      cache_table->add_tmp_key(0, items.elements - 1, &field_enumerator,
-                                (uchar*)&field_counter, TRUE) ||
-      ref.tmp_table_index_lookup_init(table_thd, cache_table->key_info, it,
-                                      TRUE, 1 /* skip result field*/))
+      cache_table->add_tmp_key(0, items.elements - 1, &field_enumerator, (uchar *)&field_counter, TRUE) ||
+      ref.tmp_table_index_lookup_init(table_thd, cache_table->key_info, it, TRUE, 1 /* skip result field*/))
   {
     DBUG_PRINT("error", ("creating index failed"));
     goto error;
   }
-  cache_table->s->keys= 1;
-  ref.null_rejecting= 1;
-  ref.disable_cache= FALSE;
-  ref.has_record= 0;
-  ref.use_count= 0;
-
+  cache_table->s->keys = 1;
+  ref.null_rejecting = 1;
+  ref.disable_cache = FALSE;
+  ref.has_record = 0;
+  ref.use_count = 0;
 
   if (open_tmp_table(cache_table))
   {
@@ -162,8 +145,7 @@ void Expression_cache_tmptable::init()
     goto error;
   }
 
-  if (!(cached_result= new (table_thd->mem_root)
-        Item_field(table_thd, cache_table->field[0])))
+  if (!(cached_result = new (table_thd->mem_root) Item_field(table_thd, cache_table->field[0])))
   {
     DBUG_PRINT("error", ("Creating Item_field failed"));
     goto error;
@@ -176,7 +158,6 @@ error:
   disable_cache();
   DBUG_VOID_RETURN;
 }
-
 
 Expression_cache_tmptable::~Expression_cache_tmptable()
 {
@@ -191,10 +172,9 @@ Expression_cache_tmptable::~Expression_cache_tmptable()
     update_tracker();
     if (tracker)
       tracker->detach_from_cache();
-    tracker= NULL;
+    tracker = NULL;
   }
 }
-
 
 /**
   Check if a given set of parameters of the expression is in the cache
@@ -218,19 +198,16 @@ Expression_cache::result Expression_cache_tmptable::check_value(Item **value)
 
   if (cache_table)
   {
-    DBUG_PRINT("info", ("status: %u  has_record %u",
-                        (uint)cache_table->status, (uint)ref.has_record));
-    if ((res= join_read_key2(table_thd, NULL, cache_table, &ref)) == 1)
+    DBUG_PRINT("info", ("status: %u  has_record %u", (uint)cache_table->status, (uint)ref.has_record));
+    if ((res = join_read_key2(table_thd, NULL, cache_table, &ref)) == 1)
       DBUG_RETURN(ERROR);
 
     if (res)
     {
       if (((++miss) == EXPCACHE_CHECK_HIT_RATIO_AFTER) &&
-          ((double)hit / ((double)hit + miss)) <
-          EXPCACHE_MIN_HIT_RATE_FOR_MEM_TABLE)
+          ((double)hit / ((double)hit + miss)) < EXPCACHE_MIN_HIT_RATE_FOR_MEM_TABLE)
       {
-        DBUG_PRINT("info",
-                   ("Early check: hit rate is not so good to keep the cache"));
+        DBUG_PRINT("info", ("Early check: hit rate is not so good to keep the cache"));
         disable_cache();
       }
 
@@ -238,12 +215,11 @@ Expression_cache::result Expression_cache_tmptable::check_value(Item **value)
     }
 
     hit++;
-    *value= cached_result;
+    *value = cached_result;
     DBUG_RETURN(Expression_cache::HIT);
   }
   DBUG_RETURN(Expression_cache::MISS);
 }
-
 
 /**
   Put a new entry into the expression cache
@@ -270,20 +246,20 @@ my_bool Expression_cache_tmptable::put_value(Item *value)
     DBUG_RETURN(FALSE);
   }
 
-  *(items.head_ref())= value;
+  *(items.head_ref()) = value;
   fill_record(table_thd, cache_table, cache_table->field, items, TRUE, TRUE);
   if (unlikely(table_thd->is_error()))
-    goto err;;
+    goto err;
+  ;
 
-  if (unlikely((error=
-                cache_table->file->ha_write_tmp_row(cache_table->record[0]))))
+  if (unlikely((error = cache_table->file->ha_write_tmp_row(cache_table->record[0]))))
   {
     /* create_myisam_from_heap will generate error if needed */
     if (cache_table->file->is_fatal_error(error, HA_CHECK_DUP))
       goto err;
     else
     {
-      double hit_rate= ((double)hit / ((double)hit + miss));
+      double hit_rate = ((double)hit / ((double)hit + miss));
       DBUG_ASSERT(miss > 0);
       if (hit_rate < EXPCACHE_MIN_HIT_RATE_FOR_MEM_TABLE)
       {
@@ -294,22 +270,19 @@ my_bool Expression_cache_tmptable::put_value(Item *value)
       else if (hit_rate < EXPCACHE_MIN_HIT_RATE_FOR_DISK_TABLE)
       {
         DBUG_PRINT("info", ("hit rate is not so good to go to disk"));
-        if (cache_table->file->ha_delete_all_rows() ||
-            cache_table->file->ha_write_tmp_row(cache_table->record[0]))
+        if (cache_table->file->ha_delete_all_rows() || cache_table->file->ha_write_tmp_row(cache_table->record[0]))
           goto err;
       }
       else
       {
-        if (create_internal_tmp_table_from_heap(table_thd, cache_table,
-                                                cache_table_param.start_recinfo,
-                                                &cache_table_param.recinfo,
-                                                error, 1, NULL))
+        if (create_internal_tmp_table_from_heap(table_thd, cache_table, cache_table_param.start_recinfo,
+                                                &cache_table_param.recinfo, error, 1, NULL))
           goto err;
       }
     }
   }
-  cache_table->status= 0; /* cache_table->record contains an existed record */
-  ref.has_record= TRUE; /* the same as above */
+  cache_table->status = 0; /* cache_table->record contains an existed record */
+  ref.has_record = TRUE;   /* the same as above */
   DBUG_PRINT("info", ("has_record: TRUE  status: 0"));
 
   DBUG_RETURN(FALSE);
@@ -319,25 +292,22 @@ err:
   DBUG_RETURN(TRUE);
 }
 
-
 void Expression_cache_tmptable::print(String *str, enum_query_type query_type)
 {
   List_iterator<Item> li(items);
   Item *item;
-  bool is_first= TRUE;
+  bool is_first = TRUE;
 
   str->append('<');
   li++;  // skip result field
-  while ((item= li++))
+  while ((item = li++))
   {
     if (!is_first)
       str->append(',');
     item->print(str, query_type);
-    is_first= FALSE;
+    is_first = FALSE;
   }
   str->append('>');
 }
 
-
-const char *Expression_cache_tracker::state_str[3]=
-{"uninitialized", "disabled", "enabled"};
+const char *Expression_cache_tracker::state_str[3] = {"uninitialized", "disabled", "enabled"};

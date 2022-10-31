@@ -15,17 +15,14 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-
 #define MAX_COMPRESSION_METHODS 16
 
 struct Compression_method
 {
   const char *name;
   uint (*compress)(THD *thd, char *to, const char *from, uint length);
-  int (*uncompress)(String *to, const uchar *from, uint from_length,
-                    uint field_length);
+  int (*uncompress)(String *to, const uchar *from, uint from_length, uint field_length);
 };
-
 
 extern Compression_method compression_methods[MAX_COMPRESSION_METHODS];
 #define zlib_compression_method (&compression_methods[8])

@@ -17,19 +17,19 @@
 #include "mariadb.h"
 #include "sql_priv.h"
 #include "unireg.h"
-#include "sql_base.h"                           // close_thread_tables
+#include "sql_base.h"  // close_thread_tables
 #include "sql_parse.h"
 #include "event_db_repository.h"
-#include "key.h"                                // key_copy
-#include "sql_db.h"                        // get_default_db_collation
-#include "sql_time.h"                      // interval_type_to_name
-#include "tztime.h"                             // struct Time_zone
-#include "records.h"          // init_read_record, end_read_record
+#include "key.h"       // key_copy
+#include "sql_db.h"    // get_default_db_collation
+#include "sql_time.h"  // interval_type_to_name
+#include "tztime.h"    // struct Time_zone
+#include "records.h"   // init_read_record, end_read_record
 #include "sp_head.h"
 #include "event_data_objects.h"
 #include "events.h"
 #include "sql_show.h"
-#include "lock.h"                               // MYSQL_LOCK_IGNORE_TIMEOUT
+#include "lock.h"  // MYSQL_LOCK_IGNORE_TIMEOUT
 #include "transaction.h"
 
 /**
@@ -37,142 +37,53 @@
   @{
 */
 
-static
-const TABLE_FIELD_TYPE event_table_fields[ET_FIELD_COUNT] =
-{
-  {
-    { STRING_WITH_LEN("db") },
-    { STRING_WITH_LEN("char(64)") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("name") },
-    { STRING_WITH_LEN("char(64)") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("body") },
-    { STRING_WITH_LEN("longblob") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("definer") },
-    { STRING_WITH_LEN("varchar(") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("execute_at") },
-    { STRING_WITH_LEN("datetime") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("interval_value") },
-    { STRING_WITH_LEN("int(11)") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("interval_field") },
-    { STRING_WITH_LEN("enum('YEAR','QUARTER','MONTH','DAY',"
-    "'HOUR','MINUTE','WEEK','SECOND','MICROSECOND','YEAR_MONTH','DAY_HOUR',"
-    "'DAY_MINUTE','DAY_SECOND','HOUR_MINUTE','HOUR_SECOND','MINUTE_SECOND',"
-    "'DAY_MICROSECOND','HOUR_MICROSECOND','MINUTE_MICROSECOND',"
-    "'SECOND_MICROSECOND')") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("created") },
-    { STRING_WITH_LEN("timestamp") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("modified") },
-    { STRING_WITH_LEN("timestamp") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("last_executed") },
-    { STRING_WITH_LEN("datetime") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("starts") },
-    { STRING_WITH_LEN("datetime") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("ends") },
-    { STRING_WITH_LEN("datetime") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("status") },
-    { STRING_WITH_LEN("enum('ENABLED','DISABLED','SLAVESIDE_DISABLED')") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("on_completion") },
-    { STRING_WITH_LEN("enum('DROP','PRESERVE')") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("sql_mode") },
-    { STRING_WITH_LEN("set('REAL_AS_FLOAT','PIPES_AS_CONCAT','ANSI_QUOTES',"
-    "'IGNORE_SPACE','IGNORE_BAD_TABLE_OPTIONS','ONLY_FULL_GROUP_BY',"
-    "'NO_UNSIGNED_SUBTRACTION',"
-    "'NO_DIR_IN_CREATE','POSTGRESQL','ORACLE','MSSQL','DB2','MAXDB',"
-    "'NO_KEY_OPTIONS','NO_TABLE_OPTIONS','NO_FIELD_OPTIONS','MYSQL323','MYSQL40',"
-    "'ANSI','NO_AUTO_VALUE_ON_ZERO','NO_BACKSLASH_ESCAPES','STRICT_TRANS_TABLES',"
-    "'STRICT_ALL_TABLES','NO_ZERO_IN_DATE','NO_ZERO_DATE','INVALID_DATES',"
-    "'ERROR_FOR_DIVISION_BY_ZERO','TRADITIONAL','NO_AUTO_CREATE_USER',"
-    "'HIGH_NOT_PRECEDENCE','NO_ENGINE_SUBSTITUTION','PAD_CHAR_TO_FULL_LENGTH',"
-    "'EMPTY_STRING_IS_NULL','SIMULTANEOUS_ASSIGNMENT')") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("comment") },
-    { STRING_WITH_LEN("char(64)") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("originator") },
-    { STRING_WITH_LEN("int(10)") },
-    {NULL, 0}
-  },
-  {
-    { STRING_WITH_LEN("time_zone") },
-    { STRING_WITH_LEN("char(64)") },
-    { STRING_WITH_LEN("latin1") }
-  },
-  {
-    { STRING_WITH_LEN("character_set_client") },
-    { STRING_WITH_LEN("char(32)") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("collation_connection") },
-    { STRING_WITH_LEN("char(") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("db_collation") },
-    { STRING_WITH_LEN("char(") },
-    { STRING_WITH_LEN("utf8mb3") }
-  },
-  {
-    { STRING_WITH_LEN("body_utf8") },
-    { STRING_WITH_LEN("longblob") },
-    { NULL, 0 }
-  }
-};
+static const TABLE_FIELD_TYPE event_table_fields[ET_FIELD_COUNT] = {
+    {{STRING_WITH_LEN("db")}, {STRING_WITH_LEN("char(64)")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("name")}, {STRING_WITH_LEN("char(64)")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("body")}, {STRING_WITH_LEN("longblob")}, {NULL, 0}},
+    {{STRING_WITH_LEN("definer")}, {STRING_WITH_LEN("varchar(")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("execute_at")}, {STRING_WITH_LEN("datetime")}, {NULL, 0}},
+    {{STRING_WITH_LEN("interval_value")}, {STRING_WITH_LEN("int(11)")}, {NULL, 0}},
+    {{STRING_WITH_LEN("interval_field")},
+     {STRING_WITH_LEN("enum('YEAR','QUARTER','MONTH','DAY',"
+                      "'HOUR','MINUTE','WEEK','SECOND','MICROSECOND','YEAR_MONTH','DAY_HOUR',"
+                      "'DAY_MINUTE','DAY_SECOND','HOUR_MINUTE','HOUR_SECOND','MINUTE_SECOND',"
+                      "'DAY_MICROSECOND','HOUR_MICROSECOND','MINUTE_MICROSECOND',"
+                      "'SECOND_MICROSECOND')")},
+     {NULL, 0}},
+    {{STRING_WITH_LEN("created")}, {STRING_WITH_LEN("timestamp")}, {NULL, 0}},
+    {{STRING_WITH_LEN("modified")}, {STRING_WITH_LEN("timestamp")}, {NULL, 0}},
+    {{STRING_WITH_LEN("last_executed")}, {STRING_WITH_LEN("datetime")}, {NULL, 0}},
+    {{STRING_WITH_LEN("starts")}, {STRING_WITH_LEN("datetime")}, {NULL, 0}},
+    {{STRING_WITH_LEN("ends")}, {STRING_WITH_LEN("datetime")}, {NULL, 0}},
+    {{STRING_WITH_LEN("status")}, {STRING_WITH_LEN("enum('ENABLED','DISABLED','SLAVESIDE_DISABLED')")}, {NULL, 0}},
+    {{STRING_WITH_LEN("on_completion")}, {STRING_WITH_LEN("enum('DROP','PRESERVE')")}, {NULL, 0}},
+    {{STRING_WITH_LEN("sql_mode")},
+     {STRING_WITH_LEN("set('REAL_AS_FLOAT','PIPES_AS_CONCAT','ANSI_QUOTES',"
+                      "'IGNORE_SPACE','IGNORE_BAD_TABLE_OPTIONS','ONLY_FULL_GROUP_BY',"
+                      "'NO_UNSIGNED_SUBTRACTION',"
+                      "'NO_DIR_IN_CREATE','POSTGRESQL','ORACLE','MSSQL','DB2','MAXDB',"
+                      "'NO_KEY_OPTIONS','NO_TABLE_OPTIONS','NO_FIELD_OPTIONS','MYSQL323','MYSQL40',"
+                      "'ANSI','NO_AUTO_VALUE_ON_ZERO','NO_BACKSLASH_ESCAPES','STRICT_TRANS_TABLES',"
+                      "'STRICT_ALL_TABLES','NO_ZERO_IN_DATE','NO_ZERO_DATE','INVALID_DATES',"
+                      "'ERROR_FOR_DIVISION_BY_ZERO','TRADITIONAL','NO_AUTO_CREATE_USER',"
+                      "'HIGH_NOT_PRECEDENCE','NO_ENGINE_SUBSTITUTION','PAD_CHAR_TO_FULL_LENGTH',"
+                      "'EMPTY_STRING_IS_NULL','SIMULTANEOUS_ASSIGNMENT')")},
+     {NULL, 0}},
+    {{STRING_WITH_LEN("comment")}, {STRING_WITH_LEN("char(64)")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("originator")}, {STRING_WITH_LEN("int(10)")}, {NULL, 0}},
+    {{STRING_WITH_LEN("time_zone")}, {STRING_WITH_LEN("char(64)")}, {STRING_WITH_LEN("latin1")}},
+    {{STRING_WITH_LEN("character_set_client")}, {STRING_WITH_LEN("char(32)")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("collation_connection")}, {STRING_WITH_LEN("char(")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("db_collation")}, {STRING_WITH_LEN("char(")}, {STRING_WITH_LEN("utf8mb3")}},
+    {{STRING_WITH_LEN("body_utf8")}, {STRING_WITH_LEN("longblob")}, {NULL, 0}}};
 
-static LEX_CSTRING MYSQL_EVENT_NAME= { STRING_WITH_LEN("event") };
+static LEX_CSTRING MYSQL_EVENT_NAME = {STRING_WITH_LEN("event")};
 
-static const TABLE_FIELD_DEF
-event_table_def= {ET_FIELD_COUNT, event_table_fields, 0, (uint*) 0};
+static const TABLE_FIELD_DEF event_table_def = {ET_FIELD_COUNT, event_table_fields, 0, (uint *)0};
 
 /** In case of an error, a message is printed to the error log. */
 static Table_check_intact_log_error table_intact;
-
 
 /**
   Puts some data common to CREATE and ALTER EVENT into a row.
@@ -189,18 +100,13 @@ static Table_check_intact_log_error table_intact;
   @retval  TRUE error
 */
 
-static bool
-mysql_event_fill_row(THD *thd,
-                     TABLE *table,
-                     Event_parse_data *et,
-                     sp_head *sp,
-                     sql_mode_t sql_mode,
-                     my_bool is_update)
+static bool mysql_event_fill_row(THD *thd, TABLE *table, Event_parse_data *et, sp_head *sp, sql_mode_t sql_mode,
+                                 my_bool is_update)
 {
-  CHARSET_INFO *scs= system_charset_info;
+  CHARSET_INFO *scs = system_charset_info;
   enum enum_events_table_field f_num;
-  Field **fields= table->field;
-  int rs= FALSE;
+  Field **fields = table->field;
+  int rs = FALSE;
 
   DBUG_ENTER("mysql_event_fill_row");
 
@@ -215,24 +121,22 @@ mysql_event_fill_row(THD *thd,
       Safety: this can only happen if someone started the server
       and then altered mysql.event.
     */
-    my_error(ER_COL_COUNT_DOESNT_MATCH_CORRUPTED_V2, MYF(0),
-             table->s->db.str, table->alias.c_ptr(),
-             (int) ET_FIELD_COUNT, table->s->fields);
+    my_error(ER_COL_COUNT_DOESNT_MATCH_CORRUPTED_V2, MYF(0), table->s->db.str, table->alias.c_ptr(),
+             (int)ET_FIELD_COUNT, table->s->fields);
     DBUG_RETURN(TRUE);
   }
 
-  if (fields[f_num= ET_FIELD_DEFINER]->
-                              store(et->definer.str, et->definer.length, scs))
+  if (fields[f_num = ET_FIELD_DEFINER]->store(et->definer.str, et->definer.length, scs))
     goto err_truncate;
 
-  if (fields[f_num= ET_FIELD_DB]->store(et->dbname.str, et->dbname.length, scs))
+  if (fields[f_num = ET_FIELD_DB]->store(et->dbname.str, et->dbname.length, scs))
     goto err_truncate;
 
-  if (fields[f_num= ET_FIELD_NAME]->store(et->name.str, et->name.length, scs))
+  if (fields[f_num = ET_FIELD_NAME]->store(et->name.str, et->name.length, scs))
     goto err_truncate;
 
   /* ON_COMPLETION field is NOT NULL thus not calling set_notnull()*/
-  rs|= fields[ET_FIELD_ON_COMPLETION]->store((longlong)et->on_completion, TRUE);
+  rs |= fields[ET_FIELD_ON_COMPLETION]->store((longlong)et->on_completion, TRUE);
 
   /*
     Set STATUS value unconditionally in case of CREATE EVENT.
@@ -240,11 +144,11 @@ mysql_event_fill_row(THD *thd,
     Since STATUS field is NOT NULL call to set_notnull() is not needed.
   */
   if (!is_update || et->status_changed)
-    rs|= fields[ET_FIELD_STATUS]->store((longlong)et->status, TRUE);
-  rs|= fields[ET_FIELD_ORIGINATOR]->store((longlong)et->originator, TRUE);
+    rs |= fields[ET_FIELD_STATUS]->store((longlong)et->status, TRUE);
+  rs |= fields[ET_FIELD_ORIGINATOR]->store((longlong)et->originator, TRUE);
 
   if (!is_update)
-    rs|= fields[ET_FIELD_CREATED]->set_time();
+    rs |= fields[ET_FIELD_CREATED]->set_time();
 
   /*
     Change the SQL_MODE only if body was present in an ALTER EVENT and of course
@@ -254,11 +158,9 @@ mysql_event_fill_row(THD *thd,
   {
     DBUG_ASSERT(sp->m_body.str);
 
-    rs|= fields[ET_FIELD_SQL_MODE]->store((longlong)sql_mode, TRUE);
+    rs |= fields[ET_FIELD_SQL_MODE]->store((longlong)sql_mode, TRUE);
 
-    if (fields[f_num= ET_FIELD_BODY]->store(sp->m_body.str,
-                                            sp->m_body.length,
-                                            scs))
+    if (fields[f_num = ET_FIELD_BODY]->store(sp->m_body.str, sp->m_body.length, scs))
     {
       goto err_truncate;
     }
@@ -266,23 +168,20 @@ mysql_event_fill_row(THD *thd,
 
   if (et->expression)
   {
-    const String *tz_name= thd->variables.time_zone->get_name();
+    const String *tz_name = thd->variables.time_zone->get_name();
     if (!is_update || !et->starts_null)
     {
       fields[ET_FIELD_TIME_ZONE]->set_notnull();
-      rs|= fields[ET_FIELD_TIME_ZONE]->store(tz_name->ptr(), tz_name->length(),
-                                             tz_name->charset());
+      rs |= fields[ET_FIELD_TIME_ZONE]->store(tz_name->ptr(), tz_name->length(), tz_name->charset());
     }
 
     fields[ET_FIELD_INTERVAL_EXPR]->set_notnull();
-    rs|= fields[ET_FIELD_INTERVAL_EXPR]->store((longlong)et->expression, TRUE);
+    rs |= fields[ET_FIELD_INTERVAL_EXPR]->store((longlong)et->expression, TRUE);
 
     fields[ET_FIELD_TRANSIENT_INTERVAL]->set_notnull();
 
-    rs|= fields[ET_FIELD_TRANSIENT_INTERVAL]->
-                            store(interval_type_to_name[et->interval].str,
-                                  interval_type_to_name[et->interval].length,
-                                  scs);
+    rs |= fields[ET_FIELD_TRANSIENT_INTERVAL]->store(interval_type_to_name[et->interval].str,
+                                                     interval_type_to_name[et->interval].length, scs);
 
     fields[ET_FIELD_EXECUTE_AT]->set_null();
 
@@ -306,10 +205,9 @@ mysql_event_fill_row(THD *thd,
   }
   else if (et->execute_at)
   {
-    const String *tz_name= thd->variables.time_zone->get_name();
+    const String *tz_name = thd->variables.time_zone->get_name();
     fields[ET_FIELD_TIME_ZONE]->set_notnull();
-    rs|= fields[ET_FIELD_TIME_ZONE]->store(tz_name->ptr(), tz_name->length(),
-                                           tz_name->charset());
+    rs |= fields[ET_FIELD_TIME_ZONE]->store(tz_name->ptr(), tz_name->length(), tz_name->charset());
 
     fields[ET_FIELD_INTERVAL_EXPR]->set_null();
     fields[ET_FIELD_TRANSIENT_INTERVAL]->set_null();
@@ -331,38 +229,33 @@ mysql_event_fill_row(THD *thd,
     */
   }
 
-  rs|= fields[ET_FIELD_MODIFIED]->set_time();
+  rs |= fields[ET_FIELD_MODIFIED]->set_time();
 
   if (et->comment.str)
   {
-    if (fields[f_num= ET_FIELD_COMMENT]->
-                          store(et->comment.str, et->comment.length, scs))
+    if (fields[f_num = ET_FIELD_COMMENT]->store(et->comment.str, et->comment.length, scs))
       goto err_truncate;
   }
 
   fields[ET_FIELD_CHARACTER_SET_CLIENT]->set_notnull();
-  rs|= fields[ET_FIELD_CHARACTER_SET_CLIENT]->
-    store(&thd->variables.character_set_client->cs_name,
-          system_charset_info);
+  rs |=
+      fields[ET_FIELD_CHARACTER_SET_CLIENT]->store(&thd->variables.character_set_client->cs_name, system_charset_info);
 
   fields[ET_FIELD_COLLATION_CONNECTION]->set_notnull();
-  rs|= fields[ET_FIELD_COLLATION_CONNECTION]->
-    store(&thd->variables.collation_connection->coll_name,
-          system_charset_info);
+  rs |= fields[ET_FIELD_COLLATION_CONNECTION]->store(&thd->variables.collation_connection->coll_name,
+                                                     system_charset_info);
 
   {
-    CHARSET_INFO *db_cl= get_default_db_collation(thd, et->dbname.str);
+    CHARSET_INFO *db_cl = get_default_db_collation(thd, et->dbname.str);
 
     fields[ET_FIELD_DB_COLLATION]->set_notnull();
-    rs|= fields[ET_FIELD_DB_COLLATION]->store(&db_cl->coll_name,
-                                              system_charset_info);
+    rs |= fields[ET_FIELD_DB_COLLATION]->store(&db_cl->coll_name, system_charset_info);
   }
 
   if (et->body_changed)
   {
     fields[ET_FIELD_BODY_UTF8]->set_notnull();
-    rs|= fields[ET_FIELD_BODY_UTF8]->store(&sp->m_body_utf8,
-                                           system_charset_info);
+    rs |= fields[ET_FIELD_BODY_UTF8]->store(&sp->m_body_utf8, system_charset_info);
   }
 
   if (rs)
@@ -377,7 +270,6 @@ err_truncate:
   my_error(ER_EVENT_DATA_TOO_LONG, MYF(0), fields[f_num]->field_name.str);
   DBUG_RETURN(TRUE);
 }
-
 
 /*
   Performs an index scan of event_table (mysql.event) and fills schema_table.
@@ -394,12 +286,9 @@ err_truncate:
     1  Error
 */
 
-bool
-Event_db_repository::index_read_for_db_for_i_s(THD *thd, TABLE *schema_table,
-                                               TABLE *event_table,
-                                               const char *db)
+bool Event_db_repository::index_read_for_db_for_i_s(THD *thd, TABLE *schema_table, TABLE *event_table, const char *db)
 {
-  CHARSET_INFO *scs= system_charset_info;
+  CHARSET_INFO *scs = system_charset_info;
   KEY *key_info;
   uint key_len;
   uchar *key_buf;
@@ -407,54 +296,50 @@ Event_db_repository::index_read_for_db_for_i_s(THD *thd, TABLE *schema_table,
 
   DBUG_PRINT("info", ("Using prefix scanning on PK"));
 
-  int ret= event_table->file->ha_index_init(0, 1);
+  int ret = event_table->file->ha_index_init(0, 1);
   if (ret)
   {
     event_table->file->print_error(ret, MYF(0));
     DBUG_RETURN(true);
   }
 
-  key_info= event_table->key_info;
+  key_info = event_table->key_info;
 
-  if (key_info->user_defined_key_parts == 0 ||
-      key_info->key_part[0].field != event_table->field[ET_FIELD_DB])
+  if (key_info->user_defined_key_parts == 0 || key_info->key_part[0].field != event_table->field[ET_FIELD_DB])
   {
     /* Corrupted table: no index or index on a wrong column */
     my_error(ER_CANNOT_LOAD_FROM_TABLE_V2, MYF(0), "mysql", "event");
-    ret= 1;
+    ret = 1;
     goto end;
   }
 
   event_table->field[ET_FIELD_DB]->store(db, strlen(db), scs);
-  key_len= key_info->key_part[0].store_length;
+  key_len = key_info->key_part[0].store_length;
 
-  if (!(key_buf= (uchar *)alloc_root(thd->mem_root, key_len)))
+  if (!(key_buf = (uchar *)alloc_root(thd->mem_root, key_len)))
   {
     /* Don't send error, it would be done by sql_alloc_error_handler() */
-    ret= 1;
+    ret = 1;
     goto end;
   }
 
   key_copy(key_buf, event_table->record[0], key_info, key_len);
-  if (!(ret= event_table->file->ha_index_read_map(event_table->record[0],
-                                                  key_buf,
-                                                  (key_part_map)1,
-                                                  HA_READ_KEY_EXACT)))
+  if (!(ret =
+            event_table->file->ha_index_read_map(event_table->record[0], key_buf, (key_part_map)1, HA_READ_KEY_EXACT)))
   {
-    DBUG_PRINT("info",("Found rows. Let's retrieve them. ret=%d", ret));
+    DBUG_PRINT("info", ("Found rows. Let's retrieve them. ret=%d", ret));
     do
     {
-      ret= copy_event_to_schema_table(thd, schema_table, event_table);
+      ret = copy_event_to_schema_table(thd, schema_table, event_table);
       if (ret == 0)
-        ret= event_table->file->ha_index_next_same(event_table->record[0],
-                                                   key_buf, key_len);
+        ret = event_table->file->ha_index_next_same(event_table->record[0], key_buf, key_len);
     } while (ret == 0);
   }
   DBUG_PRINT("info", ("Scan finished. ret=%d", ret));
 
   /*  ret is guaranteed to be != 0 */
   if (ret == HA_ERR_END_OF_FILE || ret == HA_ERR_KEY_NOT_FOUND)
-    ret= 0;
+    ret = 0;
   else
     event_table->file->print_error(ret, MYF(0));
 
@@ -463,7 +348,6 @@ end:
 
   DBUG_RETURN(MY_TEST(ret));
 }
-
 
 /*
   Performs a table scan of event_table (mysql.event) and fills schema_table.
@@ -479,16 +363,13 @@ end:
     TRUE   Error
 */
 
-bool
-Event_db_repository::table_scan_all_for_i_s(THD *thd, TABLE *schema_table,
-                                            TABLE *event_table)
+bool Event_db_repository::table_scan_all_for_i_s(THD *thd, TABLE *schema_table, TABLE *event_table)
 {
   int ret;
   READ_RECORD read_record_info;
   DBUG_ENTER("Event_db_repository::table_scan_all_for_i_s");
 
-  if (init_read_record(&read_record_info, thd, event_table, NULL, NULL, 1, 0,
-                       FALSE))
+  if (init_read_record(&read_record_info, thd, event_table, NULL, NULL, 1, 0, FALSE))
     DBUG_RETURN(TRUE);
 
   /*
@@ -498,18 +379,17 @@ Event_db_repository::table_scan_all_for_i_s(THD *thd, TABLE *schema_table,
   */
   do
   {
-    ret= read_record_info.read_record();
+    ret = read_record_info.read_record();
     if (ret == 0)
-      ret= copy_event_to_schema_table(thd, schema_table, event_table);
+      ret = copy_event_to_schema_table(thd, schema_table, event_table);
   } while (ret == 0);
 
   DBUG_PRINT("info", ("Scan finished. ret=%d", ret));
   end_read_record(&read_record_info);
 
   /*  ret is guaranteed to be != 0 */
-  DBUG_RETURN(ret == -1? FALSE:TRUE);
+  DBUG_RETURN(ret == -1 ? FALSE : TRUE);
 }
-
 
 /**
   Fills I_S.EVENTS with data loaded from mysql.event. Also used by
@@ -525,15 +405,13 @@ Event_db_repository::table_scan_all_for_i_s(THD *thd, TABLE *schema_table,
   @retval TRUE   error
 */
 
-bool
-Event_db_repository::fill_schema_events(THD *thd, TABLE_LIST *i_s_table,
-                                        const char *db)
+bool Event_db_repository::fill_schema_events(THD *thd, TABLE_LIST *i_s_table, const char *db)
 {
-  TABLE *schema_table= i_s_table->table;
+  TABLE *schema_table = i_s_table->table;
   TABLE_LIST event_table;
-  int ret= 0;
+  int ret = 0;
   DBUG_ENTER("Event_db_repository::fill_schema_events");
-  DBUG_PRINT("info",("db=%s", db? db:"(null)"));
+  DBUG_PRINT("info", ("db=%s", db ? db : "(null)"));
 
   start_new_trans new_trans(thd);
 
@@ -548,7 +426,7 @@ Event_db_repository::fill_schema_events(THD *thd, TABLE_LIST *i_s_table,
   if (table_intact.check(event_table.table, &event_table_def))
   {
     my_error(ER_EVENT_OPEN_TABLE_FAILED, MYF(0));
-    ret= 1;
+    ret = 1;
     goto err;
   }
 
@@ -562,9 +440,9 @@ Event_db_repository::fill_schema_events(THD *thd, TABLE_LIST *i_s_table,
                   every single row's `db` with the schema which we show.
   */
   if (db)
-    ret= index_read_for_db_for_i_s(thd, schema_table, event_table.table, db);
+    ret = index_read_for_db_for_i_s(thd, schema_table, event_table.table, db);
   else
-    ret= table_scan_all_for_i_s(thd, schema_table, event_table.table);
+    ret = table_scan_all_for_i_s(thd, schema_table, event_table.table);
 
 err:
   thd->commit_whole_transaction_and_close_tables();
@@ -573,7 +451,6 @@ err:
   DBUG_PRINT("info", ("Return code=%d", ret));
   DBUG_RETURN(ret);
 }
-
 
 /**
   Open mysql.event table for read.
@@ -597,9 +474,7 @@ err:
   @retval FALSE success
 */
 
-bool
-Event_db_repository::open_event_table(THD *thd, enum thr_lock_type lock_type,
-                                      TABLE **table)
+bool Event_db_repository::open_event_table(THD *thd, enum thr_lock_type lock_type, TABLE **table)
 {
   TABLE_LIST tables;
   DBUG_ENTER("Event_db_repository::open_event_table");
@@ -609,22 +484,21 @@ Event_db_repository::open_event_table(THD *thd, enum thr_lock_type lock_type,
   if (open_and_lock_tables(thd, &tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
     DBUG_RETURN(TRUE);
 
-  *table= tables.table;
+  *table = tables.table;
   tables.table->use_all_columns();
   /* NOTE: &tables pointer will be invalid after return */
-  tables.table->pos_in_table_list= NULL;
+  tables.table->pos_in_table_list = NULL;
 
   if (table_intact.check(*table, &event_table_def))
   {
     thd->commit_whole_transaction_and_close_tables();
-    *table= 0;                                  // Table is now closed
+    *table = 0;  // Table is now closed
     my_error(ER_EVENT_OPEN_TABLE_FAILED, MYF(0));
     DBUG_RETURN(TRUE);
   }
 
   DBUG_RETURN(FALSE);
 }
-
 
 /**
   Creates an event record in mysql.event table.
@@ -647,20 +521,18 @@ Event_db_repository::open_event_table(THD *thd, enum thr_lock_type lock_type,
   @retval TRUE   error
 */
 
-bool
-Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data,
-                                  bool *event_already_exists)
+bool Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data, bool *event_already_exists)
 {
-  int ret= 1;
-  TABLE *table= NULL;
-  sp_head *sp= thd->lex->sphead;
-  sql_mode_t saved_mode= thd->variables.sql_mode;
+  int ret = 1;
+  TABLE *table = NULL;
+  sp_head *sp = thd->lex->sphead;
+  sql_mode_t saved_mode = thd->variables.sql_mode;
   /*
     Take a savepoint to release only the lock on mysql.event
     table at the end but keep the global read lock and
     possible other locks taken by the caller.
   */
-  MDL_savepoint mdl_savepoint= thd->mdl_context.mdl_savepoint();
+  MDL_savepoint mdl_savepoint = thd->mdl_context.mdl_savepoint();
 
   DBUG_ENTER("Event_db_repository::create_event");
 
@@ -668,21 +540,20 @@ Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data,
   DBUG_ASSERT(sp);
 
   /* Reset sql_mode during data dictionary operations. */
-  thd->variables.sql_mode= 0;
+  thd->variables.sql_mode = 0;
 
   if (open_event_table(thd, TL_WRITE, &table))
     goto end;
 
-  DBUG_PRINT("info", ("name: %.*s", (int) parse_data->name.length,
-             parse_data->name.str));
+  DBUG_PRINT("info", ("name: %.*s", (int)parse_data->name.length, parse_data->name.str));
 
   DBUG_PRINT("info", ("check existence of an event with the same name"));
   if (!find_named_event(&parse_data->dbname, &parse_data->name, table))
   {
     if (thd->lex->create_info.or_replace())
     {
-      *event_already_exists= false; // Force the caller to update event_queue
-      if ((ret= table->file->ha_delete_row(table->record[0])))
+      *event_already_exists = false;  // Force the caller to update event_queue
+      if ((ret = table->file->ha_delete_row(table->record[0])))
       {
         table->file->print_error(ret, MYF(0));
         goto end;
@@ -690,12 +561,10 @@ Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data,
     }
     else if (thd->lex->create_info.if_not_exists())
     {
-      *event_already_exists= true;
-      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
-                          ER_EVENT_ALREADY_EXISTS,
-                          ER_THD(thd, ER_EVENT_ALREADY_EXISTS),
-                          parse_data->name.str);
-      ret= 0;
+      *event_already_exists = true;
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE, ER_EVENT_ALREADY_EXISTS,
+                          ER_THD(thd, ER_EVENT_ALREADY_EXISTS), parse_data->name.str);
+      ret = 0;
       goto end;
     }
     else
@@ -703,24 +572,23 @@ Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data,
       my_error(ER_EVENT_ALREADY_EXISTS, MYF(0), parse_data->name.str);
       goto end;
     }
-  } else
-    *event_already_exists= false;
+  }
+  else
+    *event_already_exists = false;
 
   DBUG_PRINT("info", ("non-existent, go forward"));
 
-  restore_record(table, s->default_values);     // Get default values for fields
+  restore_record(table, s->default_values);  // Get default values for fields
 
-  if (check_string_char_length(&parse_data->dbname, 0,
-                               table->field[ET_FIELD_DB]->char_length(),
-                               system_charset_info, 1))
+  if (check_string_char_length(&parse_data->dbname, 0, table->field[ET_FIELD_DB]->char_length(), system_charset_info,
+                               1))
   {
     my_error(ER_TOO_LONG_IDENT, MYF(0), parse_data->dbname.str);
     goto end;
   }
 
-  if (check_string_char_length(&parse_data->name, 0,
-                               table->field[ET_FIELD_NAME]->char_length(),
-                               system_charset_info, 1))
+  if (check_string_char_length(&parse_data->name, 0, table->field[ET_FIELD_NAME]->char_length(), system_charset_info,
+                               1))
   {
     my_error(ER_TOO_LONG_IDENT, MYF(0), parse_data->name.str);
     goto end;
@@ -739,22 +607,21 @@ Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data,
   if (mysql_event_fill_row(thd, table, parse_data, sp, saved_mode, FALSE))
     goto end;
 
-  if ((ret= table->file->ha_write_row(table->record[0])))
+  if ((ret = table->file->ha_write_row(table->record[0])))
   {
     table->file->print_error(ret, MYF(0));
     goto end;
   }
-  ret= 0;
+  ret = 0;
 
 end:
   if (table)
     thd->commit_whole_transaction_and_close_tables();
   thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
-  thd->variables.sql_mode= saved_mode;
+  thd->variables.sql_mode = saved_mode;
   DBUG_RETURN(MY_TEST(ret));
 }
-
 
 /**
   Used to execute ALTER EVENT. Pendant to Events::update_event().
@@ -774,29 +641,27 @@ end:
   @retval TRUE error (reported)
 */
 
-bool
-Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data,
-                                  LEX_CSTRING *new_dbname,
-                                  LEX_CSTRING *new_name)
+bool Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data, LEX_CSTRING *new_dbname,
+                                       LEX_CSTRING *new_name)
 {
-  CHARSET_INFO *scs= system_charset_info;
-  TABLE *table= NULL;
-  sp_head *sp= thd->lex->sphead;
-  sql_mode_t saved_mode= thd->variables.sql_mode;
+  CHARSET_INFO *scs = system_charset_info;
+  TABLE *table = NULL;
+  sp_head *sp = thd->lex->sphead;
+  sql_mode_t saved_mode = thd->variables.sql_mode;
   /*
     Take a savepoint to release only the lock on mysql.event
     table at the end but keep the global read lock and
     possible other locks taken by the caller.
   */
-  MDL_savepoint mdl_savepoint= thd->mdl_context.mdl_savepoint();
-  int ret= 1;
+  MDL_savepoint mdl_savepoint = thd->mdl_context.mdl_savepoint();
+  int ret = 1;
   DBUG_ENTER("Event_db_repository::update_event");
 
   /* None or both must be set */
   DBUG_ASSERT((new_dbname && new_name) || new_dbname == new_name);
 
   /* Reset sql_mode during data dictionary operations. */
-  thd->variables.sql_mode= 0;
+  thd->variables.sql_mode = 0;
 
   if (open_event_table(thd, TL_WRITE, &table))
     goto end;
@@ -827,7 +692,7 @@ Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data,
     goto end;
   }
 
-  store_record(table,record[1]);
+  store_record(table, record[1]);
 
   /*
     We check whether ALTER EVENT was given dates that are in the past.
@@ -837,8 +702,7 @@ Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data,
     in the ALTER EVENT-statement.
   */
 
-  if (parse_data->check_dates(thd,
-                              (int) table->field[ET_FIELD_ON_COMPLETION]->val_int()))
+  if (parse_data->check_dates(thd, (int)table->field[ET_FIELD_ON_COMPLETION]->val_int()))
     goto end;
 
   /*
@@ -854,22 +718,21 @@ Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data,
     table->field[ET_FIELD_NAME]->store(new_name->str, new_name->length, scs);
   }
 
-  if ((ret= table->file->ha_update_row(table->record[1], table->record[0])))
+  if ((ret = table->file->ha_update_row(table->record[1], table->record[0])))
   {
     table->file->print_error(ret, MYF(0));
     goto end;
   }
-  ret= 0;
+  ret = 0;
 
 end:
   if (table)
     thd->commit_whole_transaction_and_close_tables();
   thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
-  thd->variables.sql_mode= saved_mode;
+  thd->variables.sql_mode = saved_mode;
   DBUG_RETURN(MY_TEST(ret));
 }
-
 
 /**
   Delete event record from mysql.event table.
@@ -885,19 +748,16 @@ end:
   @retval TRUE error (reported)
 */
 
-bool
-Event_db_repository::drop_event(THD *thd, const LEX_CSTRING *db,
-                                const LEX_CSTRING *name,
-                                bool drop_if_exists)
+bool Event_db_repository::drop_event(THD *thd, const LEX_CSTRING *db, const LEX_CSTRING *name, bool drop_if_exists)
 {
-  TABLE *table= NULL;
+  TABLE *table = NULL;
   /*
     Take a savepoint to release only the lock on mysql.event
     table at the end but keep the global read lock and
     possible other locks taken by the caller.
   */
-  MDL_savepoint mdl_savepoint= thd->mdl_context.mdl_savepoint();
-  int ret= 1;
+  MDL_savepoint mdl_savepoint = thd->mdl_context.mdl_savepoint();
+  int ret = 1;
 
   DBUG_ENTER("Event_db_repository::drop_event");
   DBUG_PRINT("enter", ("%s@%s", db->str, name->str));
@@ -907,7 +767,7 @@ Event_db_repository::drop_event(THD *thd, const LEX_CSTRING *db,
 
   if (!find_named_event(db, name, table))
   {
-    if ((ret= table->file->ha_delete_row(table->record[0])))
+    if ((ret = table->file->ha_delete_row(table->record[0])))
       table->file->print_error(ret, MYF(0));
     goto end;
   }
@@ -919,10 +779,9 @@ Event_db_repository::drop_event(THD *thd, const LEX_CSTRING *db,
     goto end;
   }
 
-  push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
-                      ER_SP_DOES_NOT_EXIST, ER_THD(thd, ER_SP_DOES_NOT_EXIST),
+  push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE, ER_SP_DOES_NOT_EXIST, ER_THD(thd, ER_SP_DOES_NOT_EXIST),
                       "Event", name->str);
-  ret= 0;
+  ret = 0;
 
 end:
   if (table)
@@ -931,7 +790,6 @@ end:
 
   DBUG_RETURN(MY_TEST(ret));
 }
-
 
 /**
   Positions the internal pointer of `table` to the place where (db, name)
@@ -948,14 +806,11 @@ end:
   @retval  TRUE   no record found or an error occurred.
 */
 
-bool
-Event_db_repository::find_named_event(const LEX_CSTRING *db,
-                                      const LEX_CSTRING *name,
-                                      TABLE *table)
+bool Event_db_repository::find_named_event(const LEX_CSTRING *db, const LEX_CSTRING *name, TABLE *table)
 {
   uchar key[MAX_KEY_LENGTH];
   DBUG_ENTER("Event_db_repository::find_named_event");
-  DBUG_PRINT("enter", ("name: %.*s", (int) name->length, name->str));
+  DBUG_PRINT("enter", ("name: %.*s", (int)name->length, name->str));
 
   /*
     Create key to find row. We have to use field->store() to be able to
@@ -965,11 +820,9 @@ Event_db_repository::find_named_event(const LEX_CSTRING *db,
     same fields.
   */
   if (db->length > table->field[ET_FIELD_DB]->field_length ||
-      name->length > table->field[ET_FIELD_NAME]->field_length ||
-      table->s->keys == 0 ||
-      table->key_info[0].user_defined_key_parts != 2 ||
-      table->key_info[0].key_part[0].fieldnr != ET_FIELD_DB+1 ||
-      table->key_info[0].key_part[1].fieldnr != ET_FIELD_NAME+1)
+      name->length > table->field[ET_FIELD_NAME]->field_length || table->s->keys == 0 ||
+      table->key_info[0].user_defined_key_parts != 2 || table->key_info[0].key_part[0].fieldnr != ET_FIELD_DB + 1 ||
+      table->key_info[0].key_part[1].fieldnr != ET_FIELD_NAME + 1)
     DBUG_RETURN(TRUE);
 
   table->field[ET_FIELD_DB]->store(db->str, db->length, &my_charset_bin);
@@ -977,9 +830,7 @@ Event_db_repository::find_named_event(const LEX_CSTRING *db,
 
   key_copy(key, table->record[0], table->key_info, table->key_info->key_length);
 
-  if (table->file->ha_index_read_idx_map(table->record[0], 0, key,
-                                         HA_WHOLE_KEY,
-                                         HA_READ_KEY_EXACT))
+  if (table->file->ha_index_read_idx_map(table->record[0], 0, key, HA_WHOLE_KEY, HA_READ_KEY_EXACT))
   {
     DBUG_PRINT("info", ("Row not found"));
     DBUG_RETURN(TRUE);
@@ -988,7 +839,6 @@ Event_db_repository::find_named_event(const LEX_CSTRING *db,
   DBUG_PRINT("info", ("Row found!"));
   DBUG_RETURN(FALSE);
 }
-
 
 /*
   Drops all events in the selected database, from mysql.event.
@@ -999,13 +849,12 @@ Event_db_repository::find_named_event(const LEX_CSTRING *db,
       schema  The database to clean from events
 */
 
-void
-Event_db_repository::drop_schema_events(THD *thd, const LEX_CSTRING *schema)
+void Event_db_repository::drop_schema_events(THD *thd, const LEX_CSTRING *schema)
 {
-  int ret= 0;
-  TABLE *table= NULL;
+  int ret = 0;
+  TABLE *table = NULL;
   READ_RECORD read_record_info;
-  enum enum_events_table_field field= ET_FIELD_DB;
+  enum enum_events_table_field field = ET_FIELD_DB;
   DBUG_ENTER("Event_db_repository::drop_schema_events");
   DBUG_PRINT("enter", ("field: %d  schema: %s", field, schema->str));
 
@@ -1023,20 +872,18 @@ Event_db_repository::drop_schema_events(THD *thd, const LEX_CSTRING *schema)
 
   while (!ret && !(read_record_info.read_record()))
   {
-    char *et_field= get_field(thd->mem_root, table->field[field]);
+    char *et_field = get_field(thd->mem_root, table->field[field]);
 
     /* et_field may be NULL if the table is corrupted or out of memory */
     if (et_field)
     {
-      LEX_CSTRING et_field_lex= { et_field, strlen(et_field) };
-      DBUG_PRINT("info", ("Current event %s name=%s", et_field,
-                          get_field(thd->mem_root,
-                                    table->field[ET_FIELD_NAME])));
+      LEX_CSTRING et_field_lex = {et_field, strlen(et_field)};
+      DBUG_PRINT("info", ("Current event %s name=%s", et_field, get_field(thd->mem_root, table->field[ET_FIELD_NAME])));
 
       if (!sortcmp_lex_string(&et_field_lex, schema, system_charset_info))
       {
         DBUG_PRINT("info", ("Dropping"));
-        if ((ret= table->file->ha_delete_row(table->record[0])))
+        if ((ret = table->file->ha_delete_row(table->record[0])))
           table->file->print_error(ret, MYF(0));
       }
     }
@@ -1049,7 +896,6 @@ end:
   DBUG_VOID_RETURN;
 }
 
-
 /**
   Looks for a named event in mysql.event and then loads it from
   the table.
@@ -1060,16 +906,13 @@ end:
   @retval TRUE   error
 */
 
-bool
-Event_db_repository::load_named_event(THD *thd, const LEX_CSTRING *dbname,
-                                      const LEX_CSTRING *name,
-                                      Event_basic *etn)
+bool Event_db_repository::load_named_event(THD *thd, const LEX_CSTRING *dbname, const LEX_CSTRING *name,
+                                           Event_basic *etn)
 {
   bool ret;
   TABLE_LIST event_table;
   DBUG_ENTER("Event_db_repository::load_named_event");
-  DBUG_PRINT("enter",("thd: %p  name: %*s", thd,
-                      (int) name->length, name->str));
+  DBUG_PRINT("enter", ("thd: %p  name: %*s", thd, (int)name->length, name->str));
 
   start_new_trans new_trans(thd);
   /* Reset sql_mode during data dictionary operations. */
@@ -1083,7 +926,7 @@ Event_db_repository::load_named_event(THD *thd, const LEX_CSTRING *dbname,
     does not release transactional metadata locks when the
     event table is closed.
   */
-  if (!(ret= open_system_tables_for_read(thd, &event_table)))
+  if (!(ret = open_system_tables_for_read(thd, &event_table)))
   {
     if (table_intact.check(event_table.table, &event_table_def))
     {
@@ -1093,9 +936,9 @@ Event_db_repository::load_named_event(THD *thd, const LEX_CSTRING *dbname,
       DBUG_RETURN(TRUE);
     }
 
-    if ((ret= find_named_event(dbname, name, event_table.table)))
+    if ((ret = find_named_event(dbname, name, event_table.table)))
       my_error(ER_EVENT_DOES_NOT_EXIST, MYF(0), name->str);
-    else if ((ret= etn->load_from_row(thd, event_table.table)))
+    else if ((ret = etn->load_from_row(thd, event_table.table)))
       my_error(ER_CANNOT_LOAD_FROM_TABLE_V2, MYF(0), "mysql", "event");
     thd->commit_whole_transaction_and_close_tables();
   }
@@ -1104,7 +947,6 @@ Event_db_repository::load_named_event(THD *thd, const LEX_CSTRING *dbname,
   DBUG_RETURN(ret);
 }
 
-
 /**
   Update the event record in mysql.event table with a changed status
   and/or last execution time.
@@ -1112,17 +954,13 @@ Event_db_repository::load_named_event(THD *thd, const LEX_CSTRING *dbname,
   @pre The thread handle does not have open tables.
 */
 
-bool
-Event_db_repository::
-update_timing_fields_for_event(THD *thd,
-                               const LEX_CSTRING *event_db_name,
-                               const LEX_CSTRING *event_name,
-                               my_time_t last_executed,
-                               ulonglong status)
+bool Event_db_repository::update_timing_fields_for_event(THD *thd, const LEX_CSTRING *event_db_name,
+                                                         const LEX_CSTRING *event_name, my_time_t last_executed,
+                                                         ulonglong status)
 {
-  TABLE *table= NULL;
+  TABLE *table = NULL;
   Field **fields;
-  int ret= 1;
+  int ret = 1;
   MYSQL_TIME time;
   DBUG_ENTER("Event_db_repository::update_timing_fields_for_event");
 
@@ -1133,16 +971,16 @@ update_timing_fields_for_event(THD *thd,
     table at the end but keep the global read lock and
     possible other locks taken by the caller.
   */
-  MDL_savepoint mdl_savepoint= thd->mdl_context.mdl_savepoint();
+  MDL_savepoint mdl_savepoint = thd->mdl_context.mdl_savepoint();
   if (open_event_table(thd, TL_WRITE, &table))
     DBUG_RETURN(1);
 
-  fields= table->field;
+  fields = table->field;
   /*
     Turn off row binlogging of event timing updates. These are not used
     for RBR of events replicated to the slave.
   */
-  table->file->row_logging= 0;
+  table->file->row_logging = 0;
 
   if (find_named_event(event_db_name, event_name, table))
     goto end;
@@ -1156,21 +994,20 @@ update_timing_fields_for_event(THD *thd,
   fields[ET_FIELD_STATUS]->set_notnull();
   fields[ET_FIELD_STATUS]->store(status, TRUE);
 
-  if ((ret= table->file->ha_update_row(table->record[1], table->record[0])))
+  if ((ret = table->file->ha_update_row(table->record[1], table->record[0])))
   {
     table->file->print_error(ret, MYF(0));
     goto end;
   }
 
-  ret= 0;
+  ret = 0;
 end:
   if (thd->commit_whole_transaction_and_close_tables())
-    ret= 1;
+    ret = 1;
   thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
   DBUG_RETURN(MY_TEST(ret));
 }
-
 
 /**
   Open mysql.db, mysql.user and mysql.event and check whether:
@@ -1186,11 +1023,10 @@ end:
   @retval TRUE   Error, an error message is output to the error log.
 */
 
-bool
-Event_db_repository::check_system_tables(THD *thd)
+bool Event_db_repository::check_system_tables(THD *thd)
 {
   TABLE_LIST tables;
-  int ret= FALSE;
+  int ret = FALSE;
   DBUG_ENTER("Event_db_repository::check_system_tables");
   DBUG_PRINT("enter", ("thd: %p", thd));
 
@@ -1199,13 +1035,13 @@ Event_db_repository::check_system_tables(THD *thd)
 
   if (open_and_lock_tables(thd, &tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
   {
-    ret= 1;
+    ret = 1;
     sql_print_error("Cannot open mysql.event");
   }
   else
   {
     if (table_intact.check(tables.table, &event_table_def))
-      ret= 1;
+      ret = 1;
     close_mysql_tables(thd);
   }
 

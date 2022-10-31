@@ -13,7 +13,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /* Write some debug info */
 
 #include "mariadb.h"
@@ -21,7 +20,7 @@
 #include "unireg.h"
 #include "sql_test.h"
 #include "sql_base.h"
-#include "sql_show.h" // calc_sum_of_all_status
+#include "sql_show.h"  // calc_sum_of_all_status
 #include "sql_select.h"
 #include "keycaches.h"
 #include "my_json_writer.h"
@@ -41,79 +40,70 @@
 #include "events.h"
 #endif
 
-#define FT_KEYPART   (MAX_FIELDS+10)
+#define FT_KEYPART (MAX_FIELDS + 10)
 
-static const char *lock_descriptions[] =
-{
-  /* TL_UNLOCK                  */  "No lock",
-  /* TL_READ_DEFAULT            */  NULL,
-  /* TL_READ                    */  "Low priority read lock",
-  /* TL_READ_WITH_SHARED_LOCKS  */  "Shared read lock",
-  /* TL_READ_HIGH_PRIORITY      */  "High priority read lock",
-  /* TL_READ_NO_INSERT          */  "Read lock without concurrent inserts",
-  /* TL_READ_SKIP_LOCKED        */  "Read lock without blocking if row is locked",
-  /* TL_WRITE_ALLOW_WRITE       */  "Write lock that allows other writers",
-  /* TL_WRITE_CONCURRENT_INSERT */  "Concurrent insert lock",
-  /* TL_WRITE_DELAYED           */  "Lock used by delayed insert",
-  /* TL_WRITE_DEFAULT           */  NULL,
-  /* TL_WRITE_LOW_PRIORITY      */  "Low priority write lock",
-  /* TL_WRITE_SKIP_LOCKED       */  "Write lock but skip existing locked rows",
-  /* TL_WRITE                   */  "High priority write lock",
-  /* TL_WRITE_ONLY              */  "Highest priority write lock"
-};
-
+static const char *lock_descriptions[] = {
+    /* TL_UNLOCK                  */ "No lock",
+    /* TL_READ_DEFAULT            */ NULL,
+    /* TL_READ                    */ "Low priority read lock",
+    /* TL_READ_WITH_SHARED_LOCKS  */ "Shared read lock",
+    /* TL_READ_HIGH_PRIORITY      */ "High priority read lock",
+    /* TL_READ_NO_INSERT          */ "Read lock without concurrent inserts",
+    /* TL_READ_SKIP_LOCKED        */ "Read lock without blocking if row is locked",
+    /* TL_WRITE_ALLOW_WRITE       */ "Write lock that allows other writers",
+    /* TL_WRITE_CONCURRENT_INSERT */ "Concurrent insert lock",
+    /* TL_WRITE_DELAYED           */ "Lock used by delayed insert",
+    /* TL_WRITE_DEFAULT           */ NULL,
+    /* TL_WRITE_LOW_PRIORITY      */ "Low priority write lock",
+    /* TL_WRITE_SKIP_LOCKED       */ "Write lock but skip existing locked rows",
+    /* TL_WRITE                   */ "High priority write lock",
+    /* TL_WRITE_ONLY              */ "Highest priority write lock"};
 
 #ifndef DBUG_OFF
 
-void
-print_where(COND *cond,const char *info, enum_query_type query_type)
+void print_where(COND *cond, const char *info, enum_query_type query_type)
 {
   char buff[1024];
-  String str(buff,(uint32) sizeof(buff), system_charset_info);
+  String str(buff, (uint32)sizeof(buff), system_charset_info);
   str.length(0);
   str.extra_allocation(1024);
   if (cond)
     cond->print(&str, query_type);
 
   DBUG_LOCK_FILE;
-  (void) fprintf(DBUG_FILE,"\nWHERE:(%s) %p ", info, cond);
-  (void) fputs(str.c_ptr_safe(),DBUG_FILE);
-  (void) fputc('\n',DBUG_FILE);
+  (void)fprintf(DBUG_FILE, "\nWHERE:(%s) %p ", info, cond);
+  (void)fputs(str.c_ptr_safe(), DBUG_FILE);
+  (void)fputc('\n', DBUG_FILE);
   DBUG_UNLOCK_FILE;
 }
 
 #ifdef EXTRA_DEBUG
-	/* This is for debugging purposes */
-static my_bool print_cached_tables_callback(TDC_element *element,
-                                            void *arg __attribute__((unused)))
+/* This is for debugging purposes */
+static my_bool print_cached_tables_callback(TDC_element *element, void *arg __attribute__((unused)))
 {
   TABLE *entry;
 
   mysql_mutex_lock(&element->LOCK_table_share);
   All_share_tables_list::Iterator it(element->all_tables);
-  while ((entry= it++))
+  while ((entry = it++))
   {
-    THD *in_use= entry->in_use;
-    printf("%-14.14s %-32s%8ld%6d  %s\n",
-           entry->s->db.str, entry->s->table_name.str,
-           in_use ? (long) in_use->thread_id : (long) 0,
-           entry->db_stat ? 1 : 0,
-           in_use ? lock_descriptions[(int)entry->reginfo.lock_type] :
-                    "Not in use");
+    THD *in_use = entry->in_use;
+    printf("%-14.14s %-32s%8ld%6d  %s\n", entry->s->db.str, entry->s->table_name.str,
+           in_use ? (long)in_use->thread_id : (long)0, entry->db_stat ? 1 : 0,
+           in_use ? lock_descriptions[(int)entry->reginfo.lock_type] : "Not in use");
   }
   mysql_mutex_unlock(&element->LOCK_table_share);
   return FALSE;
 }
 
-
 static void print_cached_tables(void)
 {
-  compile_time_assert(TL_WRITE_ONLY+1 == array_elements(lock_descriptions));
+  compile_time_assert(TL_WRITE_ONLY + 1 == array_elements(lock_descriptions));
 
   /* purecov: begin tested */
   puts("DB             Table                            Version  Thread  Open  Lock");
 
-  tdc_iterate(0, (my_hash_walk_action) print_cached_tables_callback, NULL, true);
+  tdc_iterate(0, (my_hash_walk_action)print_cached_tables_callback, NULL, true);
 
   fflush(stdout);
   /* purecov: end */
@@ -121,17 +111,16 @@ static void print_cached_tables(void)
 }
 #endif
 
-
-void TEST_filesort(SORT_FIELD *sortorder,uint s_length)
+void TEST_filesort(SORT_FIELD *sortorder, uint s_length)
 {
-  char buff[256],buff2[256];
-  String str(buff,sizeof(buff),system_charset_info);
-  String out(buff2,sizeof(buff2),system_charset_info);
+  char buff[256], buff2[256];
+  String str(buff, sizeof(buff), system_charset_info);
+  String out(buff2, sizeof(buff2), system_charset_info);
   DBUG_ASSERT(s_length > 0);
   DBUG_ENTER("TEST_filesort");
 
   out.length(0);
-  for (; s_length-- ; sortorder++)
+  for (; s_length--; sortorder++)
   {
     if (sortorder->reverse)
       out.append('-');
@@ -139,13 +128,13 @@ void TEST_filesort(SORT_FIELD *sortorder,uint s_length)
     {
       if (sortorder->field->table_name)
       {
-        const char *table_name= *sortorder->field->table_name;
-	out.append(table_name, strlen(table_name));
-	out.append('.');
+        const char *table_name = *sortorder->field->table_name;
+        out.append(table_name, strlen(table_name));
+        out.append('.');
       }
-      const char *name= sortorder->field->field_name.str;
+      const char *name = sortorder->field->field_name.str;
       if (!name)
-        name= "tmp_table_column";
+        name = "tmp_table_column";
       out.append(name, strlen(name));
     }
     else
@@ -156,17 +145,15 @@ void TEST_filesort(SORT_FIELD *sortorder,uint s_length)
     }
     out.append(' ');
   }
-  out.chop();                                  // Remove last space
+  out.chop();  // Remove last space
   DBUG_LOCK_FILE;
-  (void) fputs("\nInfo about FILESORT\n",DBUG_FILE);
-  fprintf(DBUG_FILE,"Sortorder: %s\n",out.c_ptr_safe());
+  (void)fputs("\nInfo about FILESORT\n", DBUG_FILE);
+  fprintf(DBUG_FILE, "Sortorder: %s\n", out.c_ptr_safe());
   DBUG_UNLOCK_FILE;
   DBUG_VOID_RETURN;
 }
 
-
-void
-TEST_join(JOIN *join)
+void TEST_join(JOIN *join)
 {
   uint ref;
   int i;
@@ -175,43 +162,38 @@ TEST_join(JOIN *join)
   DBUG_ENTER("TEST_join");
 
   DBUG_LOCK_FILE;
-  (void) fputs("\nInfo about JOIN\n",DBUG_FILE);
-  while ((jt_range= it++))
+  (void)fputs("\nInfo about JOIN\n", DBUG_FILE);
+  while ((jt_range = it++))
   {
     /*
       Assemble results of all the calls to full_name() first,
       in order not to garble the tabular output below.
     */
     String ref_key_parts[MAX_TABLES];
-    int tables_in_range= (int)(jt_range->end - jt_range->start);
-    for (i= 0; i < tables_in_range; i++)
+    int tables_in_range = (int)(jt_range->end - jt_range->start);
+    for (i = 0; i < tables_in_range; i++)
     {
-      JOIN_TAB *tab= jt_range->start + i;
-      for (ref= 0; ref < tab->ref.key_parts; ref++)
+      JOIN_TAB *tab = jt_range->start + i;
+      for (ref = 0; ref < tab->ref.key_parts; ref++)
       {
         ref_key_parts[i].append(tab->ref.items[ref]->full_name_cstring());
         ref_key_parts[i].append(STRING_WITH_LEN("  "));
       }
     }
 
-    for (i= 0; i < tables_in_range; i++)
+    for (i = 0; i < tables_in_range; i++)
     {
-      JOIN_TAB *tab= jt_range->start + i;
-      TABLE *form=tab->table;
+      JOIN_TAB *tab = jt_range->start + i;
+      TABLE *form = tab->table;
       char key_map_buff[128];
-      fprintf(DBUG_FILE,"%-16.16s  type: %-7s  q_keys: %s  refs: %d  key: %d  len: %d\n",
-	    form->alias.c_ptr(),
-              join_type_str[tab->type],
-              tab->keys.print(key_map_buff),
-              tab->ref.key_parts,
-              tab->ref.key,
+      fprintf(DBUG_FILE, "%-16.16s  type: %-7s  q_keys: %s  refs: %d  key: %d  len: %d\n", form->alias.c_ptr(),
+              join_type_str[tab->type], tab->keys.print(key_map_buff), tab->ref.key_parts, tab->ref.key,
               tab->ref.key_length);
       if (tab->select)
       {
-        char buf[MAX_KEY/8+1];
+        char buf[MAX_KEY / 8 + 1];
         if (tab->use_quick == 2)
-          fprintf(DBUG_FILE,
-                  "                  quick select checked for each record (keys: %s)\n",
+          fprintf(DBUG_FILE, "                  quick select checked for each record (keys: %s)\n",
                   tab->select->quick_keys.print(buf));
         else if (tab->select->quick)
         {
@@ -219,58 +201,54 @@ TEST_join(JOIN *join)
           tab->select->quick->dbug_dump(18, FALSE);
         }
         else
-          (void)fputs("                  select used\n",DBUG_FILE);
+          (void)fputs("                  select used\n", DBUG_FILE);
       }
       if (tab->ref.key_parts)
       {
-        fprintf(DBUG_FILE,
-              "                  refs:  %s\n", ref_key_parts[i].c_ptr_safe());
+        fprintf(DBUG_FILE, "                  refs:  %s\n", ref_key_parts[i].c_ptr_safe());
       }
     }
-    (void)fputs("\n",DBUG_FILE);
+    (void)fputs("\n", DBUG_FILE);
   }
   DBUG_UNLOCK_FILE;
   DBUG_VOID_RETURN;
 }
 
-
 static void print_keyuse(KEYUSE *keyuse)
 {
   char buff[256];
-  char buf2[64]; 
+  char buf2[64];
   const char *fieldname;
-  JOIN_TAB *join_tab= keyuse->table->reginfo.join_tab;
-  KEY *key_info= join_tab->get_keyinfo_by_key_no(keyuse->key);
-  String str(buff,(uint32) sizeof(buff), system_charset_info);
+  JOIN_TAB *join_tab = keyuse->table->reginfo.join_tab;
+  KEY *key_info = join_tab->get_keyinfo_by_key_no(keyuse->key);
+  String str(buff, (uint32)sizeof(buff), system_charset_info);
   str.length(0);
   keyuse->val->print(&str, QT_ORDINARY);
   str.append('\0');
   if (keyuse->is_for_hash_join())
-    fieldname= keyuse->table->field[keyuse->keypart]->field_name.str;
+    fieldname = keyuse->table->field[keyuse->keypart]->field_name.str;
   else if (keyuse->keypart == FT_KEYPART)
-    fieldname= "FT_KEYPART";
+    fieldname = "FT_KEYPART";
   else
-    fieldname= key_info->key_part[keyuse->keypart].field->field_name.str;
-  ll2str(keyuse->used_tables, buf2, 16, 0); 
-  fprintf(DBUG_FILE, "KEYUSE: %s.%s=%s  optimize: %u  used_tables: %s "
+    fieldname = key_info->key_part[keyuse->keypart].field->field_name.str;
+  ll2str(keyuse->used_tables, buf2, 16, 0);
+  fprintf(DBUG_FILE,
+          "KEYUSE: %s.%s=%s  optimize: %u  used_tables: %s "
           "ref_table_rows: %lu  keypart_map: %0lx\n",
-          keyuse->table->alias.c_ptr(), fieldname, str.ptr(),
-          (uint) keyuse->optimize, buf2, (ulong) keyuse->ref_table_rows, 
-          (ulong) keyuse->keypart_map);
+          keyuse->table->alias.c_ptr(), fieldname, str.ptr(), (uint)keyuse->optimize, buf2,
+          (ulong)keyuse->ref_table_rows, (ulong)keyuse->keypart_map);
 }
-
 
 /* purecov: begin inspected */
 void print_keyuse_array(DYNAMIC_ARRAY *keyuse_array)
 {
   DBUG_LOCK_FILE;
   fprintf(DBUG_FILE, "KEYUSE array (%zu elements)\n", keyuse_array->elements);
-  for(uint i=0; i < keyuse_array->elements; i++)
-    print_keyuse((KEYUSE*)dynamic_array_ptr(keyuse_array, i));
+  for (uint i = 0; i < keyuse_array->elements; i++) print_keyuse((KEYUSE *)dynamic_array_ptr(keyuse_array, i));
   DBUG_UNLOCK_FILE;
 }
 
-/* 
+/*
   Print the current state during query optimization.
 
   SYNOPSIS
@@ -295,39 +273,34 @@ void print_keyuse_array(DYNAMIC_ARRAY *keyuse_array)
     None
 */
 
-void
-print_plan(JOIN* join, uint idx, double record_count, double read_time,
-           double current_read_time, const char *info)
+void print_plan(JOIN *join, uint idx, double record_count, double read_time, double current_read_time, const char *info)
 {
   uint i;
   JOIN_TAB *join_table;
   JOIN_TAB **plan_nodes;
-  TABLE*   table;
+  TABLE *table;
 
   if (info == 0)
-    info= "";
+    info = "";
 
   DBUG_LOCK_FILE;
   if (join->best_read == DBL_MAX)
   {
-    fprintf(DBUG_FILE,
-            "%s; idx: %u  best: DBL_MAX  atime: %g  itime: %g  count: %g\n",
-            info, idx, current_read_time, read_time, record_count);
+    fprintf(DBUG_FILE, "%s; idx: %u  best: DBL_MAX  atime: %g  itime: %g  count: %g\n", info, idx, current_read_time,
+            read_time, record_count);
   }
   else
   {
-    fprintf(DBUG_FILE,
-            "%s; idx :%u  best: %g  accumulated: %g  increment: %g  count: %g\n",
-            info, idx, join->best_read, current_read_time, read_time,
-            record_count);
+    fprintf(DBUG_FILE, "%s; idx :%u  best: %g  accumulated: %g  increment: %g  count: %g\n", info, idx, join->best_read,
+            current_read_time, read_time, record_count);
   }
 
   /* Print the tables in JOIN->positions */
   fputs("     POSITIONS: ", DBUG_FILE);
-  for (i= 0; i < idx ; i++)
+  for (i = 0; i < idx; i++)
   {
-    POSITION *pos= join->positions + i;
-    table= pos->table->table;
+    POSITION *pos = join->positions + i;
+    table = pos->table->table;
     if (table)
       fputs(table->s->table_name.str, DBUG_FILE);
     fputc(' ', DBUG_FILE);
@@ -341,10 +314,10 @@ print_plan(JOIN* join, uint idx, double record_count, double read_time,
   if (join->best_read < DBL_MAX)
   {
     fputs("BEST_POSITIONS: ", DBUG_FILE);
-    for (i= 0; i < idx ; i++)
+    for (i = 0; i < idx; i++)
     {
-      POSITION *pos= join->best_positions + i;
-      table= pos->table->table;
+      POSITION *pos = join->best_positions + i;
+      table = pos->table->table;
       if (table)
         fputs(table->s->table_name.str, DBUG_FILE);
       fputc(' ', DBUG_FILE);
@@ -354,14 +327,12 @@ print_plan(JOIN* join, uint idx, double record_count, double read_time,
 
   /* Print the tables in JOIN->best_ref */
   fputs("      BEST_REF: ", DBUG_FILE);
-  for (plan_nodes= join->best_ref ; *plan_nodes ; plan_nodes++)
+  for (plan_nodes = join->best_ref; *plan_nodes; plan_nodes++)
   {
-    join_table= (*plan_nodes);
+    join_table = (*plan_nodes);
     fputs(join_table->table->s->table_name.str, DBUG_FILE);
-    fprintf(DBUG_FILE, "(%lu,%lu,%lu)",
-            (ulong) join_table->found_records,
-            (ulong) join_table->records,
-            (ulong) join_table->read_time);
+    fprintf(DBUG_FILE, "(%lu,%lu,%lu)", (ulong)join_table->found_records, (ulong)join_table->records,
+            (ulong)join_table->read_time);
     fputc(' ', DBUG_FILE);
   }
   fputc('\n', DBUG_FILE);
@@ -369,21 +340,17 @@ print_plan(JOIN* join, uint idx, double record_count, double read_time,
   DBUG_UNLOCK_FILE;
 }
 
-
 void print_sjm(SJ_MATERIALIZATION_INFO *sjm)
 {
   DBUG_LOCK_FILE;
   fprintf(DBUG_FILE, "\nsemi-join nest{\n");
   fprintf(DBUG_FILE, "  tables { \n");
-  for (uint i= 0;i < sjm->tables; i++)
+  for (uint i = 0; i < sjm->tables; i++)
   {
-    fprintf(DBUG_FILE, "    %s%s\n", 
-            sjm->positions[i].table->table->alias.c_ptr(),
-            (i == sjm->tables -1)? "": ",");
+    fprintf(DBUG_FILE, "    %s%s\n", sjm->positions[i].table->table->alias.c_ptr(), (i == sjm->tables - 1) ? "" : ",");
   }
   fprintf(DBUG_FILE, "  }\n");
-  fprintf(DBUG_FILE, "  materialize_cost= %g\n",
-          sjm->materialization_cost.total_cost());
+  fprintf(DBUG_FILE, "  materialize_cost= %g\n", sjm->materialization_cost.total_cost());
   fprintf(DBUG_FILE, "  rows= %g\n", sjm->rows);
   fprintf(DBUG_FILE, "}\n");
   DBUG_UNLOCK_FILE;
@@ -393,11 +360,9 @@ void print_sjm(SJ_MATERIALIZATION_INFO *sjm)
 /*
   Debugging help: force List<...>::elem function not be removed as unused.
 */
-Item* (List<Item>::*dbug_list_item_elem_ptr)(uint)= &List<Item>::elem;
-Item_equal* (List<Item_equal>::*dbug_list_item_equal_elem_ptr)(uint)=
-  &List<Item_equal>::elem;
-TABLE_LIST* (List<TABLE_LIST>::*dbug_list_table_list_elem_ptr)(uint) =
-  &List<TABLE_LIST>::elem;
+Item *(List<Item>::*dbug_list_item_elem_ptr)(uint) = &List<Item>::elem;
+Item_equal *(List<Item_equal>::*dbug_list_item_equal_elem_ptr)(uint) = &List<Item_equal>::elem;
+TABLE_LIST *(List<TABLE_LIST>::*dbug_list_table_list_elem_ptr)(uint) = &List<TABLE_LIST>::elem;
 
 #endif
 
@@ -415,8 +380,8 @@ static int dl_compare(const void *p1, const void *p2)
 {
   TABLE_LOCK_INFO *a, *b;
 
-  a= (TABLE_LOCK_INFO *) p1;
-  b= (TABLE_LOCK_INFO *) p2;
+  a = (TABLE_LOCK_INFO *)p1;
+  b = (TABLE_LOCK_INFO *)p2;
 
   if (a->thread_id > b->thread_id)
     return 1;
@@ -430,29 +395,25 @@ static int dl_compare(const void *p1, const void *p2)
 }
 C_MODE_END
 
-
-static void push_locks_into_array(DYNAMIC_ARRAY *ar, THR_LOCK_DATA *data,
-				  bool wait, const char *text)
+static void push_locks_into_array(DYNAMIC_ARRAY *ar, THR_LOCK_DATA *data, bool wait, const char *text)
 {
   if (data)
   {
-    TABLE *table=(TABLE *)data->debug_print_param;
+    TABLE *table = (TABLE *)data->debug_print_param;
     if (table && table->s->tmp_table == NO_TMP_TABLE)
     {
       TABLE_LOCK_INFO table_lock_info;
-      table_lock_info.thread_id= (ulong)table->in_use->thread_id;
-      memcpy(table_lock_info.table_name, table->s->table_cache_key.str,
-	     table->s->table_cache_key.length);
-      table_lock_info.table_name[strlen(table_lock_info.table_name)]='.';
-      table_lock_info.waiting=wait;
-      table_lock_info.lock_text=text;
+      table_lock_info.thread_id = (ulong)table->in_use->thread_id;
+      memcpy(table_lock_info.table_name, table->s->table_cache_key.str, table->s->table_cache_key.length);
+      table_lock_info.table_name[strlen(table_lock_info.table_name)] = '.';
+      table_lock_info.waiting = wait;
+      table_lock_info.lock_text = text;
       // lock_type is also obtainable from THR_LOCK_DATA
-      table_lock_info.type=table->reginfo.lock_type;
-      (void) push_dynamic(ar,(uchar*) &table_lock_info);
+      table_lock_info.type = table->reginfo.lock_type;
+      (void)push_dynamic(ar, (uchar *)&table_lock_info);
     }
   }
 }
-
 
 /*
   Regarding MERGE tables:
@@ -474,23 +435,18 @@ static void display_table_locks(void)
   void *saved_base;
   DYNAMIC_ARRAY saved_table_locks;
 
-  (void) my_init_dynamic_array(key_memory_locked_thread_list,
-                               &saved_table_locks, sizeof(TABLE_LOCK_INFO),
-                               tc_records() + 20, 50, MYF(0));
+  (void)my_init_dynamic_array(key_memory_locked_thread_list, &saved_table_locks, sizeof(TABLE_LOCK_INFO),
+                              tc_records() + 20, 50, MYF(0));
   mysql_mutex_lock(&THR_LOCK_lock);
-  for (list= thr_lock_thread_list; list; list= list_rest(list))
+  for (list = thr_lock_thread_list; list; list = list_rest(list))
   {
-    THR_LOCK *lock=(THR_LOCK*) list->data;
+    THR_LOCK *lock = (THR_LOCK *)list->data;
 
     mysql_mutex_lock(&lock->mutex);
-    push_locks_into_array(&saved_table_locks, lock->write.data, FALSE,
-			  "Locked - write");
-    push_locks_into_array(&saved_table_locks, lock->write_wait.data, TRUE,
-			  "Waiting - write");
-    push_locks_into_array(&saved_table_locks, lock->read.data, FALSE,
-			  "Locked - read");
-    push_locks_into_array(&saved_table_locks, lock->read_wait.data, TRUE,
-			  "Waiting - read");
+    push_locks_into_array(&saved_table_locks, lock->write.data, FALSE, "Locked - write");
+    push_locks_into_array(&saved_table_locks, lock->write_wait.data, TRUE, "Waiting - write");
+    push_locks_into_array(&saved_table_locks, lock->read.data, FALSE, "Locked - read");
+    push_locks_into_array(&saved_table_locks, lock->read_wait.data, TRUE, "Waiting - read");
     mysql_mutex_unlock(&lock->mutex);
   }
   mysql_mutex_unlock(&THR_LOCK_lock);
@@ -498,19 +454,18 @@ static void display_table_locks(void)
   if (!saved_table_locks.elements)
     goto end;
 
-  saved_base= dynamic_element(&saved_table_locks, 0, TABLE_LOCK_INFO *);
-  my_qsort(saved_base, saved_table_locks.elements, sizeof(TABLE_LOCK_INFO),
-           dl_compare);
+  saved_base = dynamic_element(&saved_table_locks, 0, TABLE_LOCK_INFO *);
+  my_qsort(saved_base, saved_table_locks.elements, sizeof(TABLE_LOCK_INFO), dl_compare);
   freeze_size(&saved_table_locks);
 
   puts("\nThread database.table_name          Locked/Waiting        Lock_type\n");
 
   unsigned int i;
-  for (i=0 ; i < saved_table_locks.elements ; i++)
+  for (i = 0; i < saved_table_locks.elements; i++)
   {
-    TABLE_LOCK_INFO *dl_ptr=dynamic_element(&saved_table_locks,i,TABLE_LOCK_INFO*);
-    printf("%-8ld%-28.28s%-22s%s\n",
-	   dl_ptr->thread_id,dl_ptr->table_name,dl_ptr->lock_text,lock_descriptions[(int)dl_ptr->type]);
+    TABLE_LOCK_INFO *dl_ptr = dynamic_element(&saved_table_locks, i, TABLE_LOCK_INFO *);
+    printf("%-8ld%-28.28s%-22s%s\n", dl_ptr->thread_id, dl_ptr->table_name, dl_ptr->lock_text,
+           lock_descriptions[(int)dl_ptr->type]);
   }
   puts("\n\n");
 end:
@@ -518,8 +473,7 @@ end:
 }
 
 C_MODE_START
-static int print_key_cache_status(const char *name, KEY_CACHE *key_cache,
-                                  void *unused __attribute__((unused)))
+static int print_key_cache_status(const char *name, KEY_CACHE *key_cache, void *unused __attribute__((unused)))
 {
   char llbuff1[22];
   char llbuff2[22];
@@ -535,7 +489,8 @@ static int print_key_cache_status(const char *name, KEY_CACHE *key_cache,
     KEY_CACHE_STATISTICS stats;
     get_key_cache_statistics(key_cache, 0, &stats);
 
-    printf("%s\n\
+    printf(
+        "%s\n\
 Buffer_size:    %10lu\n\
 Block_size:     %10lu\n\
 Division_limit: %10lu\n\
@@ -547,23 +502,15 @@ w_requests:     %10s\n\
 writes:         %10s\n\
 r_requests:     %10s\n\
 reads:          %10s\n\n",
-	   name,
-	   (ulong)key_cache->param_buff_size,
-           (ulong)key_cache->param_block_size,
-	   (ulong)key_cache->param_division_limit,
-           (ulong)key_cache->param_age_threshold,
-           (ulong)key_cache->param_partitions,
-	   (ulong)stats.blocks_used,
-           (ulong)stats.blocks_changed,
-	   llstr(stats.write_requests,llbuff1),
-           llstr(stats.writes,llbuff2),
-	   llstr(stats.read_requests,llbuff3),
-           llstr(stats.reads,llbuff4));
+        name, (ulong)key_cache->param_buff_size, (ulong)key_cache->param_block_size,
+        (ulong)key_cache->param_division_limit, (ulong)key_cache->param_age_threshold,
+        (ulong)key_cache->param_partitions, (ulong)stats.blocks_used, (ulong)stats.blocks_changed,
+        llstr(stats.write_requests, llbuff1), llstr(stats.writes, llbuff2), llstr(stats.read_requests, llbuff3),
+        llstr(stats.reads, llbuff4));
   }
   return 0;
 }
 C_MODE_END
-
 
 void mysql_print_status()
 {
@@ -571,22 +518,22 @@ void mysql_print_status()
   STATUS_VAR tmp;
   uint count;
 
-  tmp= global_status_var;
-  count= calc_sum_of_all_status(&tmp);
+  tmp = global_status_var;
+  count = calc_sum_of_all_status(&tmp);
   printf("\nStatus information:\n\n");
-  (void) my_getwd(current_dir, sizeof(current_dir),MYF(0));
+  (void)my_getwd(current_dir, sizeof(current_dir), MYF(0));
   printf("Current dir: %s\n", current_dir);
-  printf("Running threads: %d  Cached threads: %lu  Stack size: %ld\n",
-         count, thread_cache.size(),
-	 (long) my_thread_stack_size);
+  printf("Running threads: %d  Cached threads: %lu  Stack size: %ld\n", count, thread_cache.size(),
+         (long)my_thread_stack_size);
 #ifdef EXTRA_DEBUG
-  thr_print_locks();				// Write some debug info
+  thr_print_locks();  // Write some debug info
   print_cached_tables();
 #endif
   /* Print key cache status */
   puts("\nKey caches:");
   process_key_caches(print_key_cache_status, 0);
-  printf("\nhandler status:\n\
+  printf(
+      "\nhandler status:\n\
 read_key:   %10lu\n\
 read_next:  %10lu\n\
 read_rnd    %10lu\n\
@@ -594,43 +541,36 @@ read_first: %10lu\n\
 write:      %10lu\n\
 delete      %10lu\n\
 update:     %10lu\n",
-	 tmp.ha_read_key_count,
-	 tmp.ha_read_next_count,
-	 tmp.ha_read_rnd_count,
-	 tmp.ha_read_first_count,
-	 tmp.ha_write_count,
-	 tmp.ha_delete_count,
-	 tmp.ha_update_count);
-  printf("\nTable status:\n\
+      tmp.ha_read_key_count, tmp.ha_read_next_count, tmp.ha_read_rnd_count, tmp.ha_read_first_count, tmp.ha_write_count,
+      tmp.ha_delete_count, tmp.ha_update_count);
+  printf(
+      "\nTable status:\n\
 Opened tables: %10lu\n\
 Open tables:   %10u\n\
 Open files:    %10u\n\
 Open streams:  %10lu\n",
-	 tmp.opened_tables,
-	 tc_records(),
-	 my_file_opened,
-	 my_stream_opened);
+      tmp.opened_tables, tc_records(), my_file_opened, my_stream_opened);
 
 #ifndef DONT_USE_THR_ALARM
   ALARM_INFO alarm_info;
   thr_alarm_info(&alarm_info);
-  printf("\nAlarm status:\n\
+  printf(
+      "\nAlarm status:\n\
 Active alarms:   %u\n\
 Max used alarms: %u\n\
 Next alarm time: %lu\n",
-	 alarm_info.active_alarms,
-	 alarm_info.max_used_alarms,
-	(ulong)alarm_info.next_alarm_time);
+      alarm_info.active_alarms, alarm_info.max_used_alarms, (ulong)alarm_info.next_alarm_time);
 #endif
   display_table_locks();
 #if defined(HAVE_MALLINFO2)
   struct mallinfo2 info = mallinfo2();
 #elif defined(HAVE_MALLINFO)
-  struct mallinfo info= mallinfo();
+  struct mallinfo info = mallinfo();
 #endif
 #if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
   char llbuff[10][22];
-  printf("\nMemory status:\n\
+  printf(
+      "\nMemory status:\n\
 Non-mmapped space allocated from system: %s\n\
 Number of free chunks:                   %lu\n\
 Number of fastbin blocks:                %lu\n\
@@ -644,35 +584,25 @@ Top-most, releasable space:              %s\n\
 Estimated memory (with thread stack):    %s\n\
 Global memory allocated by server:       %s\n\
 Memory allocated by threads:             %s\n",
-	 llstr(info.arena,   llbuff[0]),
-	 (ulong) info.ordblks,
-	 (ulong) info.smblks,
-	 (ulong) info.hblks,
-	 llstr(info.hblkhd,   llbuff[1]),
-	 llstr(info.usmblks,  llbuff[2]),
-	 llstr(info.fsmblks,  llbuff[3]),
-	 llstr(info.uordblks, llbuff[4]),
-	 llstr(info.fordblks, llbuff[5]),
-	 llstr(info.keepcost, llbuff[6]),
-         llstr((count + thread_cache.size()) * my_thread_stack_size +
-               info.hblkhd + info.arena, llbuff[7]),
-         llstr(tmp.global_memory_used, llbuff[8]),
-         llstr(tmp.local_memory_used, llbuff[9]));
+      llstr(info.arena, llbuff[0]), (ulong)info.ordblks, (ulong)info.smblks, (ulong)info.hblks,
+      llstr(info.hblkhd, llbuff[1]), llstr(info.usmblks, llbuff[2]), llstr(info.fsmblks, llbuff[3]),
+      llstr(info.uordblks, llbuff[4]), llstr(info.fordblks, llbuff[5]), llstr(info.keepcost, llbuff[6]),
+      llstr((count + thread_cache.size()) * my_thread_stack_size + info.hblkhd + info.arena, llbuff[7]),
+      llstr(tmp.global_memory_used, llbuff[8]), llstr(tmp.local_memory_used, llbuff[9]));
 
 #elif defined(HAVE_MALLOC_ZONE)
   malloc_statistics_t info;
   char llbuff[4][22];
 
   malloc_zone_statistics(nullptr, &info);
-  printf("\nMemory status:\n\
+  printf(
+      "\nMemory status:\n\
 Total allocated space:                   %s\n\
 Total free space:                        %s\n\
 Global memory allocated by server:       %s\n\
 Memory allocated by threads:             %s\n",
-         llstr(info.size_allocated, llbuff[0]),
-         llstr((info.size_allocated - info.size_in_use), llbuff[1]),
-         llstr(tmp.global_memory_used, llbuff[2]),
-         llstr(tmp.local_memory_used, llbuff[3]));
+      llstr(info.size_allocated, llbuff[0]), llstr((info.size_allocated - info.size_in_use), llbuff[1]),
+      llstr(tmp.global_memory_used, llbuff[2]), llstr(tmp.local_memory_used, llbuff[3]));
 #endif
 
 #ifdef HAVE_EVENT_SCHEDULER
@@ -689,23 +619,22 @@ void print_keyuse_array_for_trace(THD *thd, DYNAMIC_ARRAY *keyuse_array)
   Json_writer_object wrapper(thd);
   Json_writer_array trace_key_uses(thd, "ref_optimizer_key_uses");
 
-  for (uint i=0; i < keyuse_array->elements; i++)
+  for (uint i = 0; i < keyuse_array->elements; i++)
   {
-    KEYUSE *keyuse= (KEYUSE*)dynamic_array_ptr(keyuse_array, i);
+    KEYUSE *keyuse = (KEYUSE *)dynamic_array_ptr(keyuse_array, i);
     Json_writer_object keyuse_elem(thd);
     keyuse_elem.add_table_name(keyuse->table->reginfo.join_tab);
     if (keyuse->keypart != FT_KEYPART && !keyuse->is_for_hash_join())
     {
       keyuse_elem.add("index", keyuse->table->key_info[keyuse->key].name);
     }
-    keyuse_elem.add("field", (keyuse->keypart == FT_KEYPART) ? "<fulltext>":
-                                        (keyuse->is_for_hash_join() ?
-                                        keyuse->table->field[keyuse->keypart]
-                                                     ->field_name.str :
-                                        keyuse->table->key_info[keyuse->key]
-                                          .key_part[keyuse->keypart]
-                                          .field->field_name.str));
-    keyuse_elem.add("equals",keyuse->val);
-    keyuse_elem.add("null_rejecting",keyuse->null_rejecting);
+    keyuse_elem.add("field",
+                    (keyuse->keypart == FT_KEYPART)
+                        ? "<fulltext>"
+                        : (keyuse->is_for_hash_join()
+                               ? keyuse->table->field[keyuse->keypart]->field_name.str
+                               : keyuse->table->key_info[keyuse->key].key_part[keyuse->keypart].field->field_name.str));
+    keyuse_elem.add("equals", keyuse->val);
+    keyuse_elem.add("null_rejecting", keyuse->null_rejecting);
   }
 }

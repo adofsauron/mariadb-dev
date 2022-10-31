@@ -14,16 +14,15 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
-
 #include <my_global.h>
 #include "semisync_slave.h"
 
 Repl_semi_sync_slave repl_semisync_slave;
 
-my_bool rpl_semi_sync_slave_enabled= 0;
+my_bool rpl_semi_sync_slave_enabled = 0;
 
 char rpl_semi_sync_slave_delay_master;
-my_bool rpl_semi_sync_slave_status= 0;
+my_bool rpl_semi_sync_slave_status = 0;
 ulong rpl_semi_sync_slave_trace_level;
 
 /*
@@ -33,13 +32,13 @@ ulong rpl_semi_sync_slave_trace_level;
   event read is the last event of a transaction. And the value is
   checked in repl_semi_slave_queue_event.
 */
-bool semi_sync_need_reply= false;
+bool semi_sync_need_reply = false;
 unsigned int rpl_semi_sync_slave_kill_conn_timeout;
 unsigned long long rpl_semi_sync_slave_send_ack = 0;
 
 int Repl_semi_sync_slave::init_object()
 {
-  int result= 0;
+  int result = 0;
 
   m_init_done = true;
 
@@ -52,27 +51,21 @@ int Repl_semi_sync_slave::init_object()
   return result;
 }
 
-int Repl_semi_sync_slave::slave_read_sync_header(const uchar *header,
-                                                 unsigned long total_len,
-                                                 int  *semi_flags,
-                                                 const uchar **payload,
-                                                 unsigned long *payload_len)
+int Repl_semi_sync_slave::slave_read_sync_header(const uchar *header, unsigned long total_len, int *semi_flags,
+                                                 const uchar **payload, unsigned long *payload_len)
 {
   int read_res = 0;
   DBUG_ENTER("Repl_semi_sync_slave::slave_read_sync_header");
 
   if (rpl_semi_sync_slave_status)
   {
-    if (!DBUG_IF("semislave_corrupt_log")
-        && header[0] == k_packet_magic_num)
+    if (!DBUG_IF("semislave_corrupt_log") && header[0] == k_packet_magic_num)
     {
-      semi_sync_need_reply  = (header[1] & k_packet_flag_sync);
+      semi_sync_need_reply = (header[1] & k_packet_flag_sync);
       *payload_len = total_len - 2;
-      *payload     = header + 2;
+      *payload = header + 2;
 
-      DBUG_PRINT("semisync", ("%s: reply - %d",
-                              "Repl_semi_sync_slave::slave_read_sync_header",
-                              semi_sync_need_reply));
+      DBUG_PRINT("semisync", ("%s: reply - %d", "Repl_semi_sync_slave::slave_read_sync_header", semi_sync_need_reply));
 
       if (semi_sync_need_reply)
         *semi_flags |= SEMI_SYNC_NEED_ACK;
@@ -81,13 +74,17 @@ int Repl_semi_sync_slave::slave_read_sync_header(const uchar *header,
     }
     else
     {
-      sql_print_error("Missing magic number for semi-sync packet, packet "
-                      "len: %lu", total_len);
+      sql_print_error(
+          "Missing magic number for semi-sync packet, packet "
+          "len: %lu",
+          total_len);
       read_res = -1;
     }
-  } else {
-    *payload= header;
-    *payload_len= total_len;
+  }
+  else
+  {
+    *payload = header;
+    *payload_len = total_len;
   }
 
   DBUG_RETURN(read_res);
@@ -95,20 +92,19 @@ int Repl_semi_sync_slave::slave_read_sync_header(const uchar *header,
 
 int Repl_semi_sync_slave::slave_start(Master_info *mi)
 {
-  bool semi_sync= get_slave_enabled();
+  bool semi_sync = get_slave_enabled();
 
-  sql_print_information("Slave I/O thread: Start %s replication to\
+  sql_print_information(
+      "Slave I/O thread: Start %s replication to\
  master '%s@%s:%d' in log '%s' at position %lu",
-			semi_sync ? "semi-sync" : "asynchronous",
-			const_cast<char *>(mi->user), mi->host, mi->port,
-			const_cast<char *>(mi->master_log_name),
-                        (unsigned long)(mi->master_log_pos));
+      semi_sync ? "semi-sync" : "asynchronous", const_cast<char *>(mi->user), mi->host, mi->port,
+      const_cast<char *>(mi->master_log_name), (unsigned long)(mi->master_log_pos));
 
   if (semi_sync && !rpl_semi_sync_slave_status)
-    rpl_semi_sync_slave_status= 1;
+    rpl_semi_sync_slave_status = 1;
 
   /*clear the counter*/
-  rpl_semi_sync_slave_send_ack= 0;
+  rpl_semi_sync_slave_send_ack = 0;
   return 0;
 }
 
@@ -118,15 +114,12 @@ int Repl_semi_sync_slave::slave_stop(Master_info *mi)
     kill_connection(mi->mysql);
 
   if (rpl_semi_sync_slave_status)
-    rpl_semi_sync_slave_status= 0;
+    rpl_semi_sync_slave_status = 0;
 
   return 0;
 }
 
-int Repl_semi_sync_slave::reset_slave(Master_info *mi)
-{
-  return 0;
-}
+int Repl_semi_sync_slave::reset_slave(Master_info *mi) { return 0; }
 
 void Repl_semi_sync_slave::kill_connection(MYSQL *mysql)
 {
@@ -142,19 +135,19 @@ void Repl_semi_sync_slave::kill_connection(MYSQL *mysql)
   mysql_options(kill_mysql, MYSQL_OPT_READ_TIMEOUT, &m_kill_conn_timeout);
   mysql_options(kill_mysql, MYSQL_OPT_WRITE_TIMEOUT, &m_kill_conn_timeout);
 
-  bool ret= (!mysql_real_connect(kill_mysql, mysql->host,
-            mysql->user, mysql->passwd,0, mysql->port, mysql->unix_socket, 0));
+  bool ret =
+      (!mysql_real_connect(kill_mysql, mysql->host, mysql->user, mysql->passwd, 0, mysql->port, mysql->unix_socket, 0));
   if (DBUG_IF("semisync_slave_failed_kill") || ret)
   {
-    sql_print_information("cannot connect to master to kill slave io_thread's "
-                          "connection");
+    sql_print_information(
+        "cannot connect to master to kill slave io_thread's "
+        "connection");
     goto failed_graceful_kill;
   }
 
   DBUG_EXECUTE_IF("slave_delay_killing_semisync_connection", my_sleep(400000););
 
-  kill_buffer_length= my_snprintf(kill_buffer, 30, "KILL %lu",
-                                mysql->thread_id);
+  kill_buffer_length = my_snprintf(kill_buffer, 30, "KILL %lu", mysql->thread_id);
   if (mysql_real_query(kill_mysql, kill_buffer, (ulong)kill_buffer_length))
   {
     sql_print_information(
@@ -181,29 +174,29 @@ failed_graceful_kill:
 
 int Repl_semi_sync_slave::request_transmit(Master_info *mi)
 {
-  MYSQL *mysql= mi->mysql;
-  MYSQL_RES *res= 0;
+  MYSQL *mysql = mi->mysql;
+  MYSQL_RES *res = 0;
   MYSQL_ROW row;
   const char *query;
 
   if (!get_slave_enabled())
     return 0;
 
-  query= "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'";
-  if (mysql_real_query(mysql, query, (ulong)strlen(query)) ||
-      !(res= mysql_store_result(mysql)))
+  query = "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'";
+  if (mysql_real_query(mysql, query, (ulong)strlen(query)) || !(res = mysql_store_result(mysql)))
   {
     sql_print_error("Execution failed on master: %s, error :%s", query, mysql_error(mysql));
     return 1;
   }
 
-  row= mysql_fetch_row(res);
+  row = mysql_fetch_row(res);
   if (DBUG_IF("master_not_support_semisync") || !row)
   {
     /* Master does not support semi-sync */
-    sql_print_warning("Master server does not support semi-sync, "
-                      "fallback to asynchronous replication");
-    rpl_semi_sync_slave_status= 0;
+    sql_print_warning(
+        "Master server does not support semi-sync, "
+        "fallback to asynchronous replication");
+    rpl_semi_sync_slave_status = 0;
     mysql_free_result(res);
     return 0;
   }
@@ -213,28 +206,26 @@ int Repl_semi_sync_slave::request_transmit(Master_info *mi)
    Tell master dump thread that we want to do semi-sync
    replication
   */
-  query= "SET @rpl_semi_sync_slave= 1";
+  query = "SET @rpl_semi_sync_slave= 1";
   if (mysql_real_query(mysql, query, (ulong)strlen(query)))
   {
     sql_print_error("Set 'rpl_semi_sync_slave=1' on master failed");
     return 1;
   }
   mysql_free_result(mysql_store_result(mysql));
-  rpl_semi_sync_slave_status= 1;
+  rpl_semi_sync_slave_status = 1;
 
   return 0;
 }
 
 int Repl_semi_sync_slave::slave_reply(Master_info *mi)
 {
-  MYSQL* mysql= mi->mysql;
-  const char *binlog_filename= const_cast<char *>(mi->master_log_name);
-  my_off_t binlog_filepos= mi->master_log_pos;
+  MYSQL *mysql = mi->mysql;
+  const char *binlog_filename = const_cast<char *>(mi->master_log_name);
+  my_off_t binlog_filepos = mi->master_log_pos;
 
-  NET *net= &mysql->net;
-  uchar reply_buffer[REPLY_MAGIC_NUM_LEN
-                     + REPLY_BINLOG_POS_LEN
-                     + REPLY_BINLOG_NAME_LEN];
+  NET *net = &mysql->net;
+  uchar reply_buffer[REPLY_MAGIC_NUM_LEN + REPLY_BINLOG_POS_LEN + REPLY_BINLOG_NAME_LEN];
   int reply_res = 0;
   size_t name_len = strlen(binlog_filename);
 
@@ -245,18 +236,14 @@ int Repl_semi_sync_slave::slave_reply(Master_info *mi)
     /* Prepare the buffer of the reply. */
     reply_buffer[REPLY_MAGIC_NUM_OFFSET] = k_packet_magic_num;
     int8store(reply_buffer + REPLY_BINLOG_POS_OFFSET, binlog_filepos);
-    memcpy(reply_buffer + REPLY_BINLOG_NAME_OFFSET,
-           binlog_filename,
-           name_len + 1 /* including trailing '\0' */);
+    memcpy(reply_buffer + REPLY_BINLOG_NAME_OFFSET, binlog_filename, name_len + 1 /* including trailing '\0' */);
 
-    DBUG_PRINT("semisync", ("%s: reply (%s, %lu)",
-                            "Repl_semi_sync_slave::slave_reply",
-                            binlog_filename, (ulong)binlog_filepos));
+    DBUG_PRINT("semisync",
+               ("%s: reply (%s, %lu)", "Repl_semi_sync_slave::slave_reply", binlog_filename, (ulong)binlog_filepos));
 
     net_clear(net, 0);
     /* Send the reply. */
-    reply_res = my_net_write(net, reply_buffer,
-                             name_len + REPLY_BINLOG_NAME_OFFSET);
+    reply_res = my_net_write(net, reply_buffer, name_len + REPLY_BINLOG_NAME_OFFSET);
     if (!reply_res)
     {
       reply_res = (DBUG_IF("semislave_failed_net_flush") || net_flush(net));
@@ -266,8 +253,7 @@ int Repl_semi_sync_slave::slave_reply(Master_info *mi)
     }
     else
     {
-      sql_print_error("Semi-sync slave send reply failed: %s (%d)",
-                      net->last_error, net->last_errno);
+      sql_print_error("Semi-sync slave send reply failed: %s (%d)", net->last_error, net->last_errno);
     }
   }
 

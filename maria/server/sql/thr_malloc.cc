@@ -14,7 +14,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 /* Mallocs for used in threads */
 
 #include "mariadb.h"
@@ -23,13 +22,14 @@
 #include "thr_malloc.h"
 #include "sql_class.h"
 
-extern "C" {
+extern "C"
+{
   void sql_alloc_error_handler(void)
   {
-    THD *thd= current_thd;
+    THD *thd = current_thd;
     if (likely(thd))
     {
-      if (! thd->is_error())
+      if (!thd->is_error())
       {
         /*
           This thread is Out Of Memory.
@@ -58,41 +58,35 @@ extern "C" {
   }
 }
 
-void init_sql_alloc(PSI_memory_key key, MEM_ROOT *mem_root, uint block_size,
-                    uint pre_alloc, myf my_flags)
+void init_sql_alloc(PSI_memory_key key, MEM_ROOT *mem_root, uint block_size, uint pre_alloc, myf my_flags)
 {
   init_alloc_root(key, mem_root, block_size, pre_alloc, my_flags);
-  mem_root->error_handler=sql_alloc_error_handler;
+  mem_root->error_handler = sql_alloc_error_handler;
 }
 
-
-char *sql_strmake_with_convert(THD *thd, const char *str, size_t arg_length,
-			       CHARSET_INFO *from_cs,
-			       size_t max_res_length,
-			       CHARSET_INFO *to_cs, size_t *result_length)
+char *sql_strmake_with_convert(THD *thd, const char *str, size_t arg_length, CHARSET_INFO *from_cs,
+                               size_t max_res_length, CHARSET_INFO *to_cs, size_t *result_length)
 {
   char *pos;
-  size_t new_length= to_cs->mbmaxlen*arg_length;
-  max_res_length--;				// Reserve place for end null
+  size_t new_length = to_cs->mbmaxlen * arg_length;
+  max_res_length--;  // Reserve place for end null
 
   set_if_smaller(new_length, max_res_length);
-  if (!(pos= (char*) thd->alloc(new_length + 1)))
-    return pos;					// Error
+  if (!(pos = (char *)thd->alloc(new_length + 1)))
+    return pos;  // Error
 
   if ((from_cs == &my_charset_bin) || (to_cs == &my_charset_bin))
   {
     // Safety if to_cs->mbmaxlen > 0
-    new_length= MY_MIN(arg_length, max_res_length);
+    new_length = MY_MIN(arg_length, max_res_length);
     memcpy(pos, str, new_length);
   }
   else
   {
     uint dummy_errors;
-    new_length= copy_and_convert((char*) pos, new_length, to_cs, str,
-				 arg_length, from_cs, &dummy_errors);
+    new_length = copy_and_convert((char *)pos, new_length, to_cs, str, arg_length, from_cs, &dummy_errors);
   }
-  pos[new_length]= 0;
-  *result_length= new_length;
+  pos[new_length] = 0;
+  *result_length = new_length;
   return pos;
 }
-

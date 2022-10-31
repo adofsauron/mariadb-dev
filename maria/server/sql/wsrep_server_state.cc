@@ -20,58 +20,38 @@
 #include "wsrep_binlog.h" /* init/deinit group commit */
 
 mysql_mutex_t LOCK_wsrep_server_state;
-mysql_cond_t  COND_wsrep_server_state;
+mysql_cond_t COND_wsrep_server_state;
 
 #ifdef HAVE_PSI_INTERFACE
 PSI_mutex_key key_LOCK_wsrep_server_state;
-PSI_cond_key  key_COND_wsrep_server_state;
+PSI_cond_key key_COND_wsrep_server_state;
 #endif
 
 wsrep::provider::services Wsrep_server_state::m_provider_services;
 
-Wsrep_server_state::Wsrep_server_state(const std::string& name,
-                                       const std::string& incoming_address,
-                                       const std::string& address,
-                                       const std::string& working_dir,
-                                       const wsrep::gtid& initial_position,
-                                       int max_protocol_version)
-  : wsrep::server_state(m_mutex,
-                        m_cond,
-                        m_service,
-                        NULL,
-                        name,
-                        incoming_address,
-                        address,
-                        working_dir,
-                        initial_position,
-                        max_protocol_version,
-                        wsrep::server_state::rm_sync)
-  , m_mutex(&LOCK_wsrep_server_state)
-  , m_cond(&COND_wsrep_server_state)
-  , m_service(*this)
-{ }
+Wsrep_server_state::Wsrep_server_state(const std::string &name, const std::string &incoming_address,
+                                       const std::string &address, const std::string &working_dir,
+                                       const wsrep::gtid &initial_position, int max_protocol_version)
+    : wsrep::server_state(m_mutex, m_cond, m_service, NULL, name, incoming_address, address, working_dir,
+                          initial_position, max_protocol_version, wsrep::server_state::rm_sync),
+      m_mutex(&LOCK_wsrep_server_state),
+      m_cond(&COND_wsrep_server_state),
+      m_service(*this)
+{
+}
 
-Wsrep_server_state::~Wsrep_server_state()
-{ }
+Wsrep_server_state::~Wsrep_server_state() {}
 
-void Wsrep_server_state::init_once(const std::string& name,
-                                   const std::string& incoming_address,
-                                   const std::string& address,
-                                   const std::string& working_dir,
-                                   const wsrep::gtid& initial_position,
-                                   int max_protocol_version)
+void Wsrep_server_state::init_once(const std::string &name, const std::string &incoming_address,
+                                   const std::string &address, const std::string &working_dir,
+                                   const wsrep::gtid &initial_position, int max_protocol_version)
 {
   if (m_instance == 0)
   {
-    mysql_mutex_init(key_LOCK_wsrep_server_state, &LOCK_wsrep_server_state,
-                     MY_MUTEX_INIT_FAST);
+    mysql_mutex_init(key_LOCK_wsrep_server_state, &LOCK_wsrep_server_state, MY_MUTEX_INIT_FAST);
     mysql_cond_init(key_COND_wsrep_server_state, &COND_wsrep_server_state, 0);
-    m_instance = new Wsrep_server_state(name,
-                                        incoming_address,
-                                        address,
-                                        working_dir,
-                                        initial_position,
-                                        max_protocol_version);
+    m_instance =
+        new Wsrep_server_state(name, incoming_address, address, working_dir, initial_position, max_protocol_version);
   }
 }
 
@@ -80,7 +60,7 @@ void Wsrep_server_state::destroy()
   if (m_instance)
   {
     delete m_instance;
-    m_instance= 0;
+    m_instance = 0;
     mysql_mutex_destroy(&LOCK_wsrep_server_state);
     mysql_cond_destroy(&COND_wsrep_server_state);
   }
@@ -88,13 +68,12 @@ void Wsrep_server_state::destroy()
 
 void Wsrep_server_state::init_provider_services()
 {
-  m_provider_services.allowlist_service= wsrep_allowlist_service_init();
+  m_provider_services.allowlist_service = wsrep_allowlist_service_init();
 }
 
 void Wsrep_server_state::deinit_provider_services()
 {
   if (m_provider_services.allowlist_service)
     wsrep_allowlist_service_deinit();
-  m_provider_services= wsrep::provider::services();
+  m_provider_services = wsrep::provider::services();
 }
-

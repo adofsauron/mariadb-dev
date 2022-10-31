@@ -26,31 +26,25 @@
 
 class Wsrep_allowlist_service : public wsrep::allowlist_service
 {
-public:
-    bool allowlist_cb(wsrep::allowlist_service::allowlist_key key,
-                      const wsrep::const_buffer& value) WSREP_NOEXCEPT override;
+ public:
+  bool allowlist_cb(wsrep::allowlist_service::allowlist_key key,
+                    const wsrep::const_buffer &value) WSREP_NOEXCEPT override;
 };
 
-bool Wsrep_allowlist_service::allowlist_cb (
-  wsrep::allowlist_service::allowlist_key key,
-  const wsrep::const_buffer& value)
-  WSREP_NOEXCEPT
+bool Wsrep_allowlist_service::allowlist_cb(wsrep::allowlist_service::allowlist_key key,
+                                           const wsrep::const_buffer &value) WSREP_NOEXCEPT
 {
   std::string string_value(value.data());
-  bool res= wsrep_schema->allowlist_check(key, string_value);
+  bool res = wsrep_schema->allowlist_check(key, string_value);
   return res;
 }
 
 std::unique_ptr<wsrep::allowlist_service> entrypoint;
 
-wsrep::allowlist_service* wsrep_allowlist_service_init()
+wsrep::allowlist_service *wsrep_allowlist_service_init()
 {
   entrypoint = std::unique_ptr<wsrep::allowlist_service>(new Wsrep_allowlist_service);
   return entrypoint.get();
 }
 
-void wsrep_allowlist_service_deinit()
-{
-  entrypoint.reset();
-}
-
+void wsrep_allowlist_service_deinit() { entrypoint.reset(); }

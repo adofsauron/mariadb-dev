@@ -22,9 +22,9 @@
 #endif
 
 #include "sql_priv.h"
-#include "m_string.h"                           /* bzero, memcpy */
+#include "m_string.h" /* bzero, memcpy */
 #ifdef MYSQL_SERVER
-#include "table.h"                              /* TABLE_LIST */
+#include "table.h" /* TABLE_LIST */
 #endif
 #include "mysql_com.h"
 
@@ -43,7 +43,7 @@ struct rpl_group_info;
 
 class table_def
 {
-public:
+ public:
   /**
     Constructor.
 
@@ -53,8 +53,8 @@ public:
     @param metadata_size Size of the field_metadata array
     @param null_bitmap The bitmap of fields that can be null
    */
-  table_def(unsigned char *types, ulong size, uchar *field_metadata,
-            int metadata_size, uchar *null_bitmap, uint16 flags);
+  table_def(unsigned char *types, ulong size, uchar *field_metadata, int metadata_size, uchar *null_bitmap,
+            uint16 flags);
 
   ~table_def();
 
@@ -65,15 +65,11 @@ public:
    */
   ulong size() const { return m_size; }
 
-
   /**
     Returns internal binlog type code for one field,
     without translation to real types.
   */
-  enum_field_types binlog_type(ulong index) const
-  {
-    return static_cast<enum_field_types>(m_type[index]);
-  }
+  enum_field_types binlog_type(ulong index) const { return static_cast<enum_field_types>(m_type[index]); }
   /*
     Return a representation of the type data for one field.
 
@@ -91,29 +87,29 @@ public:
       either MYSQL_TYPE_STRING, MYSQL_TYPE_ENUM, or MYSQL_TYPE_SET, so
       we might need to modify the type to get the real type.
     */
-    enum_field_types source_type= binlog_type(index);
-    uint16 source_metadata= m_field_metadata[index];
+    enum_field_types source_type = binlog_type(index);
+    uint16 source_metadata = m_field_metadata[index];
     switch (source_type)
     {
-    case MYSQL_TYPE_STRING:
-    {
-      int real_type= source_metadata >> 8;
-      if (real_type == MYSQL_TYPE_ENUM || real_type == MYSQL_TYPE_SET)
-        source_type= static_cast<enum_field_types>(real_type);
-      break;
-    }
+      case MYSQL_TYPE_STRING:
+      {
+        int real_type = source_metadata >> 8;
+        if (real_type == MYSQL_TYPE_ENUM || real_type == MYSQL_TYPE_SET)
+          source_type = static_cast<enum_field_types>(real_type);
+        break;
+      }
 
-    /*
-      This type has not been used since before row-based replication,
-      so we can safely assume that it really is MYSQL_TYPE_NEWDATE.
-    */
-    case MYSQL_TYPE_DATE:
-      source_type= MYSQL_TYPE_NEWDATE;
-      break;
+      /*
+        This type has not been used since before row-based replication,
+        so we can safely assume that it really is MYSQL_TYPE_NEWDATE.
+      */
+      case MYSQL_TYPE_DATE:
+        source_type = MYSQL_TYPE_NEWDATE;
+        break;
 
-    default:
-      /* Do nothing */
-      break;
+      default:
+        /* Do nothing */
+        break;
     }
 
     return source_type;
@@ -127,11 +123,11 @@ public:
     table map for a given field. If there is no metadata for that field
     or there is no extra metadata at all, the function returns 0.
 
-    The function returns the value for the field metadata for column at 
-    position indicated by index. As mentioned, if the field was a type 
-    that stores field metadata, that value is returned else zero (0) is 
-    returned. This method is used in the unpack() methods of the 
-    corresponding fields to properly extract the data from the binary log 
+    The function returns the value for the field metadata for column at
+    position indicated by index. As mentioned, if the field was a type
+    that stores field metadata, that value is returned else zero (0) is
+    returned. This method is used in the unpack() methods of the
+    corresponding fields to properly extract the data from the binary log
     in the event that the master's field is smaller than the slave.
   */
   uint16 field_metadata(uint index) const
@@ -150,15 +146,14 @@ public:
   my_bool maybe_null(uint index) const
   {
     DBUG_ASSERT(index < m_size);
-    return ((m_null_bits[(index / 8)] & 
-            (1 << (index % 8))) == (1 << (index %8)));
+    return ((m_null_bits[(index / 8)] & (1 << (index % 8))) == (1 << (index % 8)));
   }
 
   /*
     This function returns the field size in raw bytes based on the type
-    and the encoded field data from the master's raw data. This method can 
-    be used for situations where the slave needs to skip a column (e.g., 
-    WL#3915) or needs to advance the pointer for the fields in the raw 
+    and the encoded field data from the master's raw data. This method can
+    be used for situations where the slave needs to skip a column (e.g.,
+    WL#3915) or needs to advance the pointer for the fields in the raw
     data from the master to a specific column.
   */
   uint32 calc_field_size(uint col, uchar *master_data) const;
@@ -190,8 +185,7 @@ public:
     @retval 0  if the table definition is compatible with @c table
   */
 #ifndef MYSQL_CLIENT
-  bool compatible_with(THD *thd, rpl_group_info *rgi, TABLE *table,
-                      TABLE **conv_table_var) const;
+  bool compatible_with(THD *thd, rpl_group_info *rgi, TABLE *table, TABLE **conv_table_var) const;
 
   /**
    Create a virtual in-memory temporary table structure.
@@ -215,29 +209,25 @@ public:
    @return A pointer to a temporary table with memory allocated in the
    thread's memroot, NULL if the table could not be created
    */
-  TABLE *create_conversion_table(THD *thd, rpl_group_info *rgi,
-                                 TABLE *target_table) const;
+  TABLE *create_conversion_table(THD *thd, rpl_group_info *rgi, TABLE *target_table) const;
 #endif
 
-
-private:
+ private:
   ulong m_size;           // Number of elements in the types array
   unsigned char *m_type;  // Array of type descriptors
   uint m_field_metadata_size;
   uint16 *m_field_metadata;
   uchar *m_null_bits;
-  uint16 m_flags;         // Table flags
+  uint16 m_flags;  // Table flags
   uchar *m_memory;
 };
-
 
 #ifndef MYSQL_CLIENT
 /**
    Extend the normal table list with a few new fields needed by the
    slave thread, but nowhere else.
  */
-struct RPL_TABLE_LIST
-  : public TABLE_LIST
+struct RPL_TABLE_LIST : public TABLE_LIST
 {
   bool m_tabledef_valid;
   table_def m_tabledef;
@@ -245,44 +235,49 @@ struct RPL_TABLE_LIST
   bool master_had_triggers;
 };
 
-
 /* Anonymous namespace for template functions/classes */
 CPP_UNNAMED_NS_START
 
-  /*
-    Smart pointer that will automatically call my_afree (a macro) when
-    the pointer goes out of scope.  This is used so that I do not have
-    to remember to call my_afree() before each return.  There is no
-    overhead associated with this, since all functions are inline.
+/*
+  Smart pointer that will automatically call my_afree (a macro) when
+  the pointer goes out of scope.  This is used so that I do not have
+  to remember to call my_afree() before each return.  There is no
+  overhead associated with this, since all functions are inline.
 
-    I (Matz) would prefer to use the free function as a template
-    parameter, but that is not possible when the "function" is a
-    macro.
-  */
-  template <class Obj>
-  class auto_afree_ptr
+  I (Matz) would prefer to use the free function as a template
+  parameter, but that is not possible when the "function" is a
+  macro.
+*/
+template <class Obj>
+class auto_afree_ptr
+{
+  Obj *m_ptr;
+
+ public:
+  auto_afree_ptr(Obj *ptr) : m_ptr(ptr) {}
+  ~auto_afree_ptr()
   {
-    Obj* m_ptr;
-  public:
-    auto_afree_ptr(Obj* ptr) : m_ptr(ptr) { }
-    ~auto_afree_ptr() { if (m_ptr) my_afree(m_ptr); }
-    void assign(Obj* ptr) {
-      /* Only to be called if it hasn't been given a value before. */
-      DBUG_ASSERT(m_ptr == NULL);
-      m_ptr= ptr;
-    }
-    Obj* get() { return m_ptr; }
-  };
+    if (m_ptr)
+      my_afree(m_ptr);
+  }
+  void assign(Obj *ptr)
+  {
+    /* Only to be called if it hasn't been given a value before. */
+    DBUG_ASSERT(m_ptr == NULL);
+    m_ptr = ptr;
+  }
+  Obj *get() { return m_ptr; }
+};
 
 CPP_UNNAMED_NS_END
 
 class Deferred_log_events
 {
-private:
+ private:
   DYNAMIC_ARRAY array;
   Log_event *last_added;
 
-public:
+ public:
   Deferred_log_events(Relay_log_info *rli);
   ~Deferred_log_events();
   /* queue for exection at Query-log-event time prior the Query */
@@ -296,14 +291,14 @@ public:
 #endif
 
 // NB. number of printed bit values is limited to sizeof(buf) - 1
-#define DBUG_PRINT_BITSET(N,FRM,BS)                \
-  do {                                             \
-    char buf[256];                                 \
-    uint i;                                        \
-    for (i = 0 ; i < MY_MIN(sizeof(buf) - 1, (BS)->n_bits) ; i++) \
-      buf[i] = bitmap_is_set((BS), i) ? '1' : '0'; \
-    buf[i] = '\0';                                 \
-    DBUG_PRINT((N), ((FRM), buf));                 \
+#define DBUG_PRINT_BITSET(N, FRM, BS)                                                                        \
+  do                                                                                                         \
+  {                                                                                                          \
+    char buf[256];                                                                                           \
+    uint i;                                                                                                  \
+    for (i = 0; i < MY_MIN(sizeof(buf) - 1, (BS)->n_bits); i++) buf[i] = bitmap_is_set((BS), i) ? '1' : '0'; \
+    buf[i] = '\0';                                                                                           \
+    DBUG_PRINT((N), ((FRM), buf));                                                                           \
   } while (0)
 
 #endif /* RPL_UTILITY_H */

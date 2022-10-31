@@ -22,13 +22,12 @@
 
 /* Definitions for MariaDB global transaction ID (GTID). */
 
-
 extern const LEX_CSTRING rpl_gtid_slave_state_table_name;
 
 class String;
 #define PARAM_GTID(G) G.domain_id, G.server_id, G.seq_no
 
-#define GTID_MAX_STR_LENGTH (10+1+10+1+20)
+#define GTID_MAX_STR_LENGTH (10 + 1 + 10 + 1 + 20)
 #define PARAM_GTID(G) G.domain_id, G.server_id, G.seq_no
 
 struct rpl_gtid
@@ -38,30 +37,27 @@ struct rpl_gtid
   uint64 seq_no;
 };
 
-inline bool operator==(const rpl_gtid& lhs, const rpl_gtid& rhs)
+inline bool operator==(const rpl_gtid &lhs, const rpl_gtid &rhs)
 {
-  return
-    lhs.domain_id == rhs.domain_id &&
-    lhs.server_id == rhs.server_id &&
-    lhs.seq_no    == rhs.seq_no;
+  return lhs.domain_id == rhs.domain_id && lhs.server_id == rhs.server_id && lhs.seq_no == rhs.seq_no;
 };
 
-inline bool operator<(const rpl_gtid& lhs, const rpl_gtid& rhs)
+inline bool operator<(const rpl_gtid &lhs, const rpl_gtid &rhs)
 {
-  return (lhs.domain_id == rhs.domain_id) ? lhs.seq_no < rhs.seq_no
-                                          : lhs.domain_id < rhs.domain_id;
+  return (lhs.domain_id == rhs.domain_id) ? lhs.seq_no < rhs.seq_no : lhs.domain_id < rhs.domain_id;
 };
 
-inline bool operator>(const rpl_gtid& lhs, const rpl_gtid& rhs)
+inline bool operator>(const rpl_gtid &lhs, const rpl_gtid &rhs)
 {
-  return (lhs.domain_id == rhs.domain_id) ? lhs.seq_no > rhs.seq_no
-                                          : lhs.domain_id > rhs.domain_id;
+  return (lhs.domain_id == rhs.domain_id) ? lhs.seq_no > rhs.seq_no : lhs.domain_id > rhs.domain_id;
 };
 
-enum enum_gtid_skip_type {
-  GTID_SKIP_NOT, GTID_SKIP_STANDALONE, GTID_SKIP_TRANSACTION
+enum enum_gtid_skip_type
+{
+  GTID_SKIP_NOT,
+  GTID_SKIP_STANDALONE,
+  GTID_SKIP_TRANSACTION
 };
-
 
 /*
   Structure to keep track of threads waiting in MASTER_GTID_WAIT().
@@ -74,14 +70,17 @@ enum enum_gtid_skip_type {
   thread then handles all the (potentially heavy) lifting of dealing with
   all current waiting threads.
 */
-struct gtid_waiting {
+struct gtid_waiting
+{
   /* Elements in the hash, basically a priority queue for each domain. */
-  struct hash_element {
+  struct hash_element
+  {
     QUEUE queue;
     uint32 domain_id;
   };
   /* A priority queue to handle waiters in one domain in seq_no order. */
-  struct queue_element {
+  struct queue_element
+  {
     uint64 wait_seq_no;
     THD *thd;
     int queue_idx;
@@ -108,11 +107,9 @@ struct gtid_waiting {
   void promote_new_waiter(gtid_waiting::hash_element *he);
   int wait_for_gtid(THD *thd, rpl_gtid *wait_gtid, struct timespec *wait_until);
   void process_wait_hash(uint64 wakeup_seq_no, gtid_waiting::hash_element *he);
-  int register_in_wait_queue(THD *thd, rpl_gtid *wait_gtid, hash_element *he,
-                             queue_element *elem);
+  int register_in_wait_queue(THD *thd, rpl_gtid *wait_gtid, hash_element *he, queue_element *elem);
   void remove_from_wait_queue(hash_element *he, queue_element *elem);
 };
-
 
 class Relay_log_info;
 struct rpl_group_info;
@@ -178,22 +175,29 @@ struct rpl_slave_state
     uint32 owner_count;
     mysql_cond_t COND_gtid_ignore_duplicates;
 
-    list_element *grab_list() { list_element *l= list; list= NULL; return l; }
+    list_element *grab_list()
+    {
+      list_element *l = list;
+      list = NULL;
+      return l;
+    }
     void add(list_element *l)
     {
-      l->next= list;
-      list= l;
+      l->next = list;
+      list = l;
     }
   };
 
   /* Descriptor for mysql.gtid_slave_posXXX table in specific engine. */
-  enum gtid_pos_table_state {
+  enum gtid_pos_table_state
+  {
     GTID_POS_AUTO_CREATE,
     GTID_POS_CREATE_REQUESTED,
     GTID_POS_CREATE_IN_PROGRESS,
     GTID_POS_AVAILABLE
   };
-  struct gtid_pos_table {
+  struct gtid_pos_table
+  {
     struct gtid_pos_table *next;
     /*
       Use a void * here, rather than handlerton *, to make explicit that we
@@ -234,9 +238,9 @@ struct rpl_slave_state
     by reading the gtid_pos_tables pointer atomically with acquire semantics,
     to ensure that it will see the correct next pointer of a new head element.
   */
-  std::atomic<gtid_pos_table*> gtid_pos_tables;
+  std::atomic<gtid_pos_table *> gtid_pos_tables;
   /* The default entry in gtid_pos_tables, mysql.gtid_slave_pos. */
-  std::atomic<gtid_pos_table*> default_gtid_pos_table;
+  std::atomic<gtid_pos_table *> default_gtid_pos_table;
   bool loaded;
 
   rpl_slave_state();
@@ -244,41 +248,34 @@ struct rpl_slave_state
 
   void truncate_hash();
   ulong count() const { return hash.records; }
-  int update(uint32 domain_id, uint32 server_id, uint64 sub_id,
-             uint64 seq_no, void *hton, rpl_group_info *rgi);
+  int update(uint32 domain_id, uint32 server_id, uint64 sub_id, uint64 seq_no, void *hton, rpl_group_info *rgi);
   int truncate_state_table(THD *thd);
   void select_gtid_pos_table(THD *thd, LEX_CSTRING *out_tablename);
-  int record_gtid(THD *thd, const rpl_gtid *gtid, uint64 sub_id,
-                  bool in_transaction, bool in_statement, void **out_hton);
+  int record_gtid(THD *thd, const rpl_gtid *gtid, uint64 sub_id, bool in_transaction, bool in_statement,
+                  void **out_hton);
   list_element *gtid_grab_pending_delete_list();
   LEX_CSTRING *select_gtid_pos_table(void *hton);
   void gtid_delete_pending(THD *thd, rpl_slave_state::list_element **list_ptr);
   uint64 next_sub_id(uint32 domain_id);
-  int iterate(int (*cb)(rpl_gtid *, void *), void *data,
-              rpl_gtid *extra_gtids, uint32 num_extra,
-              bool sort);
+  int iterate(int (*cb)(rpl_gtid *, void *), void *data, rpl_gtid *extra_gtids, uint32 num_extra, bool sort);
   int tostring(String *dest, rpl_gtid *extra_gtids, uint32 num_extra);
   bool domain_to_gtid(uint32 domain_id, rpl_gtid *out_gtid);
-  int load(THD *thd, const char *state_from_master, size_t len, bool reset,
-           bool in_statement);
+  int load(THD *thd, const char *state_from_master, size_t len, bool reset, bool in_statement);
   bool is_empty();
 
   element *get_element(uint32 domain_id);
   int put_back_list(list_element *list);
 
-  void update_state_hash(uint64 sub_id, rpl_gtid *gtid, void *hton,
-                         rpl_group_info *rgi);
+  void update_state_hash(uint64 sub_id, rpl_gtid *gtid, void *hton, rpl_group_info *rgi);
   int record_and_update_gtid(THD *thd, struct rpl_group_info *rgi);
   int check_duplicate_gtid(rpl_gtid *gtid, rpl_group_info *rgi);
   void release_domain_owner(rpl_group_info *rgi);
-  void set_gtid_pos_tables_list(gtid_pos_table *new_list,
-                                gtid_pos_table *default_entry);
+  void set_gtid_pos_tables_list(gtid_pos_table *new_list, gtid_pos_table *default_entry);
   void add_gtid_pos_table(gtid_pos_table *entry);
-  struct gtid_pos_table *alloc_gtid_pos_table(LEX_CSTRING *table_name,
-      void *hton, rpl_slave_state::gtid_pos_table_state state);
+  struct gtid_pos_table *alloc_gtid_pos_table(LEX_CSTRING *table_name, void *hton,
+                                              rpl_slave_state::gtid_pos_table_state state);
   void free_gtid_pos_tables(struct gtid_pos_table *list);
 };
-
 
 /*
   Binlog state.
@@ -297,9 +294,10 @@ struct rpl_slave_state
 */
 struct rpl_binlog_state
 {
-  struct element {
+  struct element
+  {
     uint32 domain_id;
-    HASH hash;                /* Containing all server_id for one domain_id */
+    HASH hash; /* Containing all server_id for one domain_id */
     /* The most recent entry in the hash. */
     rpl_gtid *last_gtid;
     /* Counter to allocate next seq_no for this domain. */
@@ -316,7 +314,7 @@ struct rpl_binlog_state
   /* Auxiliary buffer to sort gtid list. */
   DYNAMIC_ARRAY gtid_sort_array;
 
-   rpl_binlog_state() :initialized(0) {}
+  rpl_binlog_state() : initialized(0) {}
   ~rpl_binlog_state();
 
   void init();
@@ -327,11 +325,9 @@ struct rpl_binlog_state
   bool load(rpl_slave_state *slave_pos);
   int update_nolock(const struct rpl_gtid *gtid, bool strict);
   int update(const struct rpl_gtid *gtid, bool strict);
-  int update_with_next_gtid(uint32 domain_id, uint32 server_id,
-                             rpl_gtid *gtid);
+  int update_with_next_gtid(uint32 domain_id, uint32 server_id, rpl_gtid *gtid);
   int alloc_element_nolock(const rpl_gtid *gtid);
-  bool check_strict_sequence(uint32 domain_id, uint32 server_id, uint64 seq_no,
-                             bool no_error= false);
+  bool check_strict_sequence(uint32 domain_id, uint32 server_id, uint64 seq_no, bool no_error = false);
   int bump_seq_no_if_needed(uint32 domain_id, uint64 seq_no);
   int write_to_iocache(IO_CACHE *dest);
   int read_from_iocache(IO_CACHE *src);
@@ -343,9 +339,8 @@ struct rpl_binlog_state
   rpl_gtid *find_nolock(uint32 domain_id, uint32 server_id);
   rpl_gtid *find(uint32 domain_id, uint32 server_id);
   rpl_gtid *find_most_recent(uint32 domain_id);
-  const char* drop_domain(DYNAMIC_ARRAY *ids, Gtid_list_log_event *glev, char*);
+  const char *drop_domain(DYNAMIC_ARRAY *ids, Gtid_list_log_event *glev, char *);
 };
-
 
 /*
   Represent the GTID state that a slave connection to a master requests
@@ -353,15 +348,16 @@ struct rpl_binlog_state
 */
 struct slave_connection_state
 {
-  struct entry {
+  struct entry
+  {
     rpl_gtid gtid;
     uint32 flags;
   };
   /* Bits for 'flags' */
   enum start_flags
   {
-    START_OWN_SLAVE_POS= 0x1,
-    START_ON_EMPTY_DOMAIN= 0x2
+    START_OWN_SLAVE_POS = 0x1,
+    START_ON_EMPTY_DOMAIN = 0x2
   };
 
   /* Mapping from domain_id to the entry with GTID requested for that domain. */
@@ -389,16 +385,10 @@ struct slave_connection_state
   bool is_pos_reached();
 };
 
-
-extern bool rpl_slave_state_tostring_helper(String *dest, const rpl_gtid *gtid,
-                                            bool *first);
+extern bool rpl_slave_state_tostring_helper(String *dest, const rpl_gtid *gtid, bool *first);
 extern int gtid_check_rpl_slave_state_table(TABLE *table);
-extern rpl_gtid *gtid_parse_string_to_list(const char *p, size_t len,
-                                           uint32 *out_len);
-extern rpl_gtid *gtid_unpack_string_to_list(const char *p, size_t len,
-                                           uint32 *out_len);
-
-
+extern rpl_gtid *gtid_parse_string_to_list(const char *p, size_t len, uint32 *out_len);
+extern rpl_gtid *gtid_unpack_string_to_list(const char *p, size_t len, uint32 *out_len);
 
 /*
   This class ensures that the GTID state of an event stream is consistent with
@@ -412,12 +402,10 @@ extern rpl_gtid *gtid_unpack_string_to_list(const char *p, size_t len,
 */
 class Binlog_gtid_state_validator
 {
-public:
-
+ public:
   struct audit_elem
   {
     uint32 domain_id;
-
 
     /*
       Holds the largest GTID received, and is indexed by domain_id
@@ -463,8 +451,7 @@ public:
     Ensures that the expected stop GTID positions exist within the specified
     binary logs.
   */
-  my_bool verify_stop_state(FILE *out, rpl_gtid *stop_gtids,
-                            size_t n_stop_gtids);
+  my_bool verify_stop_state(FILE *out, rpl_gtid *stop_gtids, size_t n_stop_gtids);
 
   /*
     Ensure a GTID state (e.g., from a Gtid_list_log_event) is consistent with
@@ -494,7 +481,7 @@ public:
     fprintf(out, "\n");
   }
 
-  static void warn(FILE *out, const char *format,...)
+  static void warn(FILE *out, const char *format, ...)
   {
     va_list args;
     va_start(args, format);
@@ -502,7 +489,7 @@ public:
     report_details(out, format, args);
   }
 
-  static void error(FILE *out, const char *format,...)
+  static void error(FILE *out, const char *format, ...)
   {
     va_list args;
     va_start(args, format);
@@ -510,8 +497,7 @@ public:
     report_details(out, format, args);
   }
 
-private:
-
+ private:
   /*
     Holds the records for each domain id we are monitoring. Elements are of
     type `struct audit_elem` and indexed by domian_id.
@@ -524,9 +510,9 @@ private:
 */
 class Gtid_event_filter
 {
-public:
-  Gtid_event_filter() {};
-  virtual ~Gtid_event_filter() {};
+ public:
+  Gtid_event_filter(){};
+  virtual ~Gtid_event_filter(){};
 
   enum gtid_event_filter_type
   {
@@ -578,7 +564,7 @@ public:
 */
 class Accept_all_gtid_filter : public Gtid_event_filter
 {
-public:
+ public:
   Accept_all_gtid_filter() {}
   ~Accept_all_gtid_filter() {}
   my_bool exclude(rpl_gtid *gtid) { return FALSE; }
@@ -591,7 +577,7 @@ public:
 */
 class Reject_all_gtid_filter : public Gtid_event_filter
 {
-public:
+ public:
   Reject_all_gtid_filter() {}
   ~Reject_all_gtid_filter() {}
   my_bool exclude(rpl_gtid *gtid) { return TRUE; }
@@ -610,11 +596,11 @@ public:
 */
 class Window_gtid_event_filter : public Gtid_event_filter
 {
-public:
+ public:
   Window_gtid_event_filter();
   ~Window_gtid_event_filter() {}
 
-  my_bool exclude(rpl_gtid*);
+  my_bool exclude(rpl_gtid *);
   my_bool has_finished();
 
   /*
@@ -651,18 +637,17 @@ public:
 
   void clear_start_pos()
   {
-    m_has_start= FALSE;
-    m_start= {0, 0, 0};
+    m_has_start = FALSE;
+    m_start = {0, 0, 0};
   }
 
   void clear_stop_pos()
   {
-    m_has_stop= FALSE;
-    m_stop= {0, 0, 0};
+    m_has_stop = FALSE;
+    m_stop = {0, 0, 0};
   }
 
-protected:
-
+ protected:
   /*
     When processing GTID streams, the order in which they are processed should
     be sequential with no gaps between events. If a gap is found within a
@@ -670,11 +655,10 @@ protected:
   */
   void verify_gtid_is_expected(rpl_gtid *gtid);
 
-private:
-
+ private:
   enum warning_flags
   {
-    WARN_GTID_SEQUENCE_NUMBER_OUT_OF_ORDER= 0x1
+    WARN_GTID_SEQUENCE_NUMBER_OUT_OF_ORDER = 0x1
   };
 
   /*
@@ -710,7 +694,8 @@ private:
   rpl_gtid m_stop;
 };
 
-template <typename T> struct gtid_filter_element
+template <typename T>
+struct gtid_filter_element
 {
   Gtid_event_filter *filter;
   T identifier; /* Used for HASH lookup */
@@ -730,7 +715,7 @@ template <typename T> struct gtid_filter_element
 template <typename T>
 class Id_delegating_gtid_event_filter : public Gtid_event_filter
 {
-public:
+ public:
   Id_delegating_gtid_event_filter();
   ~Id_delegating_gtid_event_filter();
 
@@ -741,7 +726,7 @@ public:
   uint32 get_filter_type() { return DELEGATING_GTID_FILTER_TYPE; }
 
   virtual T get_id_from_gtid(rpl_gtid *) = 0;
-  virtual const char* get_id_type_name() = 0;
+  virtual const char *get_id_type_name() = 0;
 
   /*
     Sets restrictions on entire ids using the corresponding mode (i.e. either
@@ -753,11 +738,9 @@ public:
 
     Returns 0 on ok, non-zero on error.
   */
-  int set_id_restrictions(T *id_list, size_t n_ids,
-                          Gtid_event_filter::id_restriction_mode mode);
+  int set_id_restrictions(T *id_list, size_t n_ids, Gtid_event_filter::id_restriction_mode mode);
 
-protected:
-
+ protected:
   uint32 m_num_stateful_filters;
   uint32 m_num_completed_filters;
   Gtid_event_filter *m_default_filter;
@@ -785,18 +768,13 @@ protected:
     get_num_start_gtids()  : gets the count of added GTID start positions
     get_num_stop_gtids()   : gets the count of added GTID stop positions
 */
-class Domain_gtid_event_filter
-    : public Id_delegating_gtid_event_filter<decltype(rpl_gtid::domain_id)>
+class Domain_gtid_event_filter : public Id_delegating_gtid_event_filter<decltype(rpl_gtid::domain_id)>
 {
-public:
+ public:
   Domain_gtid_event_filter()
   {
-    my_init_dynamic_array(PSI_INSTRUMENT_ME, &m_start_filters,
-                          sizeof(decltype(rpl_gtid::domain_id) *), 8, 8,
-                          MYF(0));
-    my_init_dynamic_array(PSI_INSTRUMENT_ME, &m_stop_filters,
-                          sizeof(decltype(rpl_gtid::domain_id) *), 8, 8,
-                          MYF(0));
+    my_init_dynamic_array(PSI_INSTRUMENT_ME, &m_start_filters, sizeof(decltype(rpl_gtid::domain_id) *), 8, 8, MYF(0));
+    my_init_dynamic_array(PSI_INSTRUMENT_ME, &m_stop_filters, sizeof(decltype(rpl_gtid::domain_id) *), 8, 8, MYF(0));
   }
   ~Domain_gtid_event_filter()
   {
@@ -807,18 +785,15 @@ public:
   /*
     Returns the domain id of from the input GTID
   */
-  decltype(rpl_gtid::domain_id) get_id_from_gtid(rpl_gtid *gtid)
-  {
-    return gtid->domain_id;
-  }
+  decltype(rpl_gtid::domain_id) get_id_from_gtid(rpl_gtid *gtid) { return gtid->domain_id; }
 
-  const char* get_id_type_name() { return "domain"; }
+  const char *get_id_type_name() { return "domain"; }
 
   /*
     Override Id_delegating_gtid_event_filter to extend with domain specific
     filtering logic
   */
-  my_bool exclude(rpl_gtid*);
+  my_bool exclude(rpl_gtid *);
 
   /*
     Validates that window filters with both a start and stop GTID satisfy
@@ -866,31 +841,26 @@ public:
   size_t get_num_start_gtids() { return m_start_filters.elements; }
   size_t get_num_stop_gtids() { return m_stop_filters.elements; }
 
-private:
+ private:
   DYNAMIC_ARRAY m_start_filters;
   DYNAMIC_ARRAY m_stop_filters;
 
-  Window_gtid_event_filter *
-  find_or_create_window_filter_for_id(decltype(rpl_gtid::domain_id));
+  Window_gtid_event_filter *find_or_create_window_filter_for_id(decltype(rpl_gtid::domain_id));
 };
 
 /*
   A subclass of Id_delegating_gtid_event_filter which identifies filters using
   the server id of a GTID.
 */
-class Server_gtid_event_filter
-    : public Id_delegating_gtid_event_filter<decltype(rpl_gtid::server_id)>
+class Server_gtid_event_filter : public Id_delegating_gtid_event_filter<decltype(rpl_gtid::server_id)>
 {
-public:
+ public:
   /*
     Returns the server id of from the input GTID
   */
-  decltype(rpl_gtid::server_id) get_id_from_gtid(rpl_gtid *gtid)
-  {
-    return gtid->server_id;
-  }
+  decltype(rpl_gtid::server_id) get_id_from_gtid(rpl_gtid *gtid) { return gtid->server_id; }
 
-  const char* get_id_type_name() { return "server"; }
+  const char *get_id_type_name() { return "server"; }
 };
 
 /*
@@ -899,9 +869,8 @@ public:
 */
 class Intersecting_gtid_event_filter : public Gtid_event_filter
 {
-public:
-  Intersecting_gtid_event_filter(Gtid_event_filter *filter1,
-                                 Gtid_event_filter *filter2);
+ public:
+  Intersecting_gtid_event_filter(Gtid_event_filter *filter1, Gtid_event_filter *filter2);
   ~Intersecting_gtid_event_filter();
 
   /*
@@ -922,13 +891,10 @@ public:
   /*
     Adds a new filter to the intersection
   */
-  my_bool add_filter(Gtid_event_filter *filter)
-  {
-    return insert_dynamic(&m_filters, (void *) &filter);
-  }
+  my_bool add_filter(Gtid_event_filter *filter) { return insert_dynamic(&m_filters, (void *)&filter); }
 
-  protected:
-    DYNAMIC_ARRAY m_filters;
+ protected:
+  DYNAMIC_ARRAY m_filters;
 };
 
-#endif  /* RPL_GTID_H */
+#endif /* RPL_GTID_H */

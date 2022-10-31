@@ -20,7 +20,7 @@
 class String;
 #include "my_md5.h"
 
-#define MAX_DIGEST_STORAGE_SIZE (1024*1024)
+#define MAX_DIGEST_STORAGE_SIZE (1024 * 1024)
 
 /**
   Structure to store token count/array for a statement
@@ -49,30 +49,24 @@ struct sql_digest_storage
   /* Length of the token array to be considered for DIGEST_TEXT calculation. */
   uint m_token_array_length;
 
-  sql_digest_storage()
-  {
-    reset(NULL, 0);
-  }
+  sql_digest_storage() { reset(NULL, 0); }
 
   inline void reset(unsigned char *token_array, size_t length)
   {
-    m_token_array= token_array;
-    m_token_array_length= (uint)length;
+    m_token_array = token_array;
+    m_token_array_length = (uint)length;
     reset();
   }
 
   inline void reset()
   {
-    m_full= false;
-    m_byte_count= 0;
-    m_charset_number= 0;
+    m_full = false;
+    m_byte_count = 0;
+    m_charset_number = 0;
     memset(m_md5, 0, MD5_HASH_SIZE);
   }
 
-  inline bool is_empty()
-  {
-    return (m_byte_count == 0);
-  }
+  inline bool is_empty() { return (m_byte_count == 0); }
 
   inline void copy(const sql_digest_storage *from)
   {
@@ -81,22 +75,21 @@ struct sql_digest_storage
       as the thread producing the digest is executing concurrently,
       without any lock enforced.
     */
-    uint byte_count_copy= m_token_array_length < from->m_byte_count ?
-                          m_token_array_length : from->m_byte_count;
+    uint byte_count_copy = m_token_array_length < from->m_byte_count ? m_token_array_length : from->m_byte_count;
 
     if (byte_count_copy > 0)
     {
-      m_full= from->m_full;
-      m_byte_count= byte_count_copy;
-      m_charset_number= from->m_charset_number;
+      m_full = from->m_full;
+      m_byte_count = byte_count_copy;
+      m_charset_number = from->m_charset_number;
       memcpy(m_token_array, from->m_token_array, m_byte_count);
       memcpy(m_md5, from->m_md5, MD5_HASH_SIZE);
     }
     else
     {
-      m_full= false;
-      m_byte_count= 0;
-      m_charset_number= 0;
+      m_full = false;
+      m_byte_count = 0;
+      m_charset_number = 0;
     }
   }
 };
@@ -122,8 +115,6 @@ void compute_digest_md5(const sql_digest_storage *digest_storage, unsigned char 
   @param digest_text_length Size of @c digest_text.
   @param [out] truncated true if the text representation was truncated
 */
-void compute_digest_text(const sql_digest_storage *digest_storage,
-                         String *digest_text);
+void compute_digest_text(const sql_digest_storage *digest_storage, String *digest_text);
 
 #endif
-

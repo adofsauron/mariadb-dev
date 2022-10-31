@@ -24,39 +24,36 @@
 
 class Wsrep_status
 {
-public:
-  static void init_once(const std::string& file_name);
+ public:
+  static void init_once(const std::string &file_name);
   static void destroy();
 
   static void report_state(enum wsrep::server_state::state const state)
   {
-    if (!Wsrep_status::m_instance) return;
+    if (!Wsrep_status::m_instance)
+      return;
 
     Wsrep_status::m_instance->report_state(state);
   }
 
-  static void report_progress(const std::string& progress)
+  static void report_progress(const std::string &progress)
   {
-    if (!Wsrep_status::m_instance) return;
+    if (!Wsrep_status::m_instance)
+      return;
 
     Wsrep_status::m_instance->report_progress(progress);
   }
 
-  static void report_log_msg(wsrep::reporter::log_level level,
-                             const char* tag, size_t tag_len,
-                             const char* buf, size_t buf_len,
-                             double const tstamp = wsrep::reporter::undefined);
+  static void report_log_msg(wsrep::reporter::log_level level, const char *tag, size_t tag_len, const char *buf,
+                             size_t buf_len, double const tstamp = wsrep::reporter::undefined);
 
-  static bool is_instance_initialized()
-  {
-      return m_instance;
-  }
+  static bool is_instance_initialized() { return m_instance; }
 
-private:
-  Wsrep_status(const std::string& file_name);
+ private:
+  Wsrep_status(const std::string &file_name);
 
-  static Wsrep_mutex*     m_mutex;
-  static wsrep::reporter* m_instance;
+  static Wsrep_mutex *m_mutex;
+  static wsrep::reporter *m_instance;
 };
 
 #endif /* WSREP_STATUS_H */

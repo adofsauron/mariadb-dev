@@ -41,9 +41,8 @@ struct scheduler_functions
   void (*post_kill_notification)(THD *thd);
   void (*end)(void);
   /** resume previous unfinished command (threadpool only)*/
-  void (*thd_resume)(THD* thd);
+  void (*thd_resume)(THD *thd);
 };
-
 
 /**
   Scheduler types enumeration.
@@ -67,13 +66,13 @@ enum scheduler_types
     the first entry in this enum and the first entry in the
     thread_handling_names array.
   */
-  SCHEDULER_ONE_THREAD_PER_CONNECTION=0,
+  SCHEDULER_ONE_THREAD_PER_CONNECTION = 0,
   SCHEDULER_NO_THREADS,
   SCHEDULER_TYPES_COUNT
 };
 
-void one_thread_per_connection_scheduler(scheduler_functions *func,
-    ulong *arg_max_connections, Atomic_counter<uint> *arg_connection_count);
+void one_thread_per_connection_scheduler(scheduler_functions *func, ulong *arg_max_connections,
+                                         Atomic_counter<uint> *arg_connection_count);
 void one_thread_scheduler(scheduler_functions *func, Atomic_counter<uint> *arg_connection_count);
 
 extern void scheduler_init();
@@ -83,17 +82,15 @@ extern void post_kill_notification(THD *);
 */
 struct thd_scheduler
 {
-public:
-  void *data;                  /* scheduler-specific data structure */
+ public:
+  void *data; /* scheduler-specific data structure */
 };
 
 #ifdef HAVE_POOL_OF_THREADS
-void pool_of_threads_scheduler(scheduler_functions* func,
-   ulong *arg_max_connections,
-   Atomic_counter<uint> *arg_connection_count);
+void pool_of_threads_scheduler(scheduler_functions *func, ulong *arg_max_connections,
+                               Atomic_counter<uint> *arg_connection_count);
 #else
-#define pool_of_threads_scheduler(A,B,C) \
-  one_thread_per_connection_scheduler(A, B, C)
+#define pool_of_threads_scheduler(A, B, C) one_thread_per_connection_scheduler(A, B, C)
 #endif /*HAVE_POOL_OF_THREADS*/
 
 #endif /* SCHEDULER_INCLUDED */

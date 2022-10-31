@@ -14,7 +14,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1335  USA */
 
-
 #ifndef SEMISYNC_H
 #define SEMISYNC_H
 
@@ -26,30 +25,27 @@
    This class is used to trace function calls and other process
    information
 */
-class Trace {
-public:
+class Trace
+{
+ public:
   static const unsigned long k_trace_function;
   static const unsigned long k_trace_general;
   static const unsigned long k_trace_detail;
   static const unsigned long k_trace_net_wait;
 
-  unsigned long           m_trace_level;                      /* the level for tracing */
+  unsigned long m_trace_level; /* the level for tracing */
 
-  Trace()
-    :m_trace_level(0L)
-  {}
-  Trace(unsigned long trace_level)
-    :m_trace_level(trace_level)
-  {}
+  Trace() : m_trace_level(0L) {}
+  Trace(unsigned long trace_level) : m_trace_level(trace_level) {}
 };
 
 /**
    Base class for semi-sync master and slave classes
 */
-class Repl_semi_sync_base
-  :public Trace {
-public:
-  static const unsigned char  k_sync_header[2];     /* three byte packet header */
+class Repl_semi_sync_base : public Trace
+{
+ public:
+  static const unsigned char k_sync_header[2]; /* three byte packet header */
 
   /* Constants in network packet header. */
   static const unsigned char k_packet_magic_num;
@@ -67,7 +63,6 @@ public:
 #define REPLY_MAGIC_NUM_OFFSET 0
 #define REPLY_BINLOG_POS_OFFSET (REPLY_MAGIC_NUM_OFFSET + REPLY_MAGIC_NUM_LEN)
 #define REPLY_BINLOG_NAME_OFFSET (REPLY_BINLOG_POS_OFFSET + REPLY_BINLOG_POS_LEN)
-#define REPLY_MESSAGE_MAX_LENGTH \
-    (REPLY_MAGIC_NUM_LEN + REPLY_BINLOG_POS_LEN + REPLY_BINLOG_NAME_LEN)
+#define REPLY_MESSAGE_MAX_LENGTH (REPLY_MAGIC_NUM_LEN + REPLY_BINLOG_POS_LEN + REPLY_BINLOG_NAME_LEN)
 
 #endif /* SEMISYNC_H */

@@ -16,7 +16,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1335  USA */
 
-#include "slave.h" // for tables_ok(), rpl_filter
+#include "slave.h"  // for tables_ok(), rpl_filter
 
 class THD;
 typedef struct st_lex_server_options LEX_SERVER_OPTIONS;
@@ -34,19 +34,18 @@ typedef struct st_federated_server
 /* cache handlers */
 bool servers_init(bool dont_read_server_table);
 bool servers_reload(THD *thd);
-void servers_free(bool end=0);
+void servers_free(bool end = 0);
 
 /* insert functions */
 int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options);
 
-/* drop functions */ 
+/* drop functions */
 int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options);
 
 /* update functions */
 int alter_server(THD *thd, LEX_SERVER_OPTIONS *server_options);
 
 /* lookup functions */
-FOREIGN_SERVER *get_server_by_name(MEM_ROOT *mem, const char *server_name,
-                                   FOREIGN_SERVER *server_buffer);
+FOREIGN_SERVER *get_server_by_name(MEM_ROOT *mem, const char *server_name, FOREIGN_SERVER *server_buffer);
 
 #endif /* SQL_SERVERS_INCLUDED */

@@ -18,7 +18,7 @@
 #include "my_dbug.h"
 #include <signal.h>
 
-//#include "sys_vars.h"
+// #include "sys_vars.h"
 #include <keycache.h>
 #include "mysqld.h"
 #include "sql_class.h"
@@ -30,7 +30,6 @@
 #else
 #define SIGNAL_FMT "signal %d"
 #endif
-
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/sysctl.h>
@@ -45,7 +44,7 @@
   Any global variables we read should be 'volatile sig_atomic_t'
   to guarantee that we read some consistent value.
  */
-static volatile sig_atomic_t segfaulted= 0;
+static volatile sig_atomic_t segfaulted = 0;
 extern ulong max_used_connections;
 extern volatile sig_atomic_t calling_initgroups;
 
@@ -58,37 +57,35 @@ static inline void output_core_info()
   char buff[PATH_MAX];
   ssize_t len;
   int fd;
-  if ((len= readlink("/proc/self/cwd", buff, sizeof(buff)-1)) >= 0)
+  if ((len = readlink("/proc/self/cwd", buff, sizeof(buff) - 1)) >= 0)
   {
-    buff[len]= 0;
-    my_safe_printf_stderr("Writing a core file...\nWorking directory at %.*s\n",
-                          (int) len, buff);
+    buff[len] = 0;
+    my_safe_printf_stderr("Writing a core file...\nWorking directory at %.*s\n", (int)len, buff);
   }
 #ifdef __FreeBSD__
-  if ((fd= my_open("/proc/curproc/rlimit", O_RDONLY, MYF(MY_NO_REGISTER))) >= 0)
+  if ((fd = my_open("/proc/curproc/rlimit", O_RDONLY, MYF(MY_NO_REGISTER))) >= 0)
 #else
-  if ((fd= my_open("/proc/self/limits", O_RDONLY, MYF(MY_NO_REGISTER))) >= 0)
+  if ((fd = my_open("/proc/self/limits", O_RDONLY, MYF(MY_NO_REGISTER))) >= 0)
 #endif
   {
     my_safe_printf_stderr("Resource Limits:\n");
-    while ((len= read(fd, (uchar*)buff, sizeof(buff))) > 0)
+    while ((len = read(fd, (uchar *)buff, sizeof(buff))) > 0)
     {
       my_write_stderr(buff, len);
     }
     my_close(fd, MYF(0));
   }
 #ifdef __linux__
-  if ((fd= my_open("/proc/sys/kernel/core_pattern", O_RDONLY,
-                   MYF(MY_NO_REGISTER))) >= 0)
+  if ((fd = my_open("/proc/sys/kernel/core_pattern", O_RDONLY, MYF(MY_NO_REGISTER))) >= 0)
   {
-    len= read(fd, (uchar*)buff, sizeof(buff));
-    my_safe_printf_stderr("Core pattern: %.*s\n", (int) len, buff);
+    len = read(fd, (uchar *)buff, sizeof(buff));
+    my_safe_printf_stderr("Core pattern: %.*s\n", (int)len, buff);
     my_close(fd, MYF(0));
   }
-  if ((fd= my_open("/proc/version", O_RDONLY, MYF(0))) >= 0)
+  if ((fd = my_open("/proc/version", O_RDONLY, MYF(0))) >= 0)
   {
-    len= my_read(fd, (uchar*)buff, sizeof(buff),  MYF(0));
-    my_safe_printf_stderr("Kernel version: %.*s\n", (int) len, buff);
+    len = my_read(fd, (uchar *)buff, sizeof(buff), MYF(0));
+    my_safe_printf_stderr("Kernel version: %.*s\n", (int)len, buff);
     my_close(fd, MYF(0));
   }
 #endif
@@ -97,11 +94,11 @@ static inline void output_core_info()
   size_t len = sizeof(buff);
   if (sysctlbyname("kern.corefile", buff, &len, NULL, 0) == 0)
   {
-    my_safe_printf_stderr("Core pattern: %.*s\n", (int) len, buff);
+    my_safe_printf_stderr("Core pattern: %.*s\n", (int)len, buff);
   }
   if (sysctlbyname("kern.version", buff, &len, NULL, 0) == 0)
   {
-    my_safe_printf_stderr("Kernel version: %.*s\n", (int) len, buff);
+    my_safe_printf_stderr("Kernel version: %.*s\n", (int)len, buff);
   }
 #else
   char buff[80];
@@ -118,13 +115,13 @@ static inline void output_core_info()
  * this signal handler.  The handler will try to dump relevant
  * debugging information to stderr and dump a core image.
  *
- * POSIX : Signal handlers should, if possible, only use a set of 'safe' system 
+ * POSIX : Signal handlers should, if possible, only use a set of 'safe' system
  * calls and library functions.  A list of safe calls in POSIX systems
  * are available at:
  *  http://pubs.opengroup.org/onlinepubs/009695399/functions/xsh_chap02_04.html
  *
  * @param sig Signal number /Exception code
-*/
+ */
 extern "C" sig_handler handle_fatal_signal(int sig)
 {
   time_t curr_time;
@@ -136,7 +133,7 @@ extern "C" sig_handler handle_fatal_signal(int sig)
      We will try and print the query at the end of the signal handler, in case
      we're wrong.
   */
-  bool print_invalid_query_pointer= false;
+  bool print_invalid_query_pointer = false;
 #endif
 
   if (segfaulted)
@@ -147,72 +144,66 @@ extern "C" sig_handler handle_fatal_signal(int sig)
   segfaulted = 1;
   DBUG_PRINT("error", ("handling fatal signal"));
 
-  curr_time= my_time(0);
+  curr_time = my_time(0);
   localtime_r(&curr_time, &tm);
 
-  my_safe_printf_stderr("%02d%02d%02d %2d:%02d:%02d ",
-                        tm.tm_year % 100, tm.tm_mon+1, tm.tm_mday,
-                        tm.tm_hour, tm.tm_min, tm.tm_sec);
+  my_safe_printf_stderr("%02d%02d%02d %2d:%02d:%02d ", tm.tm_year % 100, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                        tm.tm_min, tm.tm_sec);
   if (opt_expect_abort
 #ifdef _WIN32
-    && sig == (int)EXCEPTION_BREAKPOINT /* __debugbreak in my_sigabrt_hander() */
+      && sig == (int)EXCEPTION_BREAKPOINT /* __debugbreak in my_sigabrt_hander() */
 #else
-    && sig == SIGABRT
+      && sig == SIGABRT
 #endif
-    )
+  )
   {
-    fprintf(stderr,"[Note] mysqld did an expected abort\n");
+    fprintf(stderr, "[Note] mysqld did an expected abort\n");
     goto end;
   }
 
-  my_safe_printf_stderr("[ERROR] mysqld got " SIGNAL_FMT " ;\n",sig);
+  my_safe_printf_stderr("[ERROR] mysqld got " SIGNAL_FMT " ;\n", sig);
 
   my_safe_printf_stderr("%s",
-    "This could be because you hit a bug. It is also possible that this binary\n"
-    "or one of the libraries it was linked against is corrupt, improperly built,\n"
-    "or misconfigured. This error can also be caused by malfunctioning hardware.\n\n");
+                        "This could be because you hit a bug. It is also possible that this binary\n"
+                        "or one of the libraries it was linked against is corrupt, improperly built,\n"
+                        "or misconfigured. This error can also be caused by malfunctioning hardware.\n\n");
+
+  my_safe_printf_stderr("%s", "To report this bug, see https://mariadb.com/kb/en/reporting-bugs\n\n");
 
   my_safe_printf_stderr("%s",
-                        "To report this bug, see https://mariadb.com/kb/en/reporting-bugs\n\n");
-
-  my_safe_printf_stderr("%s",
-    "We will try our best to scrape up some info that will hopefully help\n"
-    "diagnose the problem, but since we have already crashed, \n"
-    "something is definitely wrong and this may fail.\n\n");
+                        "We will try our best to scrape up some info that will hopefully help\n"
+                        "diagnose the problem, but since we have already crashed, \n"
+                        "something is definitely wrong and this may fail.\n\n");
 
   set_server_version(server_version, sizeof(server_version));
   my_safe_printf_stderr("Server version: %s\n", server_version);
 
   if (dflt_key_cache)
-    my_safe_printf_stderr("key_buffer_size=%zu\n",
-                          dflt_key_cache->key_cache_mem_size);
+    my_safe_printf_stderr("key_buffer_size=%zu\n", dflt_key_cache->key_cache_mem_size);
 
-  my_safe_printf_stderr("read_buffer_size=%lu\n",
-                        global_system_variables.read_buff_size);
+  my_safe_printf_stderr("read_buffer_size=%lu\n", global_system_variables.read_buff_size);
 
-  my_safe_printf_stderr("max_used_connections=%lu\n",
-                        max_used_connections);
+  my_safe_printf_stderr("max_used_connections=%lu\n", max_used_connections);
 
   if (thread_scheduler)
-    my_safe_printf_stderr("max_threads=%lu\n",
-                          thread_scheduler->max_threads +
-                          extra_max_connections);
+    my_safe_printf_stderr("max_threads=%lu\n", thread_scheduler->max_threads + extra_max_connections);
 
   my_safe_printf_stderr("thread_count=%u\n", THD_count::value());
 
   if (dflt_key_cache && thread_scheduler)
   {
-    size_t used_mem=
-        (dflt_key_cache->key_cache_mem_size +
-         (global_system_variables.read_buff_size +
-          (size_t) global_system_variables.sortbuff_size) *
-             (thread_scheduler->max_threads + extra_max_connections) +
-         (max_connections + extra_max_connections) * sizeof(THD)) / 1024;
+    size_t used_mem = (dflt_key_cache->key_cache_mem_size +
+                       (global_system_variables.read_buff_size + (size_t)global_system_variables.sortbuff_size) *
+                           (thread_scheduler->max_threads + extra_max_connections) +
+                       (max_connections + extra_max_connections) * sizeof(THD)) /
+                      1024;
 
-    my_safe_printf_stderr("It is possible that mysqld could use up to \n"
-                          "key_buffer_size + "
-                          "(read_buffer_size + sort_buffer_size)*max_threads = "
-                          "%zu K  bytes of memory\n", used_mem);
+    my_safe_printf_stderr(
+        "It is possible that mysqld could use up to \n"
+        "key_buffer_size + "
+        "(read_buffer_size + sort_buffer_size)*max_threads = "
+        "%zu K  bytes of memory\n",
+        used_mem);
 
     my_safe_printf_stderr("%s",
                           "Hope that's ok; if not, decrease some variables in "
@@ -220,120 +211,121 @@ extern "C" sig_handler handle_fatal_signal(int sig)
   }
 
 #ifdef HAVE_STACKTRACE
-  thd= current_thd;
+  thd = current_thd;
 
   if (opt_stack_trace)
   {
     my_safe_printf_stderr("Thread pointer: %p\n", thd);
     my_safe_printf_stderr("%s",
-      "Attempting backtrace. You can use the following "
-      "information to find out\n"
-      "where mysqld died. If you see no messages after this, something went\n"
-      "terribly wrong...\n");
-    my_print_stacktrace(thd ? (uchar*) thd->thread_stack : NULL,
-                        (ulong)my_thread_stack_size, 0);
+                          "Attempting backtrace. You can use the following "
+                          "information to find out\n"
+                          "where mysqld died. If you see no messages after this, something went\n"
+                          "terribly wrong...\n");
+    my_print_stacktrace(thd ? (uchar *)thd->thread_stack : NULL, (ulong)my_thread_stack_size, 0);
   }
   if (thd)
   {
-    const char *kreason= "UNKNOWN";
-    switch (thd->killed) {
-    case NOT_KILLED:
-    case KILL_HARD_BIT:
-      kreason= "NOT_KILLED";
-      break;
-    case KILL_BAD_DATA:
-    case KILL_BAD_DATA_HARD:
-      kreason= "KILL_BAD_DATA";
-      break;
-    case KILL_CONNECTION:
-    case KILL_CONNECTION_HARD:
-      kreason= "KILL_CONNECTION";
-      break;
-    case KILL_QUERY:
-    case KILL_QUERY_HARD:
-      kreason= "KILL_QUERY";
-      break;
-    case KILL_TIMEOUT:
-    case KILL_TIMEOUT_HARD:
-      kreason= "KILL_TIMEOUT";
-      break;
-    case KILL_SYSTEM_THREAD:
-    case KILL_SYSTEM_THREAD_HARD:
-      kreason= "KILL_SYSTEM_THREAD";
-      break;
-    case KILL_SERVER:
-    case KILL_SERVER_HARD:
-      kreason= "KILL_SERVER";
-      break;
-    case ABORT_QUERY:
-    case ABORT_QUERY_HARD:
-      kreason= "ABORT_QUERY";
-      break;
-    case KILL_SLAVE_SAME_ID:
-      kreason= "KILL_SLAVE_SAME_ID";
-      break;
-    case KILL_WAIT_TIMEOUT:
-    case KILL_WAIT_TIMEOUT_HARD:
-      kreason= "KILL_WAIT_TIMEOUT";
-      break;
+    const char *kreason = "UNKNOWN";
+    switch (thd->killed)
+    {
+      case NOT_KILLED:
+      case KILL_HARD_BIT:
+        kreason = "NOT_KILLED";
+        break;
+      case KILL_BAD_DATA:
+      case KILL_BAD_DATA_HARD:
+        kreason = "KILL_BAD_DATA";
+        break;
+      case KILL_CONNECTION:
+      case KILL_CONNECTION_HARD:
+        kreason = "KILL_CONNECTION";
+        break;
+      case KILL_QUERY:
+      case KILL_QUERY_HARD:
+        kreason = "KILL_QUERY";
+        break;
+      case KILL_TIMEOUT:
+      case KILL_TIMEOUT_HARD:
+        kreason = "KILL_TIMEOUT";
+        break;
+      case KILL_SYSTEM_THREAD:
+      case KILL_SYSTEM_THREAD_HARD:
+        kreason = "KILL_SYSTEM_THREAD";
+        break;
+      case KILL_SERVER:
+      case KILL_SERVER_HARD:
+        kreason = "KILL_SERVER";
+        break;
+      case ABORT_QUERY:
+      case ABORT_QUERY_HARD:
+        kreason = "ABORT_QUERY";
+        break;
+      case KILL_SLAVE_SAME_ID:
+        kreason = "KILL_SLAVE_SAME_ID";
+        break;
+      case KILL_WAIT_TIMEOUT:
+      case KILL_WAIT_TIMEOUT_HARD:
+        kreason = "KILL_WAIT_TIMEOUT";
+        break;
     }
-    my_safe_printf_stderr("%s", "\n"
-      "Trying to get some variables.\n"
-      "Some pointers may be invalid and cause the dump to abort.\n");
+    my_safe_printf_stderr("%s",
+                          "\n"
+                          "Trying to get some variables.\n"
+                          "Some pointers may be invalid and cause the dump to abort.\n");
 
     my_safe_printf_stderr("Query (%p): ", thd->query());
     if (my_safe_print_str(thd->query(), MY_MIN(65536U, thd->query_length())))
     {
       // Query was found invalid. We will try to print it at the end.
-      print_invalid_query_pointer= true;
+      print_invalid_query_pointer = true;
     }
 
-    my_safe_printf_stderr("\nConnection ID (thread ID): %lu\n",
-                          (ulong) thd->thread_id);
+    my_safe_printf_stderr("\nConnection ID (thread ID): %lu\n", (ulong)thd->thread_id);
     my_safe_printf_stderr("Status: %s\n\n", kreason);
     my_safe_printf_stderr("%s", "Optimizer switch: ");
-    ulonglong optsw= thd->variables.optimizer_switch;
-    for (uint i= 0; optimizer_switch_names[i+1]; i++, optsw >>= 1)
+    ulonglong optsw = thd->variables.optimizer_switch;
+    for (uint i = 0; optimizer_switch_names[i + 1]; i++, optsw >>= 1)
     {
       if (i)
         my_safe_printf_stderr("%s", ",");
-      my_safe_printf_stderr("%s=%s",
-              optimizer_switch_names[i], optsw & 1 ? "on" : "off");
+      my_safe_printf_stderr("%s=%s", optimizer_switch_names[i], optsw & 1 ? "on" : "off");
     }
     my_safe_printf_stderr("%s", "\n\n");
   }
   my_safe_printf_stderr("%s",
-    "The manual page at "
-    "https://mariadb.com/kb/en/how-to-produce-a-full-stack-trace-for-mysqld/ contains\n"
-    "information that should help you find out what is causing the crash.\n");
+                        "The manual page at "
+                        "https://mariadb.com/kb/en/how-to-produce-a-full-stack-trace-for-mysqld/ contains\n"
+                        "information that should help you find out what is causing the crash.\n");
 
 #endif /* HAVE_STACKTRACE */
 
 #ifdef HAVE_INITGROUPS
   if (calling_initgroups)
   {
-    my_safe_printf_stderr("%s", "\n"
-      "This crash occurred while the server was calling initgroups(). This is\n"
-      "often due to the use of a mysqld that is statically linked against \n"
-      "glibc and configured to use LDAP in /etc/nsswitch.conf.\n"
-      "You will need to either upgrade to a version of glibc that does not\n"
-      "have this problem (2.3.4 or later when used with nscd),\n"
-      "disable LDAP in your nsswitch.conf, or use a "
-      "mysqld that is not statically linked.\n");
+    my_safe_printf_stderr("%s",
+                          "\n"
+                          "This crash occurred while the server was calling initgroups(). This is\n"
+                          "often due to the use of a mysqld that is statically linked against \n"
+                          "glibc and configured to use LDAP in /etc/nsswitch.conf.\n"
+                          "You will need to either upgrade to a version of glibc that does not\n"
+                          "have this problem (2.3.4 or later when used with nscd),\n"
+                          "disable LDAP in your nsswitch.conf, or use a "
+                          "mysqld that is not statically linked.\n");
   }
 #endif
 
   if (locked_in_memory)
   {
-    my_safe_printf_stderr("%s", "\n"
-      "The \"--memlock\" argument, which was enabled, "
-      "uses system calls that are\n"
-      "unreliable and unstable on some operating systems and "
-      "operating-system versions (notably, some versions of Linux).\n"
-      "This crash could be due to use of those buggy OS calls.\n"
-      "You should consider whether you really need the "
-      "\"--memlock\" parameter and/or consult the OS distributer about "
-      "\"mlockall\" bugs.\n");
+    my_safe_printf_stderr("%s",
+                          "\n"
+                          "The \"--memlock\" argument, which was enabled, "
+                          "uses system calls that are\n"
+                          "unreliable and unstable on some operating systems and "
+                          "operating-system versions (notably, some versions of Linux).\n"
+                          "This crash could be due to use of those buggy OS calls.\n"
+                          "You should consider whether you really need the "
+                          "\"--memlock\" parameter and/or consult the OS distributer about "
+                          "\"mlockall\" bugs.\n");
   }
 
 #ifdef HAVE_STACKTRACE

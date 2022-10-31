@@ -19,7 +19,7 @@
 #ifndef ITEM_CREATE_H
 #define ITEM_CREATE_H
 
-#include "item_func.h" // Cast_target
+#include "item_func.h"  // Cast_target
 
 typedef struct st_udf_func udf_func;
 
@@ -36,7 +36,7 @@ typedef struct st_udf_func udf_func;
 
 class Create_func
 {
-public:
+ public:
   /**
     The builder create method.
     Given the function name and list or arguments, this method creates
@@ -58,16 +58,14 @@ public:
     @param item_list The list of arguments to the function, can be NULL
     @return An item representing the parsed function call, or NULL
   */
-  virtual Item *create_func(THD *thd, const LEX_CSTRING *name,
-                            List<Item> *item_list) = 0;
+  virtual Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) = 0;
 
-protected:
+ protected:
   /** Constructor */
   Create_func() {}
   /** Destructor */
   virtual ~Create_func() {}
 };
-
 
 /**
   Adapter for functions that takes exactly zero arguments.
@@ -75,9 +73,8 @@ protected:
 
 class Create_func_arg0 : public Create_func
 {
-public:
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+ public:
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     Builder method, with no arguments.
@@ -86,13 +83,12 @@ public:
   */
   virtual Item *create_builder(THD *thd) = 0;
 
-protected:
+ protected:
   /** Constructor. */
   Create_func_arg0() {}
   /** Destructor. */
   virtual ~Create_func_arg0() {}
 };
-
 
 /**
   Adapter for functions that takes exactly one argument.
@@ -100,9 +96,8 @@ protected:
 
 class Create_func_arg1 : public Create_func
 {
-public:
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+ public:
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     Builder method, with one argument.
@@ -112,13 +107,12 @@ public:
   */
   virtual Item *create_1_arg(THD *thd, Item *arg1) = 0;
 
-protected:
+ protected:
   /** Constructor. */
   Create_func_arg1() {}
   /** Destructor. */
   virtual ~Create_func_arg1() {}
 };
-
 
 /**
   Adapter for functions that takes exactly two arguments.
@@ -126,9 +120,8 @@ protected:
 
 class Create_func_arg2 : public Create_func
 {
-public:
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+ public:
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     Builder method, with two arguments.
@@ -139,13 +132,12 @@ public:
   */
   virtual Item *create_2_arg(THD *thd, Item *arg1, Item *arg2) = 0;
 
-protected:
+ protected:
   /** Constructor. */
   Create_func_arg2() {}
   /** Destructor. */
   virtual ~Create_func_arg2() {}
 };
-
 
 /**
   Adapter for functions that takes exactly three arguments.
@@ -153,9 +145,8 @@ protected:
 
 class Create_func_arg3 : public Create_func
 {
-public:
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+ public:
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     Builder method, with three arguments.
@@ -167,15 +158,12 @@ public:
   */
   virtual Item *create_3_arg(THD *thd, Item *arg1, Item *arg2, Item *arg3) = 0;
 
-protected:
+ protected:
   /** Constructor. */
   Create_func_arg3() {}
   /** Destructor. */
   virtual ~Create_func_arg3() {}
 };
-
-
-
 
 /**
   Adapter for native functions with a variable number of arguments.
@@ -187,9 +175,8 @@ protected:
 
 class Create_native_func : public Create_func
 {
-public:
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+ public:
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     Builder method, with no arguments.
@@ -198,16 +185,14 @@ public:
     @param item_list The function parameters, none of which are named
     @return An item representing the function call
   */
-  virtual Item *create_native(THD *thd, const LEX_CSTRING *name,
-                              List<Item> *item_list) = 0;
+  virtual Item *create_native(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) = 0;
 
-protected:
+ protected:
   /** Constructor. */
   Create_native_func() {}
   /** Destructor. */
   virtual ~Create_native_func() {}
 };
-
 
 /**
   Function builder for qualified functions.
@@ -217,7 +202,7 @@ protected:
 
 class Create_qfunc : public Create_func
 {
-public:
+ public:
   /**
     The builder create method, for unqualified functions.
     This builder will use the current database for the database name.
@@ -226,8 +211,7 @@ public:
     @param item_list The list of arguments to the function, can be NULL
     @return An item representing the parsed function call
   */
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     The builder create method, for qualified functions.
@@ -238,19 +222,15 @@ public:
     @param item_list The list of arguments to the function, can be NULL
     @return An item representing the parsed function call
   */
-  virtual Item *create_with_db(THD *thd,
-                               const LEX_CSTRING *db,
-                               const LEX_CSTRING *name,
-                               bool use_explicit_name,
+  virtual Item *create_with_db(THD *thd, const LEX_CSTRING *db, const LEX_CSTRING *name, bool use_explicit_name,
                                List<Item> *item_list) = 0;
 
-protected:
+ protected:
   /** Constructor. */
   Create_qfunc() {}
   /** Destructor. */
   virtual ~Create_qfunc() {}
 };
-
 
 /**
   Find the native function builder associated with a given function name.
@@ -258,17 +238,14 @@ protected:
   @param name The native function name
   @return The native function builder associated with the name, or NULL
 */
-extern Create_func *find_native_function_builder(THD *thd,
-                                                 const LEX_CSTRING *name);
-
+extern Create_func *find_native_function_builder(THD *thd, const LEX_CSTRING *name);
 
 /**
   Find the function builder for qualified functions.
   @param thd The current thread
   @return A function builder for qualified functions
 */
-extern Create_qfunc * find_qualified_function_builder(THD *thd);
-
+extern Create_qfunc *find_qualified_function_builder(THD *thd);
 
 #ifdef HAVE_DLOPEN
 /**
@@ -277,9 +254,8 @@ extern Create_qfunc * find_qualified_function_builder(THD *thd);
 
 class Create_udf_func : public Create_func
 {
-public:
-  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list)
-    override;
+ public:
+  Item *create_func(THD *thd, const LEX_CSTRING *name, List<Item> *item_list) override;
 
   /**
     The builder create method, for User Defined Functions.
@@ -293,14 +269,13 @@ public:
   /** Singleton. */
   static Create_udf_func s_singleton;
 
-protected:
+ protected:
   /** Constructor. */
   Create_udf_func() {}
   /** Destructor. */
   virtual ~Create_udf_func() {}
 };
 #endif
-
 
 struct Native_func_registry
 {
@@ -314,30 +289,23 @@ int item_create_remove(Native_func_registry array[]);
 void item_create_cleanup();
 
 Item *create_func_dyncol_create(THD *thd, List<DYNCALL_CREATE_DEF> &list);
-Item *create_func_dyncol_add(THD *thd, Item *str,
-                             List<DYNCALL_CREATE_DEF> &list);
+Item *create_func_dyncol_add(THD *thd, Item *str, List<DYNCALL_CREATE_DEF> &list);
 Item *create_func_dyncol_delete(THD *thd, Item *str, List<Item> &nums);
-Item *create_func_dyncol_get(THD *thd, Item *num, Item *str,
-                             const Type_handler *handler,
-                             const Lex_length_and_dec_st &length_and_dec,
-                             CHARSET_INFO *cs);
+Item *create_func_dyncol_get(THD *thd, Item *num, Item *str, const Type_handler *handler,
+                             const Lex_length_and_dec_st &length_and_dec, CHARSET_INFO *cs);
 Item *create_func_dyncol_json(THD *thd, Item *str);
-
 
 class Native_func_registry_array
 {
   const Native_func_registry *m_elements;
   size_t m_count;
-public:
-  Native_func_registry_array()
-   :m_elements(NULL),
-    m_count(0)
-  { }
-  Native_func_registry_array(const Native_func_registry *elements, size_t count)
-   :m_elements(elements),
-    m_count(count)
-  { }
-  const Native_func_registry& element(size_t i) const
+
+ public:
+  Native_func_registry_array() : m_elements(NULL), m_count(0) {}
+  Native_func_registry_array(const Native_func_registry *elements, size_t count) : m_elements(elements), m_count(count)
+  {
+  }
+  const Native_func_registry &element(size_t i) const
   {
     DBUG_ASSERT(i < m_count);
     return m_elements[i];
@@ -346,6 +314,4 @@ public:
   bool append_to_hash(HASH *hash) const;
 };
 
-
 #endif
-

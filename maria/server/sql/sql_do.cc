@@ -1,18 +1,17 @@
 /* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; version 2 of the License.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
-
 
 /* Execute DO statement */
 
@@ -21,8 +20,8 @@
 #include "transaction.h"
 #include "unireg.h"
 #include "sql_do.h"
-#include "sql_base.h"                           // setup_fields
-#include "sql_select.h"                         // free_underlaid_joins
+#include "sql_base.h"    // setup_fields
+#include "sql_select.h"  // free_underlaid_joins
 
 bool mysql_do(THD *thd, List<Item> &values)
 {
@@ -31,8 +30,7 @@ bool mysql_do(THD *thd, List<Item> &values)
   DBUG_ENTER("mysql_do");
   if (setup_fields(thd, Ref_ptr_array(), values, COLUMNS_READ, 0, NULL, 0))
     DBUG_RETURN(TRUE);
-  while ((value = li++))
-    (void) value->is_null();
+  while ((value = li++)) (void)value->is_null();
   free_underlaid_joins(thd, thd->lex->first_select_lex());
 
   if (unlikely(thd->is_error()))
@@ -42,9 +40,9 @@ bool mysql_do(THD *thd, List<Item> &values)
       will clear the error and the rollback in the end of
       mysql_execute_command() won't work.
     */
-    if (! thd->in_sub_stmt)
+    if (!thd->in_sub_stmt)
       trans_rollback_stmt(thd);
-    thd->clear_error(); // DO always is OK
+    thd->clear_error();  // DO always is OK
   }
   my_ok(thd);
   DBUG_RETURN(FALSE);

@@ -13,9 +13,8 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 #ifdef USE_PRAGMA_IMPLEMENTATION
-#pragma implementation				// gcc: Class implementation
+#pragma implementation  // gcc: Class implementation
 #endif
 
 #include "mariadb.h"
@@ -23,46 +22,42 @@
 
 list_node end_of_list;
 
-
-void free_list(I_List <i_string> *list)
+void free_list(I_List<i_string> *list)
 {
   i_string *tmp;
-  while ((tmp= list->get()))
-    delete tmp;
+  while ((tmp = list->get())) delete tmp;
 }
-
 
 bool base_list::copy(const base_list *rhs, MEM_ROOT *mem_root)
 {
-  bool error= 0;
+  bool error = 0;
   if (rhs->elements)
   {
     /*
       It's okay to allocate an array of nodes at once: we never
       call a destructor for list_node objects anyway.
     */
-    if ((first= (list_node*) alloc_root(mem_root,
-                                        sizeof(list_node) * rhs->elements)))
+    if ((first = (list_node *)alloc_root(mem_root, sizeof(list_node) * rhs->elements)))
     {
-      elements= rhs->elements;
-      list_node *dst= first;
-      list_node *src= rhs->first;
-      for (; dst < first + elements - 1; dst++, src= src->next)
+      elements = rhs->elements;
+      list_node *dst = first;
+      list_node *src = rhs->first;
+      for (; dst < first + elements - 1; dst++, src = src->next)
       {
-        dst->info= src->info;
-        dst->next= dst + 1;
+        dst->info = src->info;
+        dst->next = dst + 1;
       }
       /* Copy the last node */
-      dst->info= src->info;
-      dst->next= &end_of_list;
+      dst->info = src->info;
+      dst->next = &end_of_list;
       /* Setup 'last' member */
-      last= &dst->next;
+      last = &dst->next;
       return 0;
     }
-    error= 1;
+    error = 1;
   }
-  elements= 0;
-  first= &end_of_list;
-  last= &first;
+  elements = 0;
+  first = &end_of_list;
+  last = &first;
   return error;
 }

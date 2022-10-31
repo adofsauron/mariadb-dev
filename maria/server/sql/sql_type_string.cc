@@ -19,47 +19,40 @@
 #include "sql_class.h"
 #include "sql_type_string.h"
 
-
-uchar *
-StringPack::pack(uchar *to, const uchar *from, uint max_length) const
+uchar *StringPack::pack(uchar *to, const uchar *from, uint max_length) const
 {
-  size_t length=      MY_MIN(m_octet_length, max_length);
-  size_t local_char_length= char_length();
+  size_t length = MY_MIN(m_octet_length, max_length);
+  size_t local_char_length = char_length();
   DBUG_PRINT("debug", ("length: %zu ", length));
 
   if (length > local_char_length)
-    local_char_length= charset()->charpos(from, from + length,
-                                          local_char_length);
+    local_char_length = charset()->charpos(from, from + length, local_char_length);
   set_if_smaller(length, local_char_length);
- 
+
   /*
-     TODO: change charset interface to add a new function that does 
-           the following or add a flag to lengthsp to do it itself 
-           (this is for not packing padding adding bytes in BINARY 
+     TODO: change charset interface to add a new function that does
+           the following or add a flag to lengthsp to do it itself
+           (this is for not packing padding adding bytes in BINARY
            fields).
   */
   if (mbmaxlen() == 1)
   {
-    while (length && from[length-1] == charset()->pad_char)
-      length --;
+    while (length && from[length - 1] == charset()->pad_char) length--;
   }
   else
-    length= charset()->lengthsp((const char*) from, length);
+    length = charset()->lengthsp((const char *)from, length);
 
   // Length always stored little-endian
-  *to++= (uchar) length;
+  *to++ = (uchar)length;
   if (m_octet_length > 255)
-    *to++= (uchar) (length >> 8);
+    *to++ = (uchar)(length >> 8);
 
   // Store the actual bytes of the string
   memcpy(to, from, length);
-  return to+length;
+  return to + length;
 }
 
-
-const uchar *
-StringPack::unpack(uchar *to, const uchar *from, const uchar *from_end,
-                   uint param_data) const
+const uchar *StringPack::unpack(uchar *to, const uchar *from, const uchar *from_end, uint param_data) const
 {
   uint from_length, length;
 
@@ -68,13 +61,11 @@ StringPack::unpack(uchar *to, const uchar *from, const uchar *from_end,
     used to decide if one or two bytes should be read as length.
    */
   if (param_data)
-    from_length= (((param_data >> 4) & 0x300) ^ 0x300) + (param_data & 0x00ff);
+    from_length = (((param_data >> 4) & 0x300) ^ 0x300) + (param_data & 0x00ff);
   else
-    from_length= m_octet_length;
+    from_length = m_octet_length;
 
-  DBUG_PRINT("debug",
-             ("param_data: 0x%x, field_length: %u, from_length: %u",
-              param_data, m_octet_length, from_length));
+  DBUG_PRINT("debug", ("param_data: 0x%x, field_length: %u, from_length: %u", param_data, m_octet_length, from_length));
   /*
     Compute the actual length of the data by reading one or two bits
     (depending on the declared field length on the master).
@@ -83,22 +74,20 @@ StringPack::unpack(uchar *to, const uchar *from, const uchar *from_end,
   {
     if (from + 2 > from_end)
       return 0;
-    length= uint2korr(from);
-    from+= 2;
+    length = uint2korr(from);
+    from += 2;
   }
   else
   {
     if (from + 1 > from_end)
       return 0;
-    length= (uint) *from++;
+    length = (uint)*from++;
   }
   if (from + length > from_end || length > m_octet_length)
     return 0;
 
   memcpy(to, from, length);
   // Pad the string with the pad character of the fields charset
-  charset()->fill((char*) to + length,
-                  m_octet_length - length,
-                  charset()->pad_char);
-  return from+length;
+  charset()->fill((char *)to + length, m_octet_length - length, charset()->pad_char);
+  return from + length;
 }

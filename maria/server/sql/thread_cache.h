@@ -15,7 +15,6 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA
 */
 
-
 /**
   MariaDB thread cache for "one thread per connection" scheduler.
 
@@ -40,32 +39,23 @@ class Thread_cache
   PSI_cond_key key_COND_thread_cache, key_COND_flush_thread_cache;
   PSI_mutex_key key_LOCK_thread_cache;
 
-public:
+ public:
   void init()
   {
 #ifdef HAVE_PSI_INTERFACE
-    PSI_cond_info conds[]=
-    {
-      { &key_COND_thread_cache, "COND_thread_cache", PSI_FLAG_GLOBAL },
-      { &key_COND_flush_thread_cache, "COND_flush_thread_cache",
-        PSI_FLAG_GLOBAL }
-    };
-    PSI_mutex_info mutexes[]=
-    {
-      { &key_LOCK_thread_cache, "LOCK_thread_cache", PSI_FLAG_GLOBAL }
-    };
+    PSI_cond_info conds[] = {{&key_COND_thread_cache, "COND_thread_cache", PSI_FLAG_GLOBAL},
+                             {&key_COND_flush_thread_cache, "COND_flush_thread_cache", PSI_FLAG_GLOBAL}};
+    PSI_mutex_info mutexes[] = {{&key_LOCK_thread_cache, "LOCK_thread_cache", PSI_FLAG_GLOBAL}};
     mysql_mutex_register("sql", mutexes, array_elements(mutexes));
     mysql_cond_register("sql", conds, array_elements(conds));
 #endif
-    mysql_mutex_init(key_LOCK_thread_cache, &LOCK_thread_cache,
-                     MY_MUTEX_INIT_FAST);
+    mysql_mutex_init(key_LOCK_thread_cache, &LOCK_thread_cache, MY_MUTEX_INIT_FAST);
     mysql_cond_init(key_COND_thread_cache, &COND_thread_cache, 0);
     mysql_cond_init(key_COND_flush_thread_cache, &COND_flush_thread_cache, 0);
     list.empty();
-    kill_cached_threads= 0;
-    cached_thread_count= 0;
+    kill_cached_threads = 0;
+    cached_thread_count = 0;
   }
-
 
   void destroy()
   {
@@ -75,7 +65,6 @@ public:
     mysql_cond_destroy(&COND_thread_cache);
     mysql_mutex_destroy(&LOCK_thread_cache);
   }
-
 
   /**
     Flushes thread cache.
@@ -96,7 +85,6 @@ public:
     mysql_mutex_unlock(&LOCK_thread_cache);
   }
 
-
   /**
     Flushes thread cache and forbids threads parking in the cache.
 
@@ -107,7 +95,6 @@ public:
     kill_cached_threads++;
     flush();
   }
-
 
   /**
     Requests parked thread to serve new connection.
@@ -131,7 +118,6 @@ public:
     return false;
   }
 
-
   /**
     Parks thread in the cache.
 
@@ -148,7 +134,7 @@ public:
   {
     struct timespec abstime;
     CONNECT *connect;
-    bool flushed= false;
+    bool flushed = false;
     DBUG_ENTER("Thread_cache::park");
     set_timespec(abstime, THREAD_CACHE_TIMEOUT);
 
@@ -159,12 +145,11 @@ public:
     PSI_CALL_delete_current_thread();
 
 #ifndef DBUG_OFF
-    while (_db_is_pushed_())
-      _db_pop_();
+    while (_db_is_pushed_()) _db_pop_();
 #endif
 
     mysql_mutex_lock(&LOCK_thread_cache);
-    if ((connect= list.get()))
+    if ((connect = list.get()))
       cached_thread_count++;
     else if (cached_thread_count < thread_cache_size && !kill_cached_threads)
     {
@@ -173,10 +158,9 @@ public:
       cached_thread_count++;
       for (;;)
       {
-        int error= mysql_cond_timedwait(&COND_thread_cache, &LOCK_thread_cache,
-                                         &abstime);
-        flushed= kill_cached_threads;
-        if ((connect= list.get()))
+        int error = mysql_cond_timedwait(&COND_thread_cache, &LOCK_thread_cache, &abstime);
+        flushed = kill_cached_threads;
+        if ((connect = list.get()))
           break;
         else if (flushed || error == ETIMEDOUT || error == ETIME)
         {
@@ -196,12 +180,11 @@ public:
     DBUG_RETURN(connect);
   }
 
-
   /** Returns the number of parked threads. */
   ulong size() const
   {
     mysql_mutex_lock(&LOCK_thread_cache);
-    ulong r= cached_thread_count;
+    ulong r = cached_thread_count;
     mysql_mutex_unlock(&LOCK_thread_cache);
     return r;
   }

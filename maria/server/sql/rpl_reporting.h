@@ -16,12 +16,12 @@
 #ifndef RPL_REPORTING_H
 #define RPL_REPORTING_H
 
-#include <my_sys.h>                             /* loglevel */
+#include <my_sys.h> /* loglevel */
 
 /**
    Maximum size of an error message from a slave thread.
  */
-#define MAX_SLAVE_ERRMSG      1024
+#define MAX_SLAVE_ERRMSG 1024
 
 /**
    Mix-in to handle the message logging and reporting for relay log
@@ -32,7 +32,7 @@
  */
 class Slave_reporting_capability
 {
-public:
+ public:
   /** lock used to synchronize m_last_error on 'SHOW SLAVE STATUS' **/
   mutable mysql_mutex_t err_lock;
   /**
@@ -53,15 +53,15 @@ public:
                         code, but can contain more information), in
                         printf() format.
   */
-  void report(loglevel level, int err_code, const char *extra_info,
-              const char *msg, ...) const
-    ATTRIBUTE_FORMAT(printf, 5, 6);
+  void report(loglevel level, int err_code, const char *extra_info, const char *msg, ...) const
+      ATTRIBUTE_FORMAT(printf, 5, 6);
 
   /**
      Clear errors. They will not show up under <code>SHOW SLAVE
      STATUS</code>.
    */
-  void clear_error() {
+  void clear_error()
+  {
     mysql_mutex_lock(&err_lock);
     m_last_error.clear();
     mysql_mutex_unlock(&err_lock);
@@ -70,37 +70,31 @@ public:
   /**
      Error information structure.
    */
-  class Error {
+  class Error
+  {
     friend class Slave_reporting_capability;
-  public:
-    Error()
-    {
-      clear();
-    }
+
+   public:
+    Error() { clear(); }
 
     void clear()
     {
-      number= 0;
-      message[0]= '\0';
-      timestamp[0]= '\0';
+      number = 0;
+      message[0] = '\0';
+      timestamp[0] = '\0';
     }
     void update_timestamp()
     {
       struct tm tm_tmp;
       struct tm *start;
 
-      skr= my_time(0);
+      skr = my_time(0);
       localtime_r(&skr, &tm_tmp);
-      start=&tm_tmp;
+      start = &tm_tmp;
 
-      sprintf(timestamp, "%02d%02d%02d %02d:%02d:%02d",
-              start->tm_year % 100,
-              start->tm_mon+1,
-              start->tm_mday,
-              start->tm_hour,
-              start->tm_min,
-              start->tm_sec);
-      timestamp[15]= '\0';
+      sprintf(timestamp, "%02d%02d%02d %02d:%02d:%02d", start->tm_year % 100, start->tm_mon + 1, start->tm_mday,
+              start->tm_hour, start->tm_min, start->tm_sec);
+      timestamp[15] = '\0';
     }
 
     /** Error code */
@@ -113,10 +107,11 @@ public:
     time_t skr;
   };
 
-  Error const& last_error() const { return m_last_error; }
+  Error const &last_error() const { return m_last_error; }
 
-  virtual ~Slave_reporting_capability()= 0;
-private:
+  virtual ~Slave_reporting_capability() = 0;
+
+ private:
   /**
      Last error produced by the I/O or SQL thread respectively.
    */
@@ -125,9 +120,8 @@ private:
   char const *const m_thread_name;
 
   // not implemented
-  Slave_reporting_capability(const Slave_reporting_capability& rhs);
-  Slave_reporting_capability& operator=(const Slave_reporting_capability& rhs);
+  Slave_reporting_capability(const Slave_reporting_capability &rhs);
+  Slave_reporting_capability &operator=(const Slave_reporting_capability &rhs);
 };
 
-#endif // RPL_REPORTING_H
-
+#endif  // RPL_REPORTING_H

@@ -53,19 +53,19 @@ class Select_limit_counters;
 struct Query
 {
   List<Item> *select;
-  bool        distinct;
+  bool distinct;
   TABLE_LIST *from;
-  Item       *where;
-  ORDER      *group_by;
-  ORDER      *order_by;
-  Item       *having;
+  Item *where;
+  ORDER *group_by;
+  ORDER *order_by;
+  Item *having;
   // LIMIT
   Select_limit_counters *limit;
 };
 
 class group_by_handler
 {
-public:
+ public:
   THD *thd;
   handlerton *ht;
 
@@ -75,8 +75,7 @@ public:
   */
   TABLE *table;
 
-  group_by_handler(THD *thd_arg, handlerton *ht_arg)
-    : thd(thd_arg), ht(ht_arg), table(0) {}
+  group_by_handler(THD *thd_arg, handlerton *ht_arg) : thd(thd_arg), ht(ht_arg), table(0) {}
   virtual ~group_by_handler() {}
 
   /*
@@ -89,20 +88,20 @@ public:
     If this is a sub query with group by, this can be called many times for
     a query.
   */
-  virtual int init_scan()= 0;
+  virtual int init_scan() = 0;
 
   /*
     Return next group by result in table->record[0].
     Return 0 if row found, HA_ERR_END_OF_FILE if last row and other error
     number in case of fatal error.
    */
-  virtual int next_row()= 0;
+  virtual int next_row() = 0;
 
   /* End scanning */
-  virtual int end_scan()=0;
+  virtual int end_scan() = 0;
 
   /* Report errors */
   virtual void print_error(int error, myf errflag);
 };
 
-#endif //GROUP_BY_HANDLER_INCLUDED
+#endif  // GROUP_BY_HANDLER_INCLUDED

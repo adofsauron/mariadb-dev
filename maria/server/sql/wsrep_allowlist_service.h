@@ -22,7 +22,7 @@
 
 #include "wsrep/allowlist_service.hpp"
 
-wsrep::allowlist_service* wsrep_allowlist_service_init();
+wsrep::allowlist_service *wsrep_allowlist_service_init();
 
 void wsrep_allowlist_service_deinit();
 

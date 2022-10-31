@@ -19,7 +19,6 @@
 #include "sql_select.h"
 #include "derived_handler.h"
 
-
 /**
   The methods of the Pushdown_derived class.
 
@@ -36,30 +35,23 @@
   It could be changed if the cases when the tables is used as driving table.
 */
 
-
-Pushdown_derived::Pushdown_derived(TABLE_LIST *tbl, derived_handler *h)
- : derived(tbl), handler(h)
+Pushdown_derived::Pushdown_derived(TABLE_LIST *tbl, derived_handler *h) : derived(tbl), handler(h)
 {
-  is_analyze= handler->thd->lex->analyze_stmt;
+  is_analyze = handler->thd->lex->analyze_stmt;
 }
 
-
-Pushdown_derived::~Pushdown_derived()
-{
-  delete handler;
-}
-
+Pushdown_derived::~Pushdown_derived() { delete handler; }
 
 int Pushdown_derived::execute()
 {
   int err;
-  THD *thd= handler->thd;
-  TABLE *table= handler->table;
-  TMP_TABLE_PARAM *tmp_table_param= handler->tmp_table_param;
+  THD *thd = handler->thd;
+  TABLE *table = handler->table;
+  TMP_TABLE_PARAM *tmp_table_param = handler->tmp_table_param;
 
   DBUG_ENTER("Pushdown_query::execute");
 
-  if ((err= handler->init_scan()))
+  if ((err = handler->init_scan()))
     goto error;
 
   if (is_analyze)
@@ -68,7 +60,7 @@ int Pushdown_derived::execute()
     DBUG_RETURN(0);
   }
 
-  while (!(err= handler->next_row()))
+  while (!(err = handler->next_row()))
   {
     if (unlikely(thd->check_killed()))
     {
@@ -76,15 +68,13 @@ int Pushdown_derived::execute()
       DBUG_RETURN(-1);
     }
 
-    if ((err= table->file->ha_write_tmp_row(table->record[0])))
+    if ((err = table->file->ha_write_tmp_row(table->record[0])))
     {
       bool is_duplicate;
       if (likely(!table->file->is_fatal_error(err, HA_CHECK_DUP)))
-        continue;                           // Distinct elimination
+        continue;  // Distinct elimination
 
-      if (create_internal_tmp_table_from_heap(thd, table,
-                                              tmp_table_param->start_recinfo,
-                                              &tmp_table_param->recinfo,
+      if (create_internal_tmp_table_from_heap(thd, table, tmp_table_param->start_recinfo, &tmp_table_param->recinfo,
                                               err, 1, &is_duplicate))
         DBUG_RETURN(1);
       if (is_duplicate)
@@ -95,7 +85,7 @@ int Pushdown_derived::execute()
   if (err != 0 && err != HA_ERR_END_OF_FILE)
     goto error;
 
-  if ((err= handler->end_scan()))
+  if ((err = handler->end_scan()))
     goto error_2;
 
   DBUG_RETURN(0);
@@ -104,22 +94,16 @@ error:
   handler->end_scan();
 error_2:
   handler->print_error(err, MYF(0));
-  DBUG_RETURN(-1);                              // Error not sent to client
+  DBUG_RETURN(-1);  // Error not sent to client
 }
 
-
-void derived_handler::print_error(int error, myf errflag)
-{
-  my_error(ER_GET_ERRNO, MYF(0), error, hton_name(ht)->str);
-}
-
+void derived_handler::print_error(int error, myf errflag) { my_error(ER_GET_ERRNO, MYF(0), error, hton_name(ht)->str); }
 
 void derived_handler::set_derived(TABLE_LIST *tbl)
 {
-  derived= tbl;
-  table= tbl->table;
-  unit= tbl->derived;
-  select= unit->first_select();
-  tmp_table_param= ((select_unit *)(unit->result))->get_tmp_table_param();
+  derived = tbl;
+  table = tbl->table;
+  unit = tbl->derived;
+  select = unit->first_select();
+  tmp_table_param = ((select_unit *)(unit->result))->get_tmp_table_param();
 }
-

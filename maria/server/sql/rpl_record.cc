@@ -19,7 +19,7 @@
 #include "unireg.h"
 #include "rpl_rli.h"
 #include "rpl_record.h"
-#include "slave.h"                  // Need to pull in slave_print_msg
+#include "slave.h"  // Need to pull in slave_print_msg
 #include "rpl_utility.h"
 #include "rpl_rli.h"
 
@@ -57,16 +57,14 @@
    @return The number of bytes written at @c row_data.
  */
 #if !defined(MYSQL_CLIENT)
-size_t
-pack_row(TABLE *table, MY_BITMAP const* cols,
-         uchar *row_data, const uchar *record)
+size_t pack_row(TABLE *table, MY_BITMAP const *cols, uchar *row_data, const uchar *record)
 {
-  Field **p_field= table->field, *field;
-  int const null_byte_count= (bitmap_bits_set(cols) + 7) / 8;
+  Field **p_field = table->field, *field;
+  int const null_byte_count = (bitmap_bits_set(cols) + 7) / 8;
   uchar *pack_ptr = row_data + null_byte_count;
   uchar *null_ptr = row_data;
-  my_ptrdiff_t const rec_offset= record - table->record[0];
-  my_ptrdiff_t const def_offset= table->s->default_values - table->record[0];
+  my_ptrdiff_t const rec_offset = record - table->record[0];
+  my_ptrdiff_t const def_offset = table->s->default_values - table->record[0];
 
   DBUG_ENTER("pack_row");
 
@@ -75,22 +73,22 @@ pack_row(TABLE *table, MY_BITMAP const* cols,
     through all the fields. The null bytes are written little-endian,
     i.e., the first fields are in the first byte.
    */
-  unsigned int null_bits= (1U << 8) - 1;
+  unsigned int null_bits = (1U << 8) - 1;
   // Mask to mask out the correct but among the null bits
-  unsigned int null_mask= 1U;
-  for ( ; (field= *p_field) ; p_field++)
+  unsigned int null_mask = 1U;
+  for (; (field = *p_field); p_field++)
   {
     if (bitmap_is_set(cols, (uint)(p_field - table->field)))
     {
       my_ptrdiff_t offset;
       if (field->is_null(rec_offset))
       {
-        offset= def_offset;
+        offset = def_offset;
         null_bits |= null_mask;
       }
       else
       {
-        offset= rec_offset;
+        offset = rec_offset;
         null_bits &= ~null_mask;
 
         /*
@@ -101,15 +99,13 @@ pack_row(TABLE *table, MY_BITMAP const* cols,
           format used for the binlog.
         */
 #ifndef DBUG_OFF
-        const uchar *old_pack_ptr= pack_ptr;
+        const uchar *old_pack_ptr = pack_ptr;
 #endif
-        pack_ptr= field->pack(pack_ptr, field->ptr + offset,
-                              field->max_data_length());
-        DBUG_PRINT("debug", ("field: %s; real_type: %d, pack_ptr: %p;"
-                             " pack_ptr':%p; bytes: %d",
-                             field->field_name.str, field->real_type(),
-                             old_pack_ptr,pack_ptr,
-                             (int) (pack_ptr - old_pack_ptr)));
+        pack_ptr = field->pack(pack_ptr, field->ptr + offset, field->max_data_length());
+        DBUG_PRINT("debug",
+                   ("field: %s; real_type: %d, pack_ptr: %p;"
+                    " pack_ptr':%p; bytes: %d",
+                    field->field_name.str, field->real_type(), old_pack_ptr, pack_ptr, (int)(pack_ptr - old_pack_ptr)));
         DBUG_DUMP("packed_data", old_pack_ptr, pack_ptr - old_pack_ptr);
       }
 
@@ -119,7 +115,7 @@ pack_row(TABLE *table, MY_BITMAP const* cols,
         DBUG_ASSERT(null_ptr < row_data + null_byte_count);
         null_mask = 1U;
         *null_ptr++ = null_bits;
-        null_bits= (1U << 8) - 1;
+        null_bits = (1U << 8) - 1;
       }
     }
   }
@@ -142,7 +138,6 @@ pack_row(TABLE *table, MY_BITMAP const* cols,
   DBUG_RETURN(static_cast<size_t>(pack_ptr - row_data));
 }
 #endif
-
 
 /**
    Unpack a row into @c table->record[0].
@@ -189,25 +184,21 @@ pack_row(TABLE *table, MY_BITMAP const* cols,
    Found error when trying to unpack fields.
  */
 #if !defined(MYSQL_CLIENT) && defined(HAVE_REPLICATION)
-int
-unpack_row(rpl_group_info *rgi,
-           TABLE *table, uint const colcnt,
-           uchar const *const row_data, MY_BITMAP const *cols,
-           uchar const **const current_row_end, ulong *const master_reclength,
-           uchar const *const row_end)
+int unpack_row(rpl_group_info *rgi, TABLE *table, uint const colcnt, uchar const *const row_data, MY_BITMAP const *cols,
+               uchar const **const current_row_end, ulong *const master_reclength, uchar const *const row_end)
 {
   int error;
   DBUG_ENTER("unpack_row");
   DBUG_ASSERT(row_data);
   DBUG_ASSERT(table);
-  size_t const master_null_byte_count= (bitmap_bits_set(cols) + 7) / 8;
+  size_t const master_null_byte_count = (bitmap_bits_set(cols) + 7) / 8;
 
-  uchar const *null_ptr= row_data;
-  uchar const *pack_ptr= row_data + master_null_byte_count;
+  uchar const *null_ptr = row_data;
+  uchar const *pack_ptr = row_data + master_null_byte_count;
 
   Field **const begin_ptr = table->field;
   Field **field_ptr;
-  Field **const end_ptr= begin_ptr + colcnt;
+  Field **const end_ptr = begin_ptr + colcnt;
 
   if (bitmap_is_clear_all(cols))
   {
@@ -215,22 +206,21 @@ unpack_row(rpl_group_info *rgi,
        There was no data sent from the master, so there is
        nothing to unpack.
      */
-    *current_row_end= pack_ptr;
-    *master_reclength= 0;
+    *current_row_end = pack_ptr;
+    *master_reclength = 0;
     DBUG_RETURN(0);
   }
   DBUG_ASSERT(null_ptr < row_data + master_null_byte_count);
 
   // Mask to mask out the correct bit among the null bits
-  unsigned int null_mask= 1U;
+  unsigned int null_mask = 1U;
   // The "current" null bits
-  unsigned int null_bits= *null_ptr++;
-  uint i= 0;
-  table_def *tabledef= NULL;
-  TABLE *conv_table= NULL;
-  bool table_found= rgi && rgi->get_table_data(table, &tabledef, &conv_table);
-  DBUG_PRINT("debug", ("Table data: table_found: %d, tabldef: %p, conv_table: %p",
-                       table_found, tabledef, conv_table));
+  unsigned int null_bits = *null_ptr++;
+  uint i = 0;
+  table_def *tabledef = NULL;
+  TABLE *conv_table = NULL;
+  bool table_found = rgi && rgi->get_table_data(table, &tabledef, &conv_table);
+  DBUG_PRINT("debug", ("Table data: table_found: %d, tabldef: %p, conv_table: %p", table_found, tabledef, conv_table));
   DBUG_ASSERT(table_found);
 
   /*
@@ -242,57 +232,52 @@ unpack_row(rpl_group_info *rgi,
   if (rgi && !table_found)
     DBUG_RETURN(HA_ERR_GENERIC);
 
-  for (field_ptr= begin_ptr ; field_ptr < end_ptr && *field_ptr ; ++field_ptr)
+  for (field_ptr = begin_ptr; field_ptr < end_ptr && *field_ptr; ++field_ptr)
   {
     /*
       If there is a conversion table, we pick up the field pointer to
       the conversion table.  If the conversion table or the field
       pointer is NULL, no conversions are necessary.
      */
-    Field *conv_field=
-      conv_table ? conv_table->field[field_ptr - begin_ptr] : NULL;
-    Field *const f=
-      conv_field ? conv_field : *field_ptr;
-    DBUG_PRINT("debug", ("Conversion %srequired for field '%s' (#%ld)",
-                         conv_field ? "" : "not ",
-                         (*field_ptr)->field_name.str,
-                         (long) (field_ptr - begin_ptr)));
+    Field *conv_field = conv_table ? conv_table->field[field_ptr - begin_ptr] : NULL;
+    Field *const f = conv_field ? conv_field : *field_ptr;
+    DBUG_PRINT("debug", ("Conversion %srequired for field '%s' (#%ld)", conv_field ? "" : "not ",
+                         (*field_ptr)->field_name.str, (long)(field_ptr - begin_ptr)));
     DBUG_ASSERT(f != NULL);
 
     /*
       No need to bother about columns that does not exist: they have
       gotten default values when being emptied above.
      */
-    if (bitmap_is_set(cols, (uint)(field_ptr -  begin_ptr)))
+    if (bitmap_is_set(cols, (uint)(field_ptr - begin_ptr)))
     {
       if ((null_mask & 0xFF) == 0)
       {
         DBUG_ASSERT(null_ptr < row_data + master_null_byte_count);
-        null_mask= 1U;
-        null_bits= *null_ptr++;
+        null_mask = 1U;
+        null_bits = *null_ptr++;
       }
 
-      DBUG_ASSERT(null_mask & 0xFF); // One of the 8 LSB should be set
+      DBUG_ASSERT(null_mask & 0xFF);  // One of the 8 LSB should be set
 
       if (null_bits & null_mask)
       {
         if (f->maybe_null())
         {
-          DBUG_PRINT("debug", ("Was NULL; null mask: 0x%x; null bits: 0x%x",
-                               null_mask, null_bits));
-          /** 
-            Calling reset just in case one is unpacking on top a 
-            record with data. 
+          DBUG_PRINT("debug", ("Was NULL; null mask: 0x%x; null bits: 0x%x", null_mask, null_bits));
+          /**
+            Calling reset just in case one is unpacking on top a
+            record with data.
 
-            This could probably go into set_null() but doing so, 
-            (i) triggers assertion in other parts of the code at 
+            This could probably go into set_null() but doing so,
+            (i) triggers assertion in other parts of the code at
             the moment; (ii) it would make us reset the field,
-            always when setting null, which right now doesn't seem 
+            always when setting null, which right now doesn't seem
             needed anywhere else except here.
 
-            TODO: maybe in the future we should consider moving 
+            TODO: maybe in the future we should consider moving
                   the reset to make it part of set_null. But then
-                  the assertions triggered need to be 
+                  the assertions triggered need to be
                   addressed/revisited.
            */
           f->reset();
@@ -300,12 +285,10 @@ unpack_row(rpl_group_info *rgi,
         }
         else
         {
-          THD *thd= f->table->in_use;
+          THD *thd = f->table->in_use;
 
           f->set_default();
-          push_warning_printf(thd, Sql_condition::WARN_LEVEL_WARN,
-                              ER_BAD_NULL_ERROR,
-                              ER_THD(thd, ER_BAD_NULL_ERROR),
+          push_warning_printf(thd, Sql_condition::WARN_LEVEL_WARN, ER_BAD_NULL_ERROR, ER_THD(thd, ER_BAD_NULL_ERROR),
                               f->field_name.str);
         }
       }
@@ -318,24 +301,20 @@ unpack_row(rpl_group_info *rgi,
           Use the master's size information if available else call
           normal unpack operation.
         */
-        uint16 const metadata= tabledef->field_metadata(i);
+        uint16 const metadata = tabledef->field_metadata(i);
 #ifdef DBUG_TRACE
-        uchar const *const old_pack_ptr= pack_ptr;
+        uchar const *const old_pack_ptr = pack_ptr;
 #endif
 
-        pack_ptr= f->unpack(f->ptr, pack_ptr, row_end, metadata);
-	DBUG_PRINT("debug", ("field: %s; metadata: 0x%x;"
+        pack_ptr = f->unpack(f->ptr, pack_ptr, row_end, metadata);
+        DBUG_PRINT("debug", ("field: %s; metadata: 0x%x;"
                              " pack_ptr: %p; pack_ptr': %p; bytes: %d",
-                             f->field_name.str, metadata,
-                             old_pack_ptr, pack_ptr,
-                             (int) (pack_ptr - old_pack_ptr)));
+                             f->field_name.str, metadata, old_pack_ptr, pack_ptr, (int)(pack_ptr - old_pack_ptr)));
         if (!pack_ptr)
         {
-          rgi->rli->report(ERROR_LEVEL, ER_SLAVE_CORRUPT_EVENT,
-                      rgi->gtid_info(),
-                      "Could not read field '%s' of table '%s.%s'",
-                      f->field_name.str, table->s->db.str,
-                      table->s->table_name.str);
+          rgi->rli->report(ERROR_LEVEL, ER_SLAVE_CORRUPT_EVENT, rgi->gtid_info(),
+                           "Could not read field '%s' of table '%s.%s'", f->field_name.str, table->s->db.str,
+                           table->s->table_name.str);
           DBUG_RETURN(HA_ERR_CORRUPT_EVENT);
         }
       }
@@ -356,8 +335,7 @@ unpack_row(rpl_group_info *rgi,
         String value_string(value_buf, sizeof(value_buf), system_charset_info);
         conv_field->sql_type(source_type);
         conv_field->val_str(&value_string);
-        DBUG_PRINT("debug", ("Copying field '%s' of type '%s' with value '%s'",
-                             (*field_ptr)->field_name.str,
+        DBUG_PRINT("debug", ("Copying field '%s' of type '%s' with value '%s'", (*field_ptr)->field_name.str,
                              source_type.c_ptr_safe(), value_string.c_ptr_safe()));
 #endif
         copy.set(*field_ptr, f, TRUE);
@@ -367,8 +345,7 @@ unpack_row(rpl_group_info *rgi,
         String target_type(target_buf, sizeof(target_buf), system_charset_info);
         (*field_ptr)->sql_type(target_type);
         (*field_ptr)->val_str(&value_string);
-        DBUG_PRINT("debug", ("Value of field '%s' of type '%s' is now '%s'",
-                             (*field_ptr)->field_name.str,
+        DBUG_PRINT("debug", ("Value of field '%s' of type '%s' is now '%s'", (*field_ptr)->field_name.str,
                              target_type.c_ptr_safe(), value_string.c_ptr_safe()));
 #endif
       }
@@ -381,7 +358,7 @@ unpack_row(rpl_group_info *rgi,
   /*
     throw away master's extra fields
   */
-  uint max_cols= MY_MIN(tabledef->size(), cols->n_bits);
+  uint max_cols = MY_MIN(tabledef->size(), cols->n_bits);
   for (; i < max_cols; i++)
   {
     if (bitmap_is_set(cols, i))
@@ -389,15 +366,16 @@ unpack_row(rpl_group_info *rgi,
       if ((null_mask & 0xFF) == 0)
       {
         DBUG_ASSERT(null_ptr < row_data + master_null_byte_count);
-        null_mask= 1U;
-        null_bits= *null_ptr++;
+        null_mask = 1U;
+        null_bits = *null_ptr++;
       }
-      DBUG_ASSERT(null_mask & 0xFF); // One of the 8 LSB should be set
+      DBUG_ASSERT(null_mask & 0xFF);  // One of the 8 LSB should be set
 
-      if (!((null_bits & null_mask) && tabledef->maybe_null(i))) {
-        uint32 len= tabledef->calc_field_size(i, (uchar *) pack_ptr);
+      if (!((null_bits & null_mask) && tabledef->maybe_null(i)))
+      {
+        uint32 len = tabledef->calc_field_size(i, (uchar *)pack_ptr);
         DBUG_DUMP("field_data", pack_ptr, len);
-        pack_ptr+= len;
+        pack_ptr += len;
       }
       null_mask <<= 1;
     }
@@ -406,7 +384,7 @@ unpack_row(rpl_group_info *rgi,
   /*
     Add Extra slave persistent columns
   */
-  if (unlikely(error= fill_extra_persistent_columns(table, cols->n_bits)))
+  if (unlikely(error = fill_extra_persistent_columns(table, cols->n_bits)))
     DBUG_RETURN(error);
 
   /*
@@ -425,7 +403,7 @@ unpack_row(rpl_group_info *rgi,
     else
       *master_reclength = table->s->reclength;
   }
-  
+
   DBUG_RETURN(0);
 }
 
@@ -433,17 +411,17 @@ unpack_row(rpl_group_info *rgi,
   Fills @c table->record[0] with default values.
 
   First @c restore_record() is called to restore the default values for
-  record concerning the given table. Then, if @c check is true, 
-  a check is performed to see if fields are have default value or can 
+  record concerning the given table. Then, if @c check is true,
+  a check is performed to see if fields are have default value or can
   be NULL. Otherwise error is reported.
- 
-  @param table  Table whose record[0] buffer is prepared. 
-  @param skip   Number of columns for which default/nullable check 
+
+  @param table  Table whose record[0] buffer is prepared.
+  @param skip   Number of columns for which default/nullable check
                 should be skipped.
   @param check  Specifies if lack of default error needs checking.
 
   @returns 0 on success or a handler level error code
- */ 
+ */
 int prepare_record(TABLE *const table, const uint skip, const bool check)
 {
   DBUG_ENTER("prepare_record");
@@ -451,8 +429,8 @@ int prepare_record(TABLE *const table, const uint skip, const bool check)
   restore_record(table, s->default_values);
 
   /*
-     This skip should be revisited in 6.0, because in 6.0 RBR one 
-     can have holes in the row (as the grain of the writeset is 
+     This skip should be revisited in 6.0, because in 6.0 RBR one
+     can have holes in the row (as the grain of the writeset is
      the column and not the entire row).
    */
   if (skip >= table->s->fields || !check)
@@ -461,22 +439,18 @@ int prepare_record(TABLE *const table, const uint skip, const bool check)
   /*
     For fields the extra fields on the slave, we check if they have a default.
     The check follows the same rules as the INSERT query without specifying an
-    explicit value for a field not having the explicit default 
+    explicit value for a field not having the explicit default
     (@c check_that_all_fields_are_given_values()).
   */
-  for (Field **field_ptr= table->field+skip; *field_ptr; ++field_ptr)
+  for (Field **field_ptr = table->field + skip; *field_ptr; ++field_ptr)
   {
-    Field *const f= *field_ptr;
-    if ((f->flags &  NO_DEFAULT_VALUE_FLAG) &&
-        (f->real_type() != MYSQL_TYPE_ENUM))
+    Field *const f = *field_ptr;
+    if ((f->flags & NO_DEFAULT_VALUE_FLAG) && (f->real_type() != MYSQL_TYPE_ENUM))
     {
-      THD *thd= f->table->in_use;
+      THD *thd = f->table->in_use;
       f->set_default();
-      push_warning_printf(thd,
-                          Sql_condition::WARN_LEVEL_WARN,
-                          ER_NO_DEFAULT_FOR_FIELD,
-                          ER_THD(thd, ER_NO_DEFAULT_FOR_FIELD),
-                          f->field_name.str);
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_WARN, ER_NO_DEFAULT_FOR_FIELD,
+                          ER_THD(thd, ER_NO_DEFAULT_FOR_FIELD), f->field_name.str);
     }
   }
 
@@ -487,25 +461,25 @@ int prepare_record(TABLE *const table, const uint skip, const bool check)
   which are present on slave but not on master.
 
   @param table         Table whose record[0] buffer is prepared.
-  @param master_cols   No of columns on master 
+  @param master_cols   No of columns on master
   @returns 0 on        success
  */
 int fill_extra_persistent_columns(TABLE *table, int master_cols)
 {
-  int error= 0;
+  int error = 0;
   Field **vfield_ptr, *vfield;
 
   if (!table->vfield)
     return 0;
-  for (vfield_ptr= table->vfield; *vfield_ptr; ++vfield_ptr)
+  for (vfield_ptr = table->vfield; *vfield_ptr; ++vfield_ptr)
   {
-    vfield= *vfield_ptr;
+    vfield = *vfield_ptr;
     if (vfield->field_index >= master_cols && vfield->stored_in_db())
     {
       bitmap_set_bit(table->write_set, vfield->field_index);
-      error= vfield->vcol_info->expr->save_in_field(vfield,0);
+      error = vfield->vcol_info->expr->save_in_field(vfield, 0);
     }
   }
   return error;
 }
-#endif // HAVE_REPLICATION
+#endif  // HAVE_REPLICATION

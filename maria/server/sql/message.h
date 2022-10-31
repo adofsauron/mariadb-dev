@@ -1,9 +1,9 @@
 /*
   To change or add messages mysqld writes to the Windows error log, run
    mc.exe message.mc
-  and checkin generated messages.h, messages.rc and msg000001.bin under the 
+  and checkin generated messages.h, messages.rc and msg000001.bin under the
   source control.
-  mc.exe can be installed with Windows SDK, some Visual Studio distributions 
+  mc.exe can be installed with Windows SDK, some Visual Studio distributions
   do not include it.
 */
 //
@@ -36,11 +36,9 @@
 // Define the facility codes
 //
 
-
 //
 // Define the severity codes
 //
-
 
 //
 // MessageId: MSG_DEFAULT
@@ -48,7 +46,6 @@
 // MessageText:
 //
 // %1
-// 
 //
-#define MSG_DEFAULT                      0xC0000064L
-
+//
+#define MSG_DEFAULT 0xC0000064L

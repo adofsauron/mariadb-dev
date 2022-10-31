@@ -22,16 +22,16 @@
 
 extern "C"
 {
-  typedef int (*process_key_cache_t) (const char *, KEY_CACHE *, void *);
+  typedef int (*process_key_cache_t)(const char *, KEY_CACHE *, void *);
 }
 
 class NAMED_ILINK;
 
-class NAMED_ILIST: public I_List<NAMED_ILINK>
+class NAMED_ILIST : public I_List<NAMED_ILINK>
 {
-  public:
-  void delete_elements(void (*free_element)(const char*, void*));
-  bool delete_element(const char *name, size_t length, void (*free_element)(const char*, void*));
+ public:
+  void delete_elements(void (*free_element)(const char *, void *));
+  bool delete_element(const char *name, size_t length, void (*free_element)(const char *, void *));
 };
 
 /* For key cache */

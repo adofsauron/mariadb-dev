@@ -15,23 +15,24 @@
 
 /* old plugin api structures, used for backward compatibility */
 
-#define upgrade_var(X) latest->X= X
+#define upgrade_var(X) latest->X = X
 #define upgrade_str(X) strmake_buf(latest->X, X)
-#define downgrade_var(X) X= latest->X
+#define downgrade_var(X) X = latest->X
 #define downgrade_str(X) strmake_buf(X, latest->X)
 
 /**************************************************************/
 /* Authentication API, version 0x0100 *************************/
 #define MIN_AUTHENTICATION_INTERFACE_VERSION 0x0100
 
-struct MYSQL_SERVER_AUTH_INFO_0x0100 {
+struct MYSQL_SERVER_AUTH_INFO_0x0100
+{
   const char *user_name;
   unsigned int user_name_length;
   const char *auth_string;
   unsigned long auth_string_length;
-  char authenticated_as[49]; 
+  char authenticated_as[49];
   char external_user[512];
-  int  password_used;
+  int password_used;
   const char *host_or_ip;
   unsigned int host_or_ip_length;
 
@@ -62,4 +63,3 @@ struct MYSQL_SERVER_AUTH_INFO_0x0100 {
 };
 
 /**************************************************************/
-

@@ -21,12 +21,10 @@
 #include "mariadb.h"
 #include "sql_type.h"
 
-
 class Type_handler_json_common
 {
-public:
-  static Virtual_column_info *make_json_valid_expr(THD *thd,
-                                            const LEX_CSTRING *field_name);
+ public:
+  static Virtual_column_info *make_json_valid_expr(THD *thd, const LEX_CSTRING *field_name);
   static bool make_json_valid_expr_if_needed(THD *thd, Column_definition *c);
   static bool set_format_name(Send_field_extended_metadata *to)
   {
@@ -45,31 +43,17 @@ public:
   }
 };
 
-
 template <class BASE, const Named_type_handler<BASE> &thbase>
-class Type_handler_general_purpose_string_to_json:
-                                            public BASE,
-                                            public Type_handler_json_common
+class Type_handler_general_purpose_string_to_json : public BASE, public Type_handler_json_common
 {
-public:
-  const Type_handler *type_handler_base() const override
+ public:
+  const Type_handler *type_handler_base() const override { return &thbase; }
+  const Type_collection *type_collection() const override { return Type_handler_json_common::type_collection(); }
+  bool Column_definition_validate_check_constraint(THD *thd, Column_definition *c) const override
   {
-    return &thbase;
+    return make_json_valid_expr_if_needed(thd, c) || BASE::Column_definition_validate_check_constraint(thd, c);
   }
-  const Type_collection *type_collection() const override
-  {
-    return Type_handler_json_common::type_collection();
-  }
-  bool Column_definition_validate_check_constraint(THD *thd,
-                                                   Column_definition *c)
-                                                   const override
-  {
-    return make_json_valid_expr_if_needed(thd, c) ||
-           BASE::Column_definition_validate_check_constraint(thd, c);
-  }
-  bool Column_definition_data_type_info_image(Binary_string *to,
-                                              const Column_definition &def)
-                                              const override
+  bool Column_definition_data_type_info_image(Binary_string *to, const Column_definition &def) const override
   {
     /*
       Override the inherited method to avoid JSON type handlers writing any
@@ -80,21 +64,15 @@ public:
     return false;
   }
 
-  bool Item_append_extended_type_info(Send_field_extended_metadata *to,
-                                      const Item *item) const override
+  bool Item_append_extended_type_info(Send_field_extended_metadata *to, const Item *item) const override
   {
-    return set_format_name(to); // Send "format=json" in the protocol
+    return set_format_name(to);  // Send "format=json" in the protocol
   }
 
-  bool Item_hybrid_func_fix_attributes(THD *thd,
-                                       const LEX_CSTRING &name,
-                                       Type_handler_hybrid_field_type *hybrid,
-                                       Type_all_attributes *attr,
-                                       Item **items, uint nitems)
-                                       const override
+  bool Item_hybrid_func_fix_attributes(THD *thd, const LEX_CSTRING &name, Type_handler_hybrid_field_type *hybrid,
+                                       Type_all_attributes *attr, Item **items, uint nitems) const override
   {
-    if (BASE::Item_hybrid_func_fix_attributes(thd, name, hybrid, attr,
-                                              items, nitems))
+    if (BASE::Item_hybrid_func_fix_attributes(thd, name, hybrid, attr, items, nitems))
       return true;
     /*
       The above call can change the type handler on "hybrid", e.g.
@@ -108,58 +86,45 @@ public:
   }
 };
 
+class Type_handler_string_json
+    : public Type_handler_general_purpose_string_to_json<Type_handler_string, type_handler_string>
+{
+};
 
-class Type_handler_string_json:
-  public Type_handler_general_purpose_string_to_json<Type_handler_string,
-                                                     type_handler_string>
-{ };
+class Type_handler_varchar_json
+    : public Type_handler_general_purpose_string_to_json<Type_handler_varchar, type_handler_varchar>
+{
+};
 
+class Type_handler_tiny_blob_json
+    : public Type_handler_general_purpose_string_to_json<Type_handler_tiny_blob, type_handler_tiny_blob>
+{
+};
 
-class Type_handler_varchar_json:
-  public Type_handler_general_purpose_string_to_json<Type_handler_varchar,
-                                                     type_handler_varchar>
-{ };
+class Type_handler_blob_json : public Type_handler_general_purpose_string_to_json<Type_handler_blob, type_handler_blob>
+{
+};
 
-class Type_handler_tiny_blob_json:
-  public Type_handler_general_purpose_string_to_json<Type_handler_tiny_blob,
-                                                     type_handler_tiny_blob>
-{ };
+class Type_handler_medium_blob_json
+    : public Type_handler_general_purpose_string_to_json<Type_handler_medium_blob, type_handler_medium_blob>
+{
+};
 
-class Type_handler_blob_json:
-  public Type_handler_general_purpose_string_to_json<Type_handler_blob,
-                                                     type_handler_blob>
-{ };
+class Type_handler_long_blob_json
+    : public Type_handler_general_purpose_string_to_json<Type_handler_long_blob, type_handler_long_blob>
+{
+};
 
+extern MYSQL_PLUGIN_IMPORT Named_type_handler<Type_handler_string_json> type_handler_string_json;
 
-class Type_handler_medium_blob_json:
-  public Type_handler_general_purpose_string_to_json<Type_handler_medium_blob,
-                                                     type_handler_medium_blob>
-{ };
+extern MYSQL_PLUGIN_IMPORT Named_type_handler<Type_handler_varchar_json> type_handler_varchar_json;
 
-class Type_handler_long_blob_json:
-  public Type_handler_general_purpose_string_to_json<Type_handler_long_blob,
-                                                     type_handler_long_blob>
-{ };
+extern MYSQL_PLUGIN_IMPORT Named_type_handler<Type_handler_tiny_blob_json> type_handler_tiny_blob_json;
 
+extern MYSQL_PLUGIN_IMPORT Named_type_handler<Type_handler_blob_json> type_handler_blob_json;
 
+extern MYSQL_PLUGIN_IMPORT Named_type_handler<Type_handler_medium_blob_json> type_handler_medium_blob_json;
 
-extern MYSQL_PLUGIN_IMPORT
-  Named_type_handler<Type_handler_string_json> type_handler_string_json;
+extern MYSQL_PLUGIN_IMPORT Named_type_handler<Type_handler_long_blob_json> type_handler_long_blob_json;
 
-extern MYSQL_PLUGIN_IMPORT
-  Named_type_handler<Type_handler_varchar_json> type_handler_varchar_json;
-
-extern MYSQL_PLUGIN_IMPORT
-  Named_type_handler<Type_handler_tiny_blob_json> type_handler_tiny_blob_json;
-
-extern MYSQL_PLUGIN_IMPORT
-  Named_type_handler<Type_handler_blob_json> type_handler_blob_json;
-
-extern MYSQL_PLUGIN_IMPORT
-  Named_type_handler<Type_handler_medium_blob_json> type_handler_medium_blob_json;
-
-extern MYSQL_PLUGIN_IMPORT
-  Named_type_handler<Type_handler_long_blob_json> type_handler_long_blob_json;
-
-
-#endif // SQL_TYPE_JSON_INCLUDED
+#endif  // SQL_TYPE_JSON_INCLUDED

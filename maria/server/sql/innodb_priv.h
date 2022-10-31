@@ -19,7 +19,7 @@
 /** @file Declaring server-internal functions that are used by InnoDB. */
 
 #include <sql_priv.h>
-#include <strfunc.h>                            /* strconvert */
+#include <strfunc.h> /* strconvert */
 
 class THD;
 

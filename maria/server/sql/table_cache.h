@@ -17,15 +17,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
 struct Share_free_tables
 {
-  typedef I_P_List <TABLE, TABLE_share> List;
+  typedef I_P_List<TABLE, TABLE_share> List;
   List list;
   /** Avoid false sharing between instances */
   char pad[CPU_LEVEL1_DCACHE_LINESIZE];
 };
-
 
 struct TDC_element
 {
@@ -39,9 +37,9 @@ struct TDC_element
   */
   mysql_mutex_t LOCK_table_share;
   mysql_cond_t COND_release;
-  TDC_element *next, **prev;            /* Link to unused shares */
-  uint ref_count;                       /* How many TABLE objects uses this */
-  uint all_tables_refs;                 /* Number of refs to all_tables */
+  TDC_element *next, **prev; /* Link to unused shares */
+  uint ref_count;            /* How many TABLE objects uses this */
+  uint all_tables_refs;      /* Number of refs to all_tables */
   /**
     List of tickets representing threads waiting for the share to be flushed.
   */
@@ -60,7 +58,6 @@ struct TDC_element
   void flush_unused(bool mark_flushed);
 };
 
-
 extern ulong tdc_size;
 extern ulong tc_size;
 extern uint32 tc_instances;
@@ -70,25 +67,20 @@ extern void tdc_start_shutdown(void);
 extern void tdc_deinit(void);
 extern ulong tdc_records(void);
 extern void tdc_purge(bool all);
-extern TDC_element *tdc_lock_share(THD *thd, const char *db,
-                                   const char *table_name);
+extern TDC_element *tdc_lock_share(THD *thd, const char *db, const char *table_name);
 extern void tdc_unlock_share(TDC_element *element);
 int tdc_share_is_cached(THD *thd, const char *db, const char *table_name);
-extern TABLE_SHARE *tdc_acquire_share(THD *thd, TABLE_LIST *tl, uint flags,
-                                      TABLE **out_table= 0);
+extern TABLE_SHARE *tdc_acquire_share(THD *thd, TABLE_LIST *tl, uint flags, TABLE **out_table = 0);
 extern void tdc_release_share(TABLE_SHARE *share);
 void tdc_remove_referenced_share(THD *thd, TABLE_SHARE *share);
 void tdc_remove_table(THD *thd, const char *db, const char *table_name);
 
-extern int tdc_wait_for_old_version(THD *thd, const char *db,
-                                    const char *table_name,
-                                    ulong wait_timeout, uint deadlock_weight);
-extern int tdc_iterate(THD *thd, my_hash_walk_action action, void *argument,
-                       bool no_dups= false);
+extern int tdc_wait_for_old_version(THD *thd, const char *db, const char *table_name, ulong wait_timeout,
+                                    uint deadlock_weight);
+extern int tdc_iterate(THD *thd, my_hash_walk_action action, void *argument, bool no_dups = false);
 
 extern uint tc_records(void);
-int show_tc_active_instances(THD *thd, SHOW_VAR *var, char *buff,
-                             enum enum_var_type scope);
+int show_tc_active_instances(THD *thd, SHOW_VAR *var, char *buff, enum enum_var_type scope);
 extern void tc_purge();
 extern void tc_add_table(THD *thd, TABLE *table);
 extern void tc_release_table(TABLE *table);
@@ -111,7 +103,6 @@ inline uint tdc_create_key(char *key, const char *db, const char *table_name)
     not longer than NAME_LEN bytes. In practice we play safe to avoid
     buffer overruns.
   */
-  return (uint) (strmake(strmake(key, db, NAME_LEN) + 1, table_name,
-                         NAME_LEN) - key + 1);
+  return (uint)(strmake(strmake(key, db, NAME_LEN) + 1, table_name, NAME_LEN) - key + 1);
 }
 #endif /* TABLE_CACHE_H_INCLUDED */

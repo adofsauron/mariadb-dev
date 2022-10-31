@@ -16,8 +16,8 @@
 #ifndef SQL_CONNECT_INCLUDED
 #define SQL_CONNECT_INCLUDED
 
-#include <my_sys.h>                          /* pthread_handler_t */
-#include "mysql_com.h"                         /* enum_server_command */
+#include <my_sys.h>    /* pthread_handler_t */
+#include "mysql_com.h" /* enum_server_command */
 #include "structs.h"
 #include <mysql/psi/mysql_socket.h>
 #include <hash.h>
@@ -29,13 +29,18 @@
 
 struct scheduler_functions;
 
-class CONNECT : public ilink {
-public:
+class CONNECT : public ilink
+{
+ public:
   MYSQL_SOCKET sock;
 #ifdef _WIN32
   HANDLE pipe;
-  CONNECT(HANDLE pipe_arg): pipe(pipe_arg), vio_type(VIO_TYPE_NAMEDPIPE),
-    scheduler(thread_scheduler), thread_id(0), prior_thr_create_utime(0)
+  CONNECT(HANDLE pipe_arg)
+      : pipe(pipe_arg),
+        vio_type(VIO_TYPE_NAMEDPIPE),
+        scheduler(thread_scheduler),
+        thread_id(0),
+        prior_thr_create_utime(0)
   {
     count++;
   }
@@ -45,14 +50,12 @@ public:
   my_thread_id thread_id;
 
   /* Own variables */
-  ulonglong    prior_thr_create_utime;
+  ulonglong prior_thr_create_utime;
 
   static Atomic_counter<uint32_t> count;
 
-  CONNECT(MYSQL_SOCKET sock_arg, enum enum_vio_type vio_type_arg,
-          scheduler_functions *scheduler_arg): sock(sock_arg),
-    vio_type(vio_type_arg), scheduler(scheduler_arg), thread_id(0),
-    prior_thr_create_utime(0)
+  CONNECT(MYSQL_SOCKET sock_arg, enum enum_vio_type vio_type_arg, scheduler_functions *scheduler_arg)
+      : sock(sock_arg), vio_type(vio_type_arg), scheduler(scheduler_arg), thread_id(0), prior_thr_create_utime(0)
   {
     count++;
   }
@@ -62,11 +65,9 @@ public:
     DBUG_ASSERT(vio_type == VIO_CLOSED);
   }
   void close_and_delete();
-  void close_with_error(uint sql_errno,
-                        const char *message, uint close_error);
+  void close_with_error(uint sql_errno, const char *message, uint close_error);
   THD *create_thd(THD *thd);
 };
-
 
 class THD;
 typedef struct user_conn USER_CONN;
@@ -91,23 +92,23 @@ void time_out_user_resource_limits(THD *thd, USER_CONN *uc);
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
 void decrease_user_connections(USER_CONN *uc);
 #else
-#define decrease_user_connections(X) do { } while(0)       /* nothing */
+#define decrease_user_connections(X) \
+  do                                 \
+  {                                  \
+  } while (0) /* nothing */
 #endif
 bool thd_init_client_charset(THD *thd, uint cs_number);
 void setup_connection_thread_globals(THD *thd);
 bool thd_prepare_connection(THD *thd);
 bool thd_is_connection_alive(THD *thd);
-int thd_set_peer_addr(THD *thd, sockaddr_storage *addr,
-                      const char *ip, uint port,
-                      bool check_proxy_networks,
+int thd_set_peer_addr(THD *thd, sockaddr_storage *addr, const char *ip, uint port, bool check_proxy_networks,
                       uint *host_errors);
 
 bool login_connection(THD *thd);
-void prepare_new_connection_state(THD* thd);
+void prepare_new_connection_state(THD *thd);
 void end_connection(THD *thd);
-void update_global_user_stats(THD* thd, bool create_user, time_t now);
-int get_or_create_user_conn(THD *thd, const char *user,
-                            const char *host, const USER_RESOURCES *mqh);
+void update_global_user_stats(THD *thd, bool create_user, time_t now);
+int get_or_create_user_conn(THD *thd, const char *user, const char *host, const USER_RESOURCES *mqh);
 int check_for_max_user_connections(THD *thd, USER_CONN *uc);
 
 extern HASH global_user_stats;

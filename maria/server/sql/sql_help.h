@@ -18,12 +18,11 @@
 
 class THD;
 
-
 /*
   Function prototypes
 */
 
-bool mysqld_help (THD *thd, const char *text);
+bool mysqld_help(THD *thd, const char *text);
 
 bool mysqld_help_prepare(THD *thd, const char *text, List<Item> *fields);
 

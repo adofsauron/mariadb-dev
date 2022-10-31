@@ -24,24 +24,16 @@ class THD;
 
 class Wsrep_client_state : public wsrep::client_state
 {
-public:
-  Wsrep_client_state(THD* thd,
-                     wsrep::mutex& mutex,
-                     wsrep::condition_variable& cond,
-                     wsrep::server_state& server_state,
-                     wsrep::client_service& client_service,
-                     const wsrep::client_id& id)
-    : wsrep::client_state(mutex,
-                          cond,
-                          server_state,
-                          client_service,
-                          id,
-                          wsrep::client_state::m_local)
-    , m_thd(thd)
-  { }
-  THD* thd() { return m_thd; }
-private:
-  THD* m_thd;
+ public:
+  Wsrep_client_state(THD *thd, wsrep::mutex &mutex, wsrep::condition_variable &cond, wsrep::server_state &server_state,
+                     wsrep::client_service &client_service, const wsrep::client_id &id)
+      : wsrep::client_state(mutex, cond, server_state, client_service, id, wsrep::client_state::m_local), m_thd(thd)
+  {
+  }
+  THD *thd() { return m_thd; }
+
+ private:
+  THD *m_thd;
 };
 
 #endif /* WSREP_CLIENT_STATE_H */

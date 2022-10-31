@@ -37,30 +37,17 @@
 /**@{*/
 extern "C"
 {
-static void scheduler_wait_lock_begin(void) { 
-  thd_wait_begin(NULL, THD_WAIT_TABLE_LOCK);
-}
+  static void scheduler_wait_lock_begin(void) { thd_wait_begin(NULL, THD_WAIT_TABLE_LOCK); }
 
-static void scheduler_wait_lock_end(void) {
-  thd_wait_end(NULL);
-}
+  static void scheduler_wait_lock_end(void) { thd_wait_end(NULL); }
 
-static void scheduler_wait_sync_begin(void) {
-  thd_wait_begin(NULL, THD_WAIT_SYNC);
-}
+  static void scheduler_wait_sync_begin(void) { thd_wait_begin(NULL, THD_WAIT_SYNC); }
 
-static void scheduler_wait_sync_end(void) {
-  thd_wait_end(NULL);
-}
+  static void scheduler_wait_sync_end(void) { thd_wait_end(NULL); }
 
-static void scheduler_wait_net_begin(void) {
-   thd_wait_begin(NULL, THD_WAIT_NET);
-}
+  static void scheduler_wait_net_begin(void) { thd_wait_begin(NULL, THD_WAIT_NET); }
 
-static void scheduler_wait_net_end(void) {
-   thd_wait_end(NULL);
-}
-
+  static void scheduler_wait_net_end(void) { thd_wait_end(NULL); }
 };
 /**@}*/
 
@@ -74,22 +61,18 @@ static void scheduler_wait_net_end(void) {
 
 void scheduler_init()
 {
-  thr_set_lock_wait_callback(scheduler_wait_lock_begin,
-                             scheduler_wait_lock_end);
-  thr_set_sync_wait_callback(scheduler_wait_sync_begin,
-                             scheduler_wait_sync_end);
+  thr_set_lock_wait_callback(scheduler_wait_lock_begin, scheduler_wait_lock_end);
+  thr_set_sync_wait_callback(scheduler_wait_sync_begin, scheduler_wait_sync_end);
 
-  vio_set_wait_callback(scheduler_wait_net_begin,
-    scheduler_wait_net_end);
+  vio_set_wait_callback(scheduler_wait_net_begin, scheduler_wait_net_end);
 }
-
 
 /**
   Kill notification callback,  used by  one-thread-per-connection
   and threadpool scheduler.
 
-  Wakes up a thread that is stuck in read/poll/epoll/event-poll 
-  routines used by threadpool, such that subsequent attempt to 
+  Wakes up a thread that is stuck in read/poll/epoll/event-poll
+  routines used by threadpool, such that subsequent attempt to
   read from  client connection will result in IO error.
 */
 
@@ -110,33 +93,29 @@ void post_kill_notification(THD *thd)
 
 #ifndef EMBEDDED_LIBRARY
 
-void one_thread_per_connection_scheduler(scheduler_functions *func,
-    ulong *arg_max_connections,
-    Atomic_counter<uint> *arg_connection_count)
+void one_thread_per_connection_scheduler(scheduler_functions *func, ulong *arg_max_connections,
+                                         Atomic_counter<uint> *arg_connection_count)
 {
   scheduler_init();
-  func->max_threads= *arg_max_connections + 1;
-  func->max_connections= arg_max_connections;
-  func->connection_count= arg_connection_count;
-  func->add_connection= create_thread_to_handle_connection;
-  func->post_kill_notification= post_kill_notification;
+  func->max_threads = *arg_max_connections + 1;
+  func->max_connections = arg_max_connections;
+  func->connection_count = arg_connection_count;
+  func->add_connection = create_thread_to_handle_connection;
+  func->post_kill_notification = post_kill_notification;
 }
 #else
-void handle_connection_in_main_thread(CONNECT *connect)
-{
-}
+void handle_connection_in_main_thread(CONNECT *connect) {}
 #endif
 
 /*
   Initialize scheduler for --thread-handling=no-threads
 */
 
-void one_thread_scheduler(scheduler_functions *func,
-    Atomic_counter<uint> *arg_connection_count)
+void one_thread_scheduler(scheduler_functions *func, Atomic_counter<uint> *arg_connection_count)
 {
   scheduler_init();
-  func->max_threads= 1;
-  func->max_connections= &max_connections;
-  func->connection_count= arg_connection_count;
-  func->add_connection= handle_connection_in_main_thread;
+  func->max_threads = 1;
+  func->max_connections = &max_connections;
+  func->connection_count = arg_connection_count;
+  func->add_connection = handle_connection_in_main_thread;
 }

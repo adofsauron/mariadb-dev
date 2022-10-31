@@ -23,21 +23,18 @@
 */
 class Sql_cmd_common_signal : public Sql_cmd
 {
-protected:
+ protected:
   /**
     Constructor.
     @param cond the condition signaled if any, or NULL.
     @param set collection of signal condition item assignments.
   */
-  Sql_cmd_common_signal(const sp_condition_value *cond,
-                        const Set_signal_information& set)
-    : Sql_cmd(),
-      m_cond(cond),
-      m_set_signal_information(set)
-  {}
+  Sql_cmd_common_signal(const sp_condition_value *cond, const Set_signal_information &set)
+      : Sql_cmd(), m_cond(cond), m_set_signal_information(set)
+  {
+  }
 
-  virtual ~Sql_cmd_common_signal()
-  {}
+  virtual ~Sql_cmd_common_signal() {}
 
   /**
     Evaluate each signal condition items for this statement.
@@ -73,24 +70,19 @@ protected:
 */
 class Sql_cmd_signal : public Sql_cmd_common_signal
 {
-public:
+ public:
   /**
     Constructor, used to represent a SIGNAL statement.
     @param cond the SQL condition to signal (required).
     @param set the collection of signal information to signal.
   */
-  Sql_cmd_signal(const sp_condition_value *cond,
-                 const Set_signal_information& set)
-    : Sql_cmd_common_signal(cond, set)
-  {}
-
-  virtual ~Sql_cmd_signal()
-  {}
-
-  virtual enum_sql_command sql_command_code() const
+  Sql_cmd_signal(const sp_condition_value *cond, const Set_signal_information &set) : Sql_cmd_common_signal(cond, set)
   {
-    return SQLCOM_SIGNAL;
   }
+
+  virtual ~Sql_cmd_signal() {}
+
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_SIGNAL; }
 
   virtual bool execute(THD *thd);
 };
@@ -100,27 +92,21 @@ public:
 */
 class Sql_cmd_resignal : public Sql_cmd_common_signal
 {
-public:
+ public:
   /**
     Constructor, used to represent a RESIGNAL statement.
     @param cond the SQL condition to resignal (optional, may be NULL).
     @param set the collection of signal information to resignal.
   */
-  Sql_cmd_resignal(const sp_condition_value *cond,
-                   const Set_signal_information& set)
-    : Sql_cmd_common_signal(cond, set)
-  {}
-
-  virtual ~Sql_cmd_resignal()
-  {}
-
-  virtual enum_sql_command sql_command_code() const
+  Sql_cmd_resignal(const sp_condition_value *cond, const Set_signal_information &set) : Sql_cmd_common_signal(cond, set)
   {
-    return SQLCOM_RESIGNAL;
   }
+
+  virtual ~Sql_cmd_resignal() {}
+
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_RESIGNAL; }
 
   virtual bool execute(THD *thd);
 };
 
 #endif
-

@@ -14,10 +14,10 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335 USA */
 
 #include "mariadb.h"
-#include "sql_list.h"                 // Sql_alloc, List, List_iterator
-#include "sql_cmd.h"                  // Sql_cmd
-#include "sql_class.h"                // Diagnostics_area
-#include "sql_get_diagnostics.h"      // Sql_cmd_get_diagnostics
+#include "sql_list.h"             // Sql_alloc, List, List_iterator
+#include "sql_cmd.h"              // Sql_cmd
+#include "sql_class.h"            // Diagnostics_area
+#include "sql_get_diagnostics.h"  // Sql_cmd_get_diagnostics
 
 /**
   Execute this GET DIAGNOSTICS statement.
@@ -40,12 +40,11 @@
   @retval true on error
 */
 
-bool
-Sql_cmd_get_diagnostics::execute(THD *thd)
+bool Sql_cmd_get_diagnostics::execute(THD *thd)
 {
   bool rv;
   Diagnostics_area new_stmt_da(thd->query_id, false, true);
-  Diagnostics_area *save_stmt_da= thd->get_stmt_da();
+  Diagnostics_area *save_stmt_da = thd->get_stmt_da();
   DBUG_ENTER("Sql_cmd_get_diagnostics::execute");
 
   /* Disable the unneeded read-only mode of the original DA. */
@@ -53,20 +52,20 @@ Sql_cmd_get_diagnostics::execute(THD *thd)
 
   /* Set new diagnostics area, execute statement and restore. */
   thd->set_stmt_da(&new_stmt_da);
-  rv= m_info->aggregate(thd, save_stmt_da);
+  rv = m_info->aggregate(thd, save_stmt_da);
   thd->set_stmt_da(save_stmt_da);
 
   /* Bail out early if statement succeeded. */
-  if (! rv)
+  if (!rv)
   {
     thd->get_stmt_da()->set_ok_status(0, 0, NULL);
     DBUG_RETURN(false);
   }
 
   /* Statement failed, retrieve the error information for propagation. */
-  uint sql_errno= new_stmt_da.sql_errno();
-  const char *message= new_stmt_da.message();
-  const char *sqlstate= new_stmt_da.get_sqlstate();
+  uint sql_errno = new_stmt_da.sql_errno();
+  const char *message = new_stmt_da.message();
+  const char *sqlstate = new_stmt_da.get_sqlstate();
 
   /* In case of a fatal error, set it into the original DA.*/
   if (unlikely(thd->is_fatal_error))
@@ -76,17 +75,14 @@ Sql_cmd_get_diagnostics::execute(THD *thd)
   }
 
   /* Otherwise, just append the new error as a exception condition. */
-  save_stmt_da->push_warning(thd, sql_errno, sqlstate,
-                             Sql_condition::WARN_LEVEL_ERROR,
-                             message);
+  save_stmt_da->push_warning(thd, sql_errno, sqlstate, Sql_condition::WARN_LEVEL_ERROR, message);
 
   /* Appending might have failed. */
-  if (unlikely(!(rv= thd->is_error())))
+  if (unlikely(!(rv = thd->is_error())))
     thd->get_stmt_da()->set_ok_status(0, 0, NULL);
 
   DBUG_RETURN(rv);
 }
-
 
 /**
   Set a value for this item.
@@ -98,15 +94,14 @@ Sql_cmd_get_diagnostics::execute(THD *thd)
   @retval true on error.
 */
 
-bool
-Diagnostics_information_item::set_value(THD *thd, Item **value)
+bool Diagnostics_information_item::set_value(THD *thd, Item **value)
 {
   bool rv;
   Settable_routine_parameter *srp;
   DBUG_ENTER("Diagnostics_information_item::set_value");
 
   /* Get a settable reference to the target. */
-  srp= m_target->get_settable_routine_parameter();
+  srp = m_target->get_settable_routine_parameter();
 
   DBUG_ASSERT(srp);
 
@@ -114,11 +109,10 @@ Diagnostics_information_item::set_value(THD *thd, Item **value)
   DBUG_ASSERT(srp->get_item_param() == NULL);
 
   /* Set variable/parameter value. */
-  rv= srp->set_value(thd, thd->spcont, value);
+  rv = srp->set_value(thd, thd->spcont, value);
 
   DBUG_RETURN(rv);
 }
-
 
 /**
   Obtain statement information in the context of a given diagnostics area.
@@ -130,10 +124,9 @@ Diagnostics_information_item::set_value(THD *thd, Item **value)
   @retval true on error
 */
 
-bool
-Statement_information::aggregate(THD *thd, const Diagnostics_area *da)
+bool Statement_information::aggregate(THD *thd, const Diagnostics_area *da)
 {
-  bool rv= false;
+  bool rv = false;
   Statement_information_item *stmt_info_item;
   List_iterator<Statement_information_item> it(*m_items);
   DBUG_ENTER("Statement_information::aggregate");
@@ -142,15 +135,14 @@ Statement_information::aggregate(THD *thd, const Diagnostics_area *da)
     Each specified target gets the value of each given
     information item obtained from the diagnostics area.
   */
-  while ((stmt_info_item= it++))
+  while ((stmt_info_item = it++))
   {
-    if ((rv= evaluate(thd, stmt_info_item, da)))
+    if ((rv = evaluate(thd, stmt_info_item, da)))
       break;
   }
 
   DBUG_RETURN(rv);
 }
-
 
 /**
   Obtain the value of this statement information item in the context of
@@ -163,37 +155,35 @@ Statement_information::aggregate(THD *thd, const Diagnostics_area *da)
   @retval NULL on error.
 */
 
-Item *
-Statement_information_item::get_value(THD *thd, const Diagnostics_area *da)
+Item *Statement_information_item::get_value(THD *thd, const Diagnostics_area *da)
 {
-  Item *value= NULL;
+  Item *value = NULL;
   DBUG_ENTER("Statement_information_item::get_value");
 
   switch (m_name)
   {
-  /*
-    The number of condition areas that have information. That is,
-    the number of errors and warnings within the diagnostics area.
-  */
-  case NUMBER:
-  {
-    ulong count= da->cond_count();
-    value= new (thd->mem_root) Item_uint(thd, count);
-    break;
-  }
-  /*
-    Number that shows how many rows were directly affected by
-    a data-change statement (INSERT, UPDATE, DELETE, MERGE,
-    REPLACE, LOAD).
-  */
-  case ROW_COUNT:
-    value= new (thd->mem_root) Item_int(thd, thd->get_row_count_func());
-    break;
+    /*
+      The number of condition areas that have information. That is,
+      the number of errors and warnings within the diagnostics area.
+    */
+    case NUMBER:
+    {
+      ulong count = da->cond_count();
+      value = new (thd->mem_root) Item_uint(thd, count);
+      break;
+    }
+    /*
+      Number that shows how many rows were directly affected by
+      a data-change statement (INSERT, UPDATE, DELETE, MERGE,
+      REPLACE, LOAD).
+    */
+    case ROW_COUNT:
+      value = new (thd->mem_root) Item_int(thd, thd->get_row_count_func());
+      break;
   }
 
   DBUG_RETURN(value);
 }
-
 
 /**
   Obtain condition information in the context of a given diagnostics area.
@@ -205,14 +195,13 @@ Statement_information_item::get_value(THD *thd, const Diagnostics_area *da)
   @retval true on error
 */
 
-bool
-Condition_information::aggregate(THD *thd, const Diagnostics_area *da)
+bool Condition_information::aggregate(THD *thd, const Diagnostics_area *da)
 {
-  bool rv= false;
+  bool rv = false;
   longlong cond_number;
-  const Sql_condition *cond= NULL;
+  const Sql_condition *cond = NULL;
   Condition_information_item *cond_info_item;
-  Diagnostics_area::Sql_condition_iterator it_conds= da->sql_conditions();
+  Diagnostics_area::Sql_condition_iterator it_conds = da->sql_conditions();
   List_iterator_fast<Condition_information_item> it_items(*m_items);
   DBUG_ENTER("Condition_information::aggregate");
 
@@ -220,7 +209,7 @@ Condition_information::aggregate(THD *thd, const Diagnostics_area *da)
   if (m_cond_number_expr->fix_fields_if_needed(thd, &m_cond_number_expr))
     DBUG_RETURN(true);
 
-  cond_number= m_cond_number_expr->val_int();
+  cond_number = m_cond_number_expr->val_int();
 
   /*
     Limit to the number of available conditions. Warning_info::warn_count()
@@ -228,28 +217,26 @@ Condition_information::aggregate(THD *thd, const Diagnostics_area *da)
     @@max_error_count, which prevents conditions from being pushed, but not
     counted.
   */
-  if (cond_number < 1 || (ulonglong) cond_number > da->cond_count())
+  if (cond_number < 1 || (ulonglong)cond_number > da->cond_count())
   {
     my_error(ER_DA_INVALID_CONDITION_NUMBER, MYF(0));
     DBUG_RETURN(true);
   }
 
   /* Advance to the requested condition. */
-  while (cond_number--)
-    cond= it_conds++;
+  while (cond_number--) cond = it_conds++;
 
   DBUG_ASSERT(cond);
 
   /* Evaluate the requested information in the context of the condition. */
-  while ((cond_info_item= it_items++))
+  while ((cond_info_item = it_items++))
   {
-    if ((rv= evaluate(thd, cond_info_item, cond)))
+    if ((rv = evaluate(thd, cond_info_item, cond)))
       break;
   }
 
   DBUG_RETURN(rv);
 }
-
 
 /**
   Create an UTF-8 string item to represent a condition item string.
@@ -263,20 +250,17 @@ Condition_information::aggregate(THD *thd, const Diagnostics_area *da)
   @return Pointer to an string item, NULL on failure.
 */
 
-Item *
-Condition_information_item::make_utf8_string_item(THD *thd, const String *str)
+Item *Condition_information_item::make_utf8_string_item(THD *thd, const String *str)
 {
   /* Default is utf8 character set and utf8mb3_general_ci collation. */
-  CHARSET_INFO *to_cs= &my_charset_utf8mb3_general_ci;
+  CHARSET_INFO *to_cs = &my_charset_utf8mb3_general_ci;
   /* If a charset was not set, assume that no conversion is needed. */
-  CHARSET_INFO *from_cs= str->charset() ? str->charset() : to_cs;
+  CHARSET_INFO *from_cs = str->charset() ? str->charset() : to_cs;
   String tmp(str->ptr(), str->length(), from_cs);
   /* If necessary, convert the string (ignoring errors), then copy it over. */
   uint conv_errors;
-  return new (thd->mem_root) Item_string(thd, &tmp, to_cs, &conv_errors,
-                         DERIVATION_COERCIBLE, MY_REPERTOIRE_UNICODE30);
+  return new (thd->mem_root) Item_string(thd, &tmp, to_cs, &conv_errors, DERIVATION_COERCIBLE, MY_REPERTOIRE_UNICODE30);
 }
-
 
 /**
   Obtain the value of this condition information item in the context of
@@ -289,59 +273,57 @@ Condition_information_item::make_utf8_string_item(THD *thd, const String *str)
   @retval NULL on error.
 */
 
-Item *
-Condition_information_item::get_value(THD *thd, const Sql_condition *cond)
+Item *Condition_information_item::get_value(THD *thd, const Sql_condition *cond)
 {
   String str;
-  Item *value= NULL;
+  Item *value = NULL;
   DBUG_ENTER("Condition_information_item::get_value");
 
   switch (m_name)
   {
-  case CLASS_ORIGIN:
-    value= make_utf8_string_item(thd, &(cond->m_class_origin));
-    break;
-  case SUBCLASS_ORIGIN:
-    value= make_utf8_string_item(thd, &(cond->m_subclass_origin));
-    break;
-  case CONSTRAINT_CATALOG:
-    value= make_utf8_string_item(thd, &(cond->m_constraint_catalog));
-    break;
-  case CONSTRAINT_SCHEMA:
-    value= make_utf8_string_item(thd, &(cond->m_constraint_schema));
-    break;
-  case CONSTRAINT_NAME:
-    value= make_utf8_string_item(thd, &(cond->m_constraint_name));
-    break;
-  case CATALOG_NAME:
-    value= make_utf8_string_item(thd, &(cond->m_catalog_name));
-    break;
-  case SCHEMA_NAME:
-    value= make_utf8_string_item(thd, &(cond->m_schema_name));
-    break;
-  case TABLE_NAME:
-    value= make_utf8_string_item(thd, &(cond->m_table_name));
-    break;
-  case COLUMN_NAME:
-    value= make_utf8_string_item(thd, &(cond->m_column_name));
-    break;
-  case CURSOR_NAME:
-    value= make_utf8_string_item(thd, &(cond->m_cursor_name));
-    break;
-  case MESSAGE_TEXT:
-    value= make_utf8_string_item(thd, &(cond->m_message_text));
-    break;
-  case MYSQL_ERRNO:
-    value= new (thd->mem_root) Item_uint(thd, cond->m_sql_errno);
-    break;
-  case RETURNED_SQLSTATE:
-    str.set_ascii(cond->get_sqlstate(), strlen(cond->get_sqlstate()));
-    value= make_utf8_string_item(thd, &str);
-    break;
-  case ROW_NUMBER:
-    value= new (thd->mem_root) Item_uint(thd, cond->m_row_number);
+    case CLASS_ORIGIN:
+      value = make_utf8_string_item(thd, &(cond->m_class_origin));
+      break;
+    case SUBCLASS_ORIGIN:
+      value = make_utf8_string_item(thd, &(cond->m_subclass_origin));
+      break;
+    case CONSTRAINT_CATALOG:
+      value = make_utf8_string_item(thd, &(cond->m_constraint_catalog));
+      break;
+    case CONSTRAINT_SCHEMA:
+      value = make_utf8_string_item(thd, &(cond->m_constraint_schema));
+      break;
+    case CONSTRAINT_NAME:
+      value = make_utf8_string_item(thd, &(cond->m_constraint_name));
+      break;
+    case CATALOG_NAME:
+      value = make_utf8_string_item(thd, &(cond->m_catalog_name));
+      break;
+    case SCHEMA_NAME:
+      value = make_utf8_string_item(thd, &(cond->m_schema_name));
+      break;
+    case TABLE_NAME:
+      value = make_utf8_string_item(thd, &(cond->m_table_name));
+      break;
+    case COLUMN_NAME:
+      value = make_utf8_string_item(thd, &(cond->m_column_name));
+      break;
+    case CURSOR_NAME:
+      value = make_utf8_string_item(thd, &(cond->m_cursor_name));
+      break;
+    case MESSAGE_TEXT:
+      value = make_utf8_string_item(thd, &(cond->m_message_text));
+      break;
+    case MYSQL_ERRNO:
+      value = new (thd->mem_root) Item_uint(thd, cond->m_sql_errno);
+      break;
+    case RETURNED_SQLSTATE:
+      str.set_ascii(cond->get_sqlstate(), strlen(cond->get_sqlstate()));
+      value = make_utf8_string_item(thd, &str);
+      break;
+    case ROW_NUMBER:
+      value = new (thd->mem_root) Item_uint(thd, cond->m_row_number);
   }
 
   DBUG_RETURN(value);
 }
-

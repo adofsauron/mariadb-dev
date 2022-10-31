@@ -30,25 +30,23 @@
 
 #include "mariadb.h"
 #include "sql_class.h"
-#include "sql_base.h"                           // flush_tables
-#include "sql_insert.h"                         // kill_delayed_threads
-#include "sql_handler.h"                        // mysql_ha_cleanup_no_free
+#include "sql_base.h"     // flush_tables
+#include "sql_insert.h"   // kill_delayed_threads
+#include "sql_handler.h"  // mysql_ha_cleanup_no_free
 #include <my_sys.h>
-#include <strfunc.h>                           // strconvert()
+#include <strfunc.h>  // strconvert()
 #include "wsrep_mysqld.h"
 #ifdef WITH_WSREP
 #include "wsrep_server_state.h"
 #endif /* WITH_WSREP */
 
-static const char *stage_names[]=
-{"START", "FLUSH", "BLOCK_DDL", "BLOCK_COMMIT", "END", 0};
+static const char *stage_names[] = {"START", "FLUSH", "BLOCK_DDL", "BLOCK_COMMIT", "END", 0};
 
-TYPELIB backup_stage_names=
-{ array_elements(stage_names)-1, "", stage_names, 0 };
+TYPELIB backup_stage_names = {array_elements(stage_names) - 1, "", stage_names, 0};
 
 static MDL_ticket *backup_flush_ticket;
-static File volatile backup_log= -1;
-static int backup_log_error= 0;
+static File volatile backup_log = -1;
+static int backup_log_error = 0;
 
 static bool backup_start(THD *thd);
 static bool backup_flush(THD *thd);
@@ -63,9 +61,9 @@ static void stop_ddl_logging();
 
 void backup_init()
 {
-  backup_flush_ticket= 0;
-  backup_log= -1;
-  backup_log_error= 0;
+  backup_flush_ticket = 0;
+  backup_log = -1;
+  backup_log_error = 0;
 }
 
 bool run_backup_stage(THD *thd, backup_stages stage)
@@ -80,14 +78,13 @@ bool run_backup_stage(THD *thd, backup_stages stage)
       my_error(ER_BACKUP_NOT_RUNNING, MYF(0));
       DBUG_RETURN(1);
     }
-    next_stage= BACKUP_START;
+    next_stage = BACKUP_START;
   }
   else
   {
-    if ((uint) thd->current_backup_stage >= (uint) stage)
+    if ((uint)thd->current_backup_stage >= (uint)stage)
     {
-      my_error(ER_BACKUP_WRONG_STAGE, MYF(0), stage_names[stage],
-               stage_names[thd->current_backup_stage]);
+      my_error(ER_BACKUP_WRONG_STAGE, MYF(0), stage_names[stage], stage_names[thd->current_backup_stage]);
       DBUG_RETURN(1);
     }
     if (stage == BACKUP_END)
@@ -96,54 +93,54 @@ bool run_backup_stage(THD *thd, backup_stages stage)
         If end is given, jump directly to stage end. This is to allow one
         to abort backup quickly.
       */
-      next_stage= stage;
+      next_stage = stage;
     }
     else
     {
       /* Go trough all not used stages until we reach 'stage' */
-      next_stage= (backup_stages) ((uint) thd->current_backup_stage + 1);
+      next_stage = (backup_stages)((uint)thd->current_backup_stage + 1);
     }
   }
 
   do
   {
-    bool res= false;
-    backup_stages previous_stage= thd->current_backup_stage;
-    thd->current_backup_stage= next_stage;
-    switch (next_stage) {
-    case BACKUP_START:
-      if (!(res= backup_start(thd)))
+    bool res = false;
+    backup_stages previous_stage = thd->current_backup_stage;
+    thd->current_backup_stage = next_stage;
+    switch (next_stage)
+    {
+      case BACKUP_START:
+        if (!(res = backup_start(thd)))
+          break;
+        /* Reset backup stage to start for next backup try */
+        previous_stage = BACKUP_FINISHED;
         break;
-      /* Reset backup stage to start for next backup try */
-      previous_stage= BACKUP_FINISHED;
-      break;
-    case BACKUP_FLUSH:
-      res= backup_flush(thd);
-      break;
-    case BACKUP_WAIT_FOR_FLUSH:
-      res= backup_block_ddl(thd);
-      break;
-    case BACKUP_LOCK_COMMIT:
-      res= backup_block_commit(thd);
-      break;
-    case BACKUP_END:
-      res= backup_end(thd);
-      break;
-    case BACKUP_FINISHED:
-      DBUG_ASSERT(0);
+      case BACKUP_FLUSH:
+        res = backup_flush(thd);
+        break;
+      case BACKUP_WAIT_FOR_FLUSH:
+        res = backup_block_ddl(thd);
+        break;
+      case BACKUP_LOCK_COMMIT:
+        res = backup_block_commit(thd);
+        break;
+      case BACKUP_END:
+        res = backup_end(thd);
+        break;
+      case BACKUP_FINISHED:
+        DBUG_ASSERT(0);
     }
     if (res)
     {
-      thd->current_backup_stage= previous_stage;
-      my_error(ER_BACKUP_STAGE_FAILED, MYF(0), stage_names[(uint) stage]);
+      thd->current_backup_stage = previous_stage;
+      my_error(ER_BACKUP_STAGE_FAILED, MYF(0), stage_names[(uint)stage]);
       DBUG_RETURN(1);
     }
-    next_stage= (backup_stages) ((uint) next_stage + 1);
-  } while ((uint) next_stage <= (uint) stage);
+    next_stage = (backup_stages)((uint)next_stage + 1);
+  } while ((uint)next_stage <= (uint)stage);
 
   DBUG_RETURN(0);
 }
-
 
 /**
   Start the backup
@@ -160,7 +157,7 @@ static bool backup_start(THD *thd)
   MDL_request mdl_request;
   DBUG_ENTER("backup_start");
 
-  thd->current_backup_stage= BACKUP_FINISHED;   // For next test
+  thd->current_backup_stage = BACKUP_FINISHED;  // For next test
   if (thd->has_read_only_protection())
     DBUG_RETURN(1);
 
@@ -171,16 +168,14 @@ static bool backup_start(THD *thd)
   }
 
   /* this will be reset if this stage fails */
-  thd->current_backup_stage= BACKUP_START;
+  thd->current_backup_stage = BACKUP_START;
 
   /*
     Wait for old backup to finish and block ddl's so that we can start the
     ddl logger
   */
-  MDL_REQUEST_INIT(&mdl_request, MDL_key::BACKUP, "", "", MDL_BACKUP_BLOCK_DDL,
-                   MDL_EXPLICIT);
-  if (thd->mdl_context.acquire_lock(&mdl_request,
-                                    thd->variables.lock_wait_timeout))
+  MDL_REQUEST_INIT(&mdl_request, MDL_key::BACKUP, "", "", MDL_BACKUP_BLOCK_DDL, MDL_EXPLICIT);
+  if (thd->mdl_context.acquire_lock(&mdl_request, thd->variables.lock_wait_timeout))
     DBUG_RETURN(1);
 
   if (start_ddl_logging())
@@ -190,7 +185,7 @@ static bool backup_start(THD *thd)
   }
 
   DBUG_ASSERT(backup_flush_ticket == 0);
-  backup_flush_ticket= mdl_request.ticket;
+  backup_flush_ticket = mdl_request.ticket;
 
   /* Downgrade lock to only block other backups */
   backup_flush_ticket->downgrade_lock(MDL_BACKUP_START);
@@ -222,9 +217,7 @@ static bool backup_flush(THD *thd)
   /*
     Lock all non transactional normal tables to be used in new DML's
   */
-  if (thd->mdl_context.upgrade_shared_lock(backup_flush_ticket,
-                                           MDL_BACKUP_FLUSH,
-                                           thd->variables.lock_wait_timeout))
+  if (thd->mdl_context.upgrade_shared_lock(backup_flush_ticket, MDL_BACKUP_FLUSH, thd->variables.lock_wait_timeout))
     DBUG_RETURN(1);
 
   /*
@@ -275,8 +268,7 @@ static bool backup_block_ddl(THD *thd)
   thd->backup_stage(&org_stage);
   THD_STAGE_INFO(thd, stage_waiting_for_flush);
   /* Wait until all non trans statements has ended */
-  if (thd->mdl_context.upgrade_shared_lock(backup_flush_ticket,
-                                           MDL_BACKUP_WAIT_FLUSH,
+  if (thd->mdl_context.upgrade_shared_lock(backup_flush_ticket, MDL_BACKUP_WAIT_FLUSH,
                                            thd->variables.lock_wait_timeout))
     goto err;
 
@@ -287,7 +279,7 @@ static bool backup_block_ddl(THD *thd)
     flush_tables() returns an error. It's ok to continue with next
     backup stage even if we got an error.
   */
-  (void) flush_tables(thd, FLUSH_NON_TRANS_TABLES);
+  (void)flush_tables(thd, FLUSH_NON_TRANS_TABLES);
   thd->clear_error();
 
 #ifdef WITH_WSREP
@@ -297,11 +289,12 @@ static bool backup_block_ddl(THD *thd)
   */
   if (WSREP_NNULL(thd))
   {
-    Wsrep_server_state &server_state= Wsrep_server_state::instance();
-    if (server_state.desync_and_pause().is_undefined()) {
+    Wsrep_server_state &server_state = Wsrep_server_state::instance();
+    if (server_state.desync_and_pause().is_undefined())
+    {
       DBUG_RETURN(1);
     }
-    thd->wsrep_desynced_backup_stage= true;
+    thd->wsrep_desynced_backup_stage = true;
   }
 #endif /* WITH_WSREP */
 
@@ -316,15 +309,13 @@ static bool backup_block_ddl(THD *thd)
     and the MDL happens in the middle of it.
  */
   THD_STAGE_INFO(thd, stage_waiting_for_ddl);
-  sleep_time= 100;                              // Start with 0.1 seconds
-  for (uint i= 0 ; i <= MAX_RETRY_COUNT ; i++)
+  sleep_time = 100;  // Start with 0.1 seconds
+  for (uint i = 0; i <= MAX_RETRY_COUNT; i++)
   {
-    if (!thd->mdl_context.upgrade_shared_lock(backup_flush_ticket,
-                                              MDL_BACKUP_WAIT_DDL,
+    if (!thd->mdl_context.upgrade_shared_lock(backup_flush_ticket, MDL_BACKUP_WAIT_DDL,
                                               thd->variables.lock_wait_timeout))
       break;
-    if (thd->get_stmt_da()->sql_errno() != ER_LOCK_DEADLOCK || thd->killed ||
-        i == MAX_RETRY_COUNT)
+    if (thd->get_stmt_da()->sql_errno() != ER_LOCK_DEADLOCK || thd->killed || i == MAX_RETRY_COUNT)
     {
       /*
         Could be a timeout. Downgrade lock to what is was before this function
@@ -333,9 +324,9 @@ static bool backup_block_ddl(THD *thd)
       backup_flush_ticket->downgrade_lock(MDL_BACKUP_FLUSH);
       goto err;
     }
-    thd->clear_error();                         // Forget the DEADLOCK error
+    thd->clear_error();  // Forget the DEADLOCK error
     my_sleep(sleep_time);
-    sleep_time*= 5;                             // Wait a bit longer next time
+    sleep_time *= 5;  // Wait a bit longer next time
   }
 
   /* There can't be anything more that needs to be logged to ddl log */
@@ -347,7 +338,6 @@ err:
   DBUG_RETURN(1);
 }
 
-
 /**
    backup_block_commit()
 
@@ -357,26 +347,23 @@ err:
 static bool backup_block_commit(THD *thd)
 {
   DBUG_ENTER("backup_block_commit");
-  if (thd->mdl_context.upgrade_shared_lock(backup_flush_ticket,
-                                           MDL_BACKUP_WAIT_COMMIT,
+  if (thd->mdl_context.upgrade_shared_lock(backup_flush_ticket, MDL_BACKUP_WAIT_COMMIT,
                                            thd->variables.lock_wait_timeout))
     DBUG_RETURN(1);
 
   /* We can ignore errors from flush_tables () */
-  (void) flush_tables(thd, FLUSH_SYS_TABLES);
+  (void)flush_tables(thd, FLUSH_SYS_TABLES);
 
   if (mysql_bin_log.is_open())
   {
     mysql_mutex_lock(mysql_bin_log.get_log_lock());
-    mysql_file_sync(mysql_bin_log.get_log_file()->file,
-                    MYF(MY_WME|MY_SYNC_FILESIZE));
+    mysql_file_sync(mysql_bin_log.get_log_file()->file, MYF(MY_WME | MY_SYNC_FILESIZE));
     mysql_mutex_unlock(mysql_bin_log.get_log_lock());
   }
   thd->clear_error();
 
   DBUG_RETURN(0);
 }
-
 
 /**
    backup_end()
@@ -392,28 +379,26 @@ bool backup_end(THD *thd)
   if (thd->current_backup_stage != BACKUP_FINISHED)
   {
     DBUG_ASSERT(backup_flush_ticket);
-    MDL_ticket *old_ticket= backup_flush_ticket;
+    MDL_ticket *old_ticket = backup_flush_ticket;
     ha_end_backup();
     // This is needed as we may call backup_end without backup_block_commit
     stop_ddl_logging();
-    backup_flush_ticket= 0;
-    thd->current_backup_stage= BACKUP_FINISHED;
+    backup_flush_ticket = 0;
+    thd->current_backup_stage = BACKUP_FINISHED;
     thd->mdl_context.release_lock(old_ticket);
 #ifdef WITH_WSREP
     if (WSREP_NNULL(thd) && thd->wsrep_desynced_backup_stage)
     {
-      Wsrep_server_state &server_state= Wsrep_server_state::instance();
+      Wsrep_server_state &server_state = Wsrep_server_state::instance();
       THD_STAGE_INFO(thd, stage_waiting_flow);
-      WSREP_DEBUG("backup_end: waiting for flow control for %s",
-                  wsrep_thd_query(thd));
+      WSREP_DEBUG("backup_end: waiting for flow control for %s", wsrep_thd_query(thd));
       server_state.resume_and_resync();
-      thd->wsrep_desynced_backup_stage= false;
+      thd->wsrep_desynced_backup_stage = false;
     }
 #endif /* WITH_WSREP */
   }
   DBUG_RETURN(0);
 }
-
 
 /**
    backup_set_alter_copy_lock()
@@ -431,11 +416,10 @@ bool backup_end(THD *thd)
 
 void backup_set_alter_copy_lock(THD *thd, TABLE *table)
 {
-  MDL_ticket *ticket= thd->mdl_backup_ticket;
+  MDL_ticket *ticket = thd->mdl_backup_ticket;
 
   /* Ticket maybe NULL in case of LOCK TABLES or for temporary tables*/
-  DBUG_ASSERT(ticket || thd->locked_tables_mode ||
-              table->s->tmp_table != NO_TMP_TABLE);
+  DBUG_ASSERT(ticket || thd->locked_tables_mode || table->s->tmp_table != NO_TMP_TABLE);
   if (ticket)
     ticket->downgrade_lock(MDL_BACKUP_ALTER_COPY);
 }
@@ -449,23 +433,20 @@ void backup_set_alter_copy_lock(THD *thd, TABLE *table)
 
 bool backup_reset_alter_copy_lock(THD *thd)
 {
-  bool res= 0;
-  MDL_ticket *ticket= thd->mdl_backup_ticket;
+  bool res = 0;
+  MDL_ticket *ticket = thd->mdl_backup_ticket;
 
   /* Ticket maybe NULL in case of LOCK TABLES or for temporary tables*/
   if (ticket)
-    res= thd->mdl_context.upgrade_shared_lock(ticket, MDL_BACKUP_DDL,
-                                              thd->variables.lock_wait_timeout);
+    res = thd->mdl_context.upgrade_shared_lock(ticket, MDL_BACKUP_DDL, thd->variables.lock_wait_timeout);
   return res;
 }
-
 
 /*****************************************************************************
  Interfaces for BACKUP LOCK
  These functions are used by maria_backup to ensure that there are no active
  ddl's on the object the backup is going to copy
 *****************************************************************************/
-
 
 bool backup_lock(THD *thd, TABLE_LIST *table)
 {
@@ -476,14 +457,12 @@ bool backup_lock(THD *thd, TABLE_LIST *table)
     my_error(ER_LOCK_OR_ACTIVE_TRANSACTION, MYF(0));
     return 1;
   }
-  table->mdl_request.duration= MDL_EXPLICIT;
-  if (thd->mdl_context.acquire_lock(&table->mdl_request,
-                                    thd->variables.lock_wait_timeout))
+  table->mdl_request.duration = MDL_EXPLICIT;
+  if (thd->mdl_context.acquire_lock(&table->mdl_request, thd->variables.lock_wait_timeout))
     return 1;
-  thd->mdl_backup_lock= table->mdl_request.ticket;
+  thd->mdl_backup_lock = table->mdl_request.ticket;
   return 0;
 }
-
 
 /* Release old backup lock if it exists */
 
@@ -491,9 +470,8 @@ void backup_unlock(THD *thd)
 {
   if (thd->mdl_backup_lock)
     thd->mdl_context.release_lock(thd->mdl_backup_lock);
-  thd->mdl_backup_lock= 0;
+  thd->mdl_backup_lock = 0;
 }
-
 
 /*****************************************************************************
  Logging of ddl statements to backup log
@@ -506,10 +484,9 @@ static bool start_ddl_logging()
 
   fn_format(name, "ddl", mysql_data_home, ".log", 0);
 
-  backup_log_error= 0;
-  backup_log= mysql_file_create(key_file_log_ddl, name, CREATE_MODE,
-                                O_TRUNC | O_WRONLY | O_APPEND | O_NOFOLLOW,
-                                MYF(MY_WME));
+  backup_log_error = 0;
+  backup_log =
+      mysql_file_create(key_file_log_ddl, name, CREATE_MODE, O_TRUNC | O_WRONLY | O_APPEND | O_NOFOLLOW, MYF(MY_WME));
   DBUG_RETURN(backup_log < 0);
 }
 
@@ -519,33 +496,31 @@ static void stop_ddl_logging()
   if (backup_log >= 0)
   {
     mysql_file_close(backup_log, MYF(MY_WME));
-    backup_log= -1;
+    backup_log = -1;
   }
-  backup_log_error= 0;
+  backup_log_error = 0;
   mysql_mutex_unlock(&LOCK_backup_log);
 }
 
-
 static inline char *add_str_to_buffer(char *ptr, const LEX_CSTRING *from)
 {
-  if (from->length)                           // If length == 0, str may be 0
+  if (from->length)  // If length == 0, str may be 0
     memcpy(ptr, from->str, from->length);
-  ptr[from->length]= '\t';
-  return ptr+ from->length + 1;
+  ptr[from->length] = '\t';
+  return ptr + from->length + 1;
 }
 
 static char *add_name_to_buffer(char *ptr, const LEX_CSTRING *from)
 {
   LEX_CSTRING tmp;
-  char buff[NAME_LEN*4];
+  char buff[NAME_LEN * 4];
   uint errors;
 
-  tmp.str= buff;
-  tmp.length= strconvert(system_charset_info, from->str, from->length,
-                         &my_charset_filename, buff, sizeof(buff), &errors);
+  tmp.str = buff;
+  tmp.length =
+      strconvert(system_charset_info, from->str, from->length, &my_charset_filename, buff, sizeof(buff), &errors);
   return add_str_to_buffer(ptr, &tmp);
 }
-
 
 static char *add_id_to_buffer(char *ptr, const LEX_CUSTRING *from)
 {
@@ -553,16 +528,16 @@ static char *add_id_to_buffer(char *ptr, const LEX_CUSTRING *from)
   char buff[MY_UUID_STRING_LENGTH];
 
   if (!from->length)
-    return add_str_to_buffer(ptr, (LEX_CSTRING*) from);
+    return add_str_to_buffer(ptr, (LEX_CSTRING *)from);
 
-  tmp.str= buff;
-  tmp.length= MY_UUID_STRING_LENGTH;
+  tmp.str = buff;
+  tmp.length = MY_UUID_STRING_LENGTH;
   my_uuid2str(from->str, buff, 1);
   return add_str_to_buffer(ptr, &tmp);
 }
 
-
-static char *add_bool_to_buffer(char *ptr, bool value) {
+static char *add_bool_to_buffer(char *ptr, bool value)
+{
   *(ptr++) = value ? '1' : '0';
   *(ptr++) = '\t';
   return ptr;
@@ -586,42 +561,36 @@ void backup_log_ddl(const backup_log_info *info)
       return;
     }
     /* Enough place for db.table *2 + query + engine_name * 2 + tabs+ uuids */
-    char buff[NAME_CHAR_LEN*4+20+40*2+10+MY_UUID_STRING_LENGTH*2], *ptr= buff;
+    char buff[NAME_CHAR_LEN * 4 + 20 + 40 * 2 + 10 + MY_UUID_STRING_LENGTH * 2], *ptr = buff;
     char timebuff[20];
     struct tm current_time;
     LEX_CSTRING tmp_lex;
-    time_t tmp_time= my_time(0);
+    time_t tmp_time = my_time(0);
 
     localtime_r(&tmp_time, &current_time);
-    tmp_lex.str= timebuff;
-    tmp_lex.length= snprintf(timebuff, sizeof(timebuff),
-                             "%4d-%02d-%02d %2d:%02d:%02d",
-                             current_time.tm_year + 1900,
-                             current_time.tm_mon+1,
-                             current_time.tm_mday,
-                             current_time.tm_hour,
-                             current_time.tm_min,
-                             current_time.tm_sec);
-    ptr= add_str_to_buffer(ptr, &tmp_lex);
+    tmp_lex.str = timebuff;
+    tmp_lex.length = snprintf(timebuff, sizeof(timebuff), "%4d-%02d-%02d %2d:%02d:%02d", current_time.tm_year + 1900,
+                              current_time.tm_mon + 1, current_time.tm_mday, current_time.tm_hour, current_time.tm_min,
+                              current_time.tm_sec);
+    ptr = add_str_to_buffer(ptr, &tmp_lex);
 
-    ptr= add_str_to_buffer(ptr,  &info->query);
-    ptr= add_str_to_buffer(ptr,  &info->org_storage_engine_name);
-    ptr= add_bool_to_buffer(ptr, info->org_partitioned);
-    ptr= add_name_to_buffer(ptr, &info->org_database);
-    ptr= add_name_to_buffer(ptr, &info->org_table);
-    ptr= add_id_to_buffer(ptr,   &info->org_table_id);
+    ptr = add_str_to_buffer(ptr, &info->query);
+    ptr = add_str_to_buffer(ptr, &info->org_storage_engine_name);
+    ptr = add_bool_to_buffer(ptr, info->org_partitioned);
+    ptr = add_name_to_buffer(ptr, &info->org_database);
+    ptr = add_name_to_buffer(ptr, &info->org_table);
+    ptr = add_id_to_buffer(ptr, &info->org_table_id);
 
     /* The following fields are only set in case of rename */
-    ptr= add_str_to_buffer(ptr,  &info->new_storage_engine_name);
-    ptr= add_bool_to_buffer(ptr, info->new_partitioned);
-    ptr= add_name_to_buffer(ptr, &info->new_database);
-    ptr= add_name_to_buffer(ptr, &info->new_table);
-    ptr= add_id_to_buffer(ptr,   &info->new_table_id);
+    ptr = add_str_to_buffer(ptr, &info->new_storage_engine_name);
+    ptr = add_bool_to_buffer(ptr, info->new_partitioned);
+    ptr = add_name_to_buffer(ptr, &info->new_database);
+    ptr = add_name_to_buffer(ptr, &info->new_table);
+    ptr = add_id_to_buffer(ptr, &info->new_table_id);
 
-    ptr[-1]= '\n';                              // Replace last tab with nl
-    if (mysql_file_write(backup_log, (uchar*) buff, (size_t) (ptr-buff),
-                         MYF(MY_FNABP)))
-      backup_log_error= my_errno;
+    ptr[-1] = '\n';  // Replace last tab with nl
+    if (mysql_file_write(backup_log, (uchar *)buff, (size_t)(ptr - buff), MYF(MY_FNABP)))
+      backup_log_error = my_errno;
     mysql_mutex_unlock(&LOCK_backup_log);
   }
 }

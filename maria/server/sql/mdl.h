@@ -28,11 +28,10 @@ class THD;
 class MDL_context;
 class MDL_lock;
 class MDL_ticket;
-bool  ok_for_lower_case_names(const char *name);
+bool ok_for_lower_case_names(const char *name);
 
 typedef unsigned short mdl_bitmap_t;
 #define MDL_BIT(A) static_cast<mdl_bitmap_t>(1U << A)
-
 
 /**
   @def ENTER_COND(C, M, S, O)
@@ -59,7 +58,7 @@ typedef unsigned short mdl_bitmap_t;
 
 class MDL_context_owner
 {
-public:
+ public:
   virtual ~MDL_context_owner() {}
 
   /**
@@ -77,10 +76,8 @@ public:
     @sa ENTER_COND(), THD::enter_cond()
     @sa EXIT_COND(), THD::exit_cond()
   */
-  virtual void enter_cond(mysql_cond_t *cond, mysql_mutex_t *mutex,
-                          const PSI_stage_info *stage, PSI_stage_info *old_stage,
-                          const char *src_function, const char *src_file,
-                          int src_line) = 0;
+  virtual void enter_cond(mysql_cond_t *cond, mysql_mutex_t *mutex, const PSI_stage_info *stage,
+                          PSI_stage_info *old_stage, const char *src_function, const char *src_file, int src_line) = 0;
 
   /**
     @def EXIT_COND(S)
@@ -92,25 +89,22 @@ public:
     @sa ENTER_COND(), THD::enter_cond()
     @sa EXIT_COND(), THD::exit_cond()
   */
-  virtual void exit_cond(const PSI_stage_info *stage,
-                         const char *src_function, const char *src_file,
-                         int src_line) = 0;
+  virtual void exit_cond(const PSI_stage_info *stage, const char *src_function, const char *src_file, int src_line) = 0;
   /**
      Has the owner thread been killed?
    */
-  virtual int  is_killed() = 0;
+  virtual int is_killed() = 0;
 
   /**
      This one is only used for DEBUG_SYNC.
      (Do not use it to peek/poke into other parts of THD.)
    */
-  virtual THD* get_thd() = 0;
+  virtual THD *get_thd() = 0;
 
   /**
      @see THD::notify_shared_lock()
    */
-  virtual bool notify_shared_lock(MDL_context_owner *in_use,
-                                  bool needs_thr_lock_abort) = 0;
+  virtual bool notify_shared_lock(MDL_context_owner *in_use, bool needs_thr_lock_abort) = 0;
 };
 
 /**
@@ -123,9 +117,10 @@ public:
   The object locks are for tables, triggers etc.
 */
 
-enum enum_mdl_type {
+enum enum_mdl_type
+{
   /* This means that the MDL_request is not initialized */
-  MDL_NOT_INITIALIZED= -1,
+  MDL_NOT_INITIALIZED = -1,
   /*
     An intention exclusive metadata lock (IX). Used only for scoped locks.
     Owner of this type of lock can acquire upgradable exclusive locks on
@@ -136,7 +131,7 @@ enum enum_mdl_type {
     object metadata. Object may refer table, stored procedure, trigger,
     view/etc.
   */
-  MDL_INTENTION_EXCLUSIVE= 0,
+  MDL_INTENTION_EXCLUSIVE = 0,
   /*
     A shared metadata lock (S).
     To be used in cases when we are interested in object metadata only
@@ -254,7 +249,6 @@ enum enum_mdl_type {
   MDL_TYPE_END
 };
 
-
 /** Backup locks */
 
 /**
@@ -321,15 +315,15 @@ enum enum_mdl_type {
 #define MDL_BACKUP_COMMIT enum_mdl_type(13)
 #define MDL_BACKUP_END enum_mdl_type(14)
 
-
 /** Duration of metadata lock. */
 
-enum enum_mdl_duration {
+enum enum_mdl_duration
+{
   /**
     Locks with statement duration are automatically released at the end
     of statement or transaction.
   */
-  MDL_STATEMENT= 0,
+  MDL_STATEMENT = 0,
   /**
     Locks with transaction duration are automatically released at the end
     of transaction.
@@ -341,12 +335,11 @@ enum enum_mdl_duration {
   */
   MDL_EXPLICIT,
   /* This should be the last ! */
-  MDL_DURATION_END };
-
+  MDL_DURATION_END
+};
 
 /** Maximal length of key for metadata locking subsystem. */
 #define MAX_MDLKEY_LENGTH (1 + NAME_LEN + 1 + NAME_LEN + 1)
-
 
 /**
   Metadata lock object key.
@@ -359,7 +352,7 @@ enum enum_mdl_duration {
 
 struct MDL_key
 {
-public:
+ public:
 #ifdef HAVE_PSI_INTERFACE
   static void init_psi_keys();
 #endif
@@ -382,19 +375,22 @@ public:
     it's necessary to have a separate namespace for them since
     MDL_key is also used outside of the MDL subsystem.
   */
-  enum enum_mdl_namespace { BACKUP=0,
-                            SCHEMA,
-                            TABLE,
-                            FUNCTION,
-                            PROCEDURE,
-                            PACKAGE_BODY,
-                            TRIGGER,
-                            EVENT,
-                            USER_LOCK,           /* user level locks. */
-                            /* This should be the last ! */
-                            NAMESPACE_END };
+  enum enum_mdl_namespace
+  {
+    BACKUP = 0,
+    SCHEMA,
+    TABLE,
+    FUNCTION,
+    PROCEDURE,
+    PACKAGE_BODY,
+    TRIGGER,
+    EVENT,
+    USER_LOCK, /* user level locks. */
+    /* This should be the last ! */
+    NAMESPACE_END
+  };
 
-  const uchar *ptr() const { return (uchar*) m_ptr; }
+  const uchar *ptr() const { return (uchar *)m_ptr; }
   uint length() const { return m_length; }
 
   const char *db_name() const { return m_ptr + 1; }
@@ -403,8 +399,7 @@ public:
   const char *name() const { return m_ptr + m_db_name_length + 2; }
   uint name_length() const { return m_length - m_db_name_length - 3; }
 
-  enum_mdl_namespace mdl_namespace() const
-  { return (enum_mdl_namespace)(m_ptr[0]); }
+  enum_mdl_namespace mdl_namespace() const { return (enum_mdl_namespace)(m_ptr[0]); }
 
   /**
     Construct a metadata lock key from a triplet (mdl_namespace,
@@ -417,10 +412,9 @@ public:
     @param  name          Name of of the object
     @param  key           Where to store the the MDL key.
   */
-  void mdl_key_init(enum_mdl_namespace mdl_namespace_arg,
-                    const char *db, const char *name_arg)
+  void mdl_key_init(enum_mdl_namespace mdl_namespace_arg, const char *db, const char *name_arg)
   {
-    m_ptr[0]= (char) mdl_namespace_arg;
+    m_ptr[0] = (char)mdl_namespace_arg;
     /*
       It is responsibility of caller to ensure that db and object names
       are not longer than NAME_LEN. Still we play safe and try to avoid
@@ -428,26 +422,21 @@ public:
     */
     DBUG_ASSERT(strlen(db) <= NAME_LEN);
     DBUG_ASSERT(strlen(name_arg) <= NAME_LEN);
-    m_db_name_length= static_cast<uint16>(strmake(m_ptr + 1, db, NAME_LEN) -
-                                          m_ptr - 1);
-    m_length= static_cast<uint16>(strmake(m_ptr + m_db_name_length + 2,
-                                          name_arg,
-                                          NAME_LEN) - m_ptr + 1);
-    m_hash_value= my_hash_sort(&my_charset_bin, (uchar*) m_ptr + 1,
-                               m_length - 1);
+    m_db_name_length = static_cast<uint16>(strmake(m_ptr + 1, db, NAME_LEN) - m_ptr - 1);
+    m_length = static_cast<uint16>(strmake(m_ptr + m_db_name_length + 2, name_arg, NAME_LEN) - m_ptr + 1);
+    m_hash_value = my_hash_sort(&my_charset_bin, (uchar *)m_ptr + 1, m_length - 1);
     DBUG_SLOW_ASSERT(mdl_namespace_arg == USER_LOCK || ok_for_lower_case_names(db));
   }
   void mdl_key_init(const MDL_key *rhs)
   {
     memcpy(m_ptr, rhs->m_ptr, rhs->m_length);
-    m_length= rhs->m_length;
-    m_db_name_length= rhs->m_db_name_length;
-    m_hash_value= rhs->m_hash_value;
+    m_length = rhs->m_length;
+    m_db_name_length = rhs->m_db_name_length;
+    m_hash_value = rhs->m_hash_value;
   }
   bool is_equal(const MDL_key *rhs) const
   {
-    return (m_length == rhs->m_length &&
-            memcmp(m_ptr, rhs->m_ptr, m_length) == 0);
+    return (m_length == rhs->m_length && memcmp(m_ptr, rhs->m_ptr, m_length) == 0);
   }
   /**
     Compare two MDL keys lexicographically.
@@ -462,12 +451,8 @@ public:
     return memcmp(m_ptr, rhs->m_ptr, MY_MIN(m_length, rhs->m_length));
   }
 
-  MDL_key(const MDL_key *rhs)
-  {
-    mdl_key_init(rhs);
-  }
-  MDL_key(enum_mdl_namespace namespace_arg,
-          const char *db_arg, const char *name_arg)
+  MDL_key(const MDL_key *rhs) { mdl_key_init(rhs); }
+  MDL_key(enum_mdl_namespace namespace_arg, const char *db_arg, const char *name_arg)
   {
     mdl_key_init(namespace_arg, db_arg, name_arg);
   }
@@ -477,32 +462,22 @@ public:
     Get thread state name to be used in case when we have to
     wait on resource identified by key.
   */
-  const PSI_stage_info * get_wait_state_name() const
-  {
-    return & m_namespace_to_wait_state_name[(int)mdl_namespace()];
-  }
-  my_hash_value_type hash_value() const
-  {
-    return m_hash_value + mdl_namespace();
-  }
-  my_hash_value_type tc_hash_value() const
-  {
-    return m_hash_value;
-  }
+  const PSI_stage_info *get_wait_state_name() const { return &m_namespace_to_wait_state_name[(int)mdl_namespace()]; }
+  my_hash_value_type hash_value() const { return m_hash_value + mdl_namespace(); }
+  my_hash_value_type tc_hash_value() const { return m_hash_value; }
 
-private:
+ private:
   uint16 m_length;
   uint16 m_db_name_length;
   my_hash_value_type m_hash_value;
   char m_ptr[MAX_MDLKEY_LENGTH];
   static PSI_stage_info m_namespace_to_wait_state_name[NAMESPACE_END];
-private:
-  MDL_key(const MDL_key &);                     /* not implemented */
-  MDL_key &operator=(const MDL_key &);          /* not implemented */
-  friend my_hash_value_type mdl_hash_function(CHARSET_INFO *,
-                                              const uchar *, size_t);
-};
 
+ private:
+  MDL_key(const MDL_key &);            /* not implemented */
+  MDL_key &operator=(const MDL_key &); /* not implemented */
+  friend my_hash_value_type mdl_hash_function(CHARSET_INFO *, const uchar *, size_t);
+};
 
 /**
   A pending metadata lock request.
@@ -519,9 +494,9 @@ private:
 
 class MDL_request
 {
-public:
+ public:
   /** Type of metadata lock. */
-  enum          enum_mdl_type type;
+  enum enum_mdl_type type;
   /** Duration for requested lock. */
   enum enum_mdl_duration duration;
 
@@ -542,35 +517,30 @@ public:
   const char *m_src_file;
   uint m_src_line;
 
-public:
-
-  static void *operator new(size_t size, MEM_ROOT *mem_root) throw ()
-  { return alloc_root(mem_root, size); }
+ public:
+  static void *operator new(size_t size, MEM_ROOT *mem_root) throw() { return alloc_root(mem_root, size); }
   static void operator delete(void *, MEM_ROOT *) {}
 
-  void init_with_source(MDL_key::enum_mdl_namespace namespace_arg,
-            const char *db_arg, const char *name_arg,
-            enum_mdl_type mdl_type_arg,
-            enum_mdl_duration mdl_duration_arg,
-            const char *src_file, uint src_line);
-  void init_by_key_with_source(const MDL_key *key_arg, enum_mdl_type mdl_type_arg,
-            enum_mdl_duration mdl_duration_arg,
-            const char *src_file, uint src_line);
+  void init_with_source(MDL_key::enum_mdl_namespace namespace_arg, const char *db_arg, const char *name_arg,
+                        enum_mdl_type mdl_type_arg, enum_mdl_duration mdl_duration_arg, const char *src_file,
+                        uint src_line);
+  void init_by_key_with_source(const MDL_key *key_arg, enum_mdl_type mdl_type_arg, enum_mdl_duration mdl_duration_arg,
+                               const char *src_file, uint src_line);
   /** Set type of lock request. Can be only applied to pending locks. */
   inline void set_type(enum_mdl_type type_arg)
   {
     DBUG_ASSERT(ticket == NULL);
-    type= type_arg;
+    type = type_arg;
   }
   void move_from(MDL_request &from)
   {
-    type= from.type;
-    duration= from.duration;
-    ticket= from.ticket;
-    next_in_list= from.next_in_list;
-    prev_in_list= from.prev_in_list;
+    type = from.type;
+    duration = from.duration;
+    ticket = from.ticket;
+    next_in_list = from.next_in_list;
+    prev_in_list = from.prev_in_list;
     key.mdl_key_init(&from.key);
-    from.ticket=  NULL; // that's what "move" means
+    from.ticket = NULL;  // that's what "move" means
   }
 
   /**
@@ -580,11 +550,7 @@ public:
           lock. Even though this type of lock doesn't allow updates
           it will always be upgraded to one that does.
   */
-  bool is_write_lock_request() const
-  {
-    return (type >= MDL_SHARED_WRITE &&
-            type != MDL_SHARED_READ_ONLY);
-  }
+  bool is_write_lock_request() const { return (type >= MDL_SHARED_WRITE && type != MDL_SHARED_READ_ONLY); }
 
   /*
     This is to work around the ugliness of TABLE_LIST
@@ -599,33 +565,24 @@ public:
     is mandatory. Can only be used before the request has been
     granted.
   */
-  MDL_request& operator=(const MDL_request &)
+  MDL_request &operator=(const MDL_request &)
   {
-    type= MDL_NOT_INITIALIZED;
-    ticket= NULL;
+    type = MDL_NOT_INITIALIZED;
+    ticket = NULL;
     /* Do nothing, in particular, don't try to copy the key. */
     return *this;
   }
   /* Another piece of ugliness for TABLE_LIST constructor */
-  MDL_request(): type(MDL_NOT_INITIALIZED), ticket(NULL) {}
+  MDL_request() : type(MDL_NOT_INITIALIZED), ticket(NULL) {}
 
-  MDL_request(const MDL_request *rhs)
-    :type(rhs->type),
-    duration(rhs->duration),
-    ticket(NULL),
-    key(&rhs->key)
-  {}
+  MDL_request(const MDL_request *rhs) : type(rhs->type), duration(rhs->duration), ticket(NULL), key(&rhs->key) {}
 };
-
 
 typedef void (*mdl_cached_object_release_hook)(void *);
 
-#define MDL_REQUEST_INIT(R, P1, P2, P3, P4, P5) \
-  (*R).init_with_source(P1, P2, P3, P4, P5, __FILE__, __LINE__)
+#define MDL_REQUEST_INIT(R, P1, P2, P3, P4, P5) (*R).init_with_source(P1, P2, P3, P4, P5, __FILE__, __LINE__)
 
-#define MDL_REQUEST_INIT_BY_KEY(R, P1, P2, P3) \
-  (*R).init_by_key_with_source(P1, P2, P3, __FILE__, __LINE__)
-
+#define MDL_REQUEST_INIT_BY_KEY(R, P1, P2, P3) (*R).init_by_key_with_source(P1, P2, P3, __FILE__, __LINE__)
 
 /**
   An abstract class for inspection of a connected
@@ -634,7 +591,7 @@ typedef void (*mdl_cached_object_release_hook)(void *);
 
 class MDL_wait_for_graph_visitor
 {
-public:
+ public:
   virtual bool enter_node(MDL_context *node) = 0;
   virtual void leave_node(MDL_context *node) = 0;
 
@@ -650,7 +607,7 @@ public:
 
 class MDL_wait_for_subgraph
 {
-public:
+ public:
   virtual ~MDL_wait_for_subgraph();
 
   /**
@@ -661,14 +618,13 @@ public:
 
   enum enum_deadlock_weight
   {
-    DEADLOCK_WEIGHT_FTWRL1= 0,
-    DEADLOCK_WEIGHT_DML= 1,
-    DEADLOCK_WEIGHT_DDL= 100
+    DEADLOCK_WEIGHT_FTWRL1 = 0,
+    DEADLOCK_WEIGHT_DML = 1,
+    DEADLOCK_WEIGHT_DDL = 100
   };
   /* A helper used to determine which lock request should be aborted. */
   virtual uint get_deadlock_weight() const = 0;
 };
-
 
 /**
   A granted metadata lock.
@@ -692,14 +648,15 @@ public:
 
 class MDL_ticket : public MDL_wait_for_subgraph, public ilist_node<>
 {
-public:
+ public:
   /**
     Pointers for participating in the list of lock requests for this context.
     Context private.
   */
   MDL_ticket *next_in_context;
   MDL_ticket **prev_in_context;
-public:
+
+ public:
 #ifdef WITH_WSREP
   void wsrep_report(bool debug) const;
 #endif /* WITH_WSREP */
@@ -708,9 +665,7 @@ public:
   MDL_context *get_ctx() const { return m_ctx; }
   bool is_upgradable_or_exclusive() const
   {
-    return m_type == MDL_SHARED_UPGRADABLE ||
-           m_type == MDL_SHARED_NO_WRITE ||
-           m_type == MDL_SHARED_NO_READ_WRITE ||
+    return m_type == MDL_SHARED_UPGRADABLE || m_type == MDL_SHARED_NO_WRITE || m_type == MDL_SHARED_NO_READ_WRITE ||
            m_type == MDL_EXCLUSIVE;
   }
   enum_mdl_type get_type() const { return m_type; }
@@ -731,37 +686,44 @@ public:
   /**
     Status of lock request represented by the ticket as reflected in P_S.
   */
-  enum enum_psi_status { PENDING = 0, GRANTED,
-                         PRE_ACQUIRE_NOTIFY, POST_RELEASE_NOTIFY };
-private:
+  enum enum_psi_status
+  {
+    PENDING = 0,
+    GRANTED,
+    PRE_ACQUIRE_NOTIFY,
+    POST_RELEASE_NOTIFY
+  };
+
+ private:
   friend class MDL_context;
 
   MDL_ticket(MDL_context *ctx_arg, enum_mdl_type type_arg
 #ifndef DBUG_OFF
-             , enum_mdl_duration duration_arg
+             ,
+             enum_mdl_duration duration_arg
 #endif
-            )
-   : m_type(type_arg),
+             )
+      : m_type(type_arg),
 #ifndef DBUG_OFF
-     m_duration(duration_arg),
+        m_duration(duration_arg),
 #endif
-     m_ctx(ctx_arg),
-     m_lock(NULL),
-     m_psi(NULL)
-  {}
-
-  virtual ~MDL_ticket()
+        m_ctx(ctx_arg),
+        m_lock(NULL),
+        m_psi(NULL)
   {
-    DBUG_ASSERT(m_psi == NULL);
   }
+
+  virtual ~MDL_ticket() { DBUG_ASSERT(m_psi == NULL); }
 
   static MDL_ticket *create(MDL_context *ctx_arg, enum_mdl_type type_arg
 #ifndef DBUG_OFF
-                            , enum_mdl_duration duration_arg
+                            ,
+                            enum_mdl_duration duration_arg
 #endif
-                            );
+  );
   static void destroy(MDL_ticket *ticket);
-private:
+
+ private:
   /** Type of metadata lock. Externally accessible. */
   enum enum_mdl_type m_type;
 #ifndef DBUG_OFF
@@ -783,11 +745,10 @@ private:
 
   PSI_metadata_lock *m_psi;
 
-private:
-  MDL_ticket(const MDL_ticket &);               /* not implemented */
-  MDL_ticket &operator=(const MDL_ticket &);    /* not implemented */
+ private:
+  MDL_ticket(const MDL_ticket &);            /* not implemented */
+  MDL_ticket &operator=(const MDL_ticket &); /* not implemented */
 };
-
 
 /**
   Savepoint for MDL context.
@@ -798,17 +759,18 @@ private:
 
 class MDL_savepoint
 {
-public:
-  MDL_savepoint() {};
+ public:
+  MDL_savepoint(){};
 
-private:
+ private:
   MDL_savepoint(MDL_ticket *stmt_ticket, MDL_ticket *trans_ticket)
-    : m_stmt_ticket(stmt_ticket), m_trans_ticket(trans_ticket)
-  {}
+      : m_stmt_ticket(stmt_ticket), m_trans_ticket(trans_ticket)
+  {
+  }
 
   friend class MDL_context;
 
-private:
+ private:
   /**
     Pointer to last lock with statement duration which was taken
     before creation of savepoint.
@@ -821,27 +783,32 @@ private:
   MDL_ticket *m_trans_ticket;
 };
 
-
 /**
   A reliable way to wait on an MDL lock.
 */
 
 class MDL_wait
 {
-public:
+ public:
   MDL_wait();
   ~MDL_wait();
 
-  enum enum_wait_status { EMPTY = 0, GRANTED, VICTIM, TIMEOUT, KILLED };
+  enum enum_wait_status
+  {
+    EMPTY = 0,
+    GRANTED,
+    VICTIM,
+    TIMEOUT,
+    KILLED
+  };
 
   bool set_status(enum_wait_status result_arg);
   enum_wait_status get_status();
   void reset_status();
-  enum_wait_status timed_wait(MDL_context_owner *owner,
-                              struct timespec *abs_timeout,
-                              bool signal_timeout,
+  enum_wait_status timed_wait(MDL_context_owner *owner, struct timespec *abs_timeout, bool signal_timeout,
                               const PSI_stage_info *wait_state_name);
-private:
+
+ private:
   /**
     Condvar which is used for waiting until this context's pending
     request can be satisfied or this thread has to perform actions
@@ -854,12 +821,9 @@ private:
   enum_wait_status m_wait_status;
 };
 
-
-typedef I_P_List<MDL_request, I_P_List_adapter<MDL_request,
-                 &MDL_request::next_in_list,
-                 &MDL_request::prev_in_list>,
+typedef I_P_List<MDL_request, I_P_List_adapter<MDL_request, &MDL_request::next_in_list, &MDL_request::prev_in_list>,
                  I_P_List_counter>
-        MDL_request_list;
+    MDL_request_list;
 
 /**
   Context of the owner of metadata locks. I.e. each server
@@ -868,12 +832,9 @@ typedef I_P_List<MDL_request, I_P_List_adapter<MDL_request,
 
 class MDL_context
 {
-public:
-  typedef I_P_List<MDL_ticket,
-                   I_P_List_adapter<MDL_ticket,
-                                    &MDL_ticket::next_in_context,
-                                    &MDL_ticket::prev_in_context> >
-          Ticket_list;
+ public:
+  typedef I_P_List<MDL_ticket, I_P_List_adapter<MDL_ticket, &MDL_ticket::next_in_context, &MDL_ticket::prev_in_context>>
+      Ticket_list;
 
   typedef Ticket_list::Iterator Ticket_iterator;
 
@@ -883,17 +844,14 @@ public:
   bool try_acquire_lock(MDL_request *mdl_request);
   bool acquire_lock(MDL_request *mdl_request, double lock_wait_timeout);
   bool acquire_locks(MDL_request_list *requests, double lock_wait_timeout);
-  bool upgrade_shared_lock(MDL_ticket *mdl_ticket,
-                           enum_mdl_type new_type,
-                           double lock_wait_timeout);
+  bool upgrade_shared_lock(MDL_ticket *mdl_ticket, enum_mdl_type new_type, double lock_wait_timeout);
 
   bool clone_ticket(MDL_request *mdl_request);
 
   void release_all_locks_for_name(MDL_ticket *ticket);
   void release_lock(MDL_ticket *ticket);
 
-  bool is_lock_owner(MDL_key::enum_mdl_namespace mdl_namespace,
-                     const char *db, const char *name,
+  bool is_lock_owner(MDL_key::enum_mdl_namespace mdl_namespace, const char *db, const char *name,
                      enum_mdl_type mdl_type);
   unsigned long get_lock_owner(MDL_key *mdl_key);
 
@@ -901,23 +859,15 @@ public:
 
   inline bool has_locks() const
   {
-    return !(m_tickets[MDL_STATEMENT].is_empty() &&
-             m_tickets[MDL_TRANSACTION].is_empty() &&
+    return !(m_tickets[MDL_STATEMENT].is_empty() && m_tickets[MDL_TRANSACTION].is_empty() &&
              m_tickets[MDL_EXPLICIT].is_empty());
   }
-  bool has_explicit_locks() const
-  {
-    return !m_tickets[MDL_EXPLICIT].is_empty();
-  }
-  inline bool has_transactional_locks() const
-  {
-    return !m_tickets[MDL_TRANSACTION].is_empty();
-  }
+  bool has_explicit_locks() const { return !m_tickets[MDL_EXPLICIT].is_empty(); }
+  inline bool has_transactional_locks() const { return !m_tickets[MDL_TRANSACTION].is_empty(); }
 
   MDL_savepoint mdl_savepoint()
   {
-    return MDL_savepoint(m_tickets[MDL_STATEMENT].front(),
-                         m_tickets[MDL_TRANSACTION].front());
+    return MDL_savepoint(m_tickets[MDL_STATEMENT].front(), m_tickets[MDL_TRANSACTION].front());
   }
 
   void set_explicit_duration_for_all_locks();
@@ -932,8 +882,7 @@ public:
   MDL_context_owner *get_owner() { return m_owner; }
 
   /** @pre Only valid if we started waiting for lock. */
-  inline uint get_deadlock_weight() const
-  { return m_waiting_for->get_deadlock_weight() + m_deadlock_overweight; }
+  inline uint get_deadlock_weight() const { return m_waiting_for->get_deadlock_weight() + m_deadlock_overweight; }
   void inc_deadlock_overweight() { m_deadlock_overweight++; }
   /**
     Post signal to the context (and wake it up if necessary).
@@ -943,7 +892,7 @@ public:
                     already has received some signal or closed
                     signal slot.
   */
-  void init(MDL_context_owner *arg) { m_owner= arg; }
+  void init(MDL_context_owner *arg) { m_owner = arg; }
 
   void set_needs_thr_lock_abort(bool needs_thr_lock_abort)
   {
@@ -955,19 +904,18 @@ public:
             always re-try reading it after small timeout and therefore
             will see the new value eventually.
     */
-    m_needs_thr_lock_abort= needs_thr_lock_abort;
+    m_needs_thr_lock_abort = needs_thr_lock_abort;
   }
-  bool get_needs_thr_lock_abort() const
-  {
-    return m_needs_thr_lock_abort;
-  }
-public:
+  bool get_needs_thr_lock_abort() const { return m_needs_thr_lock_abort; }
+
+ public:
   /**
     If our request for a lock is scheduled, or aborted by the deadlock
     detector, the result is recorded in this class.
   */
   MDL_wait m_wait;
-private:
+
+ private:
   /**
     Lists of all MDL tickets acquired by this connection.
 
@@ -1052,17 +1000,16 @@ private:
    */
   MDL_wait_for_subgraph *m_waiting_for;
   LF_PINS *m_pins;
-  uint m_deadlock_overweight= 0;
-private:
-  MDL_ticket *find_ticket(MDL_request *mdl_req,
-                          enum_mdl_duration *duration);
+  uint m_deadlock_overweight = 0;
+
+ private:
+  MDL_ticket *find_ticket(MDL_request *mdl_req, enum_mdl_duration *duration);
   void release_locks_stored_before(enum_mdl_duration duration, MDL_ticket *sentinel);
   void release_lock(enum_mdl_duration duration, MDL_ticket *ticket);
-  bool try_acquire_lock_impl(MDL_request *mdl_request,
-                             MDL_ticket **out_ticket);
+  bool try_acquire_lock_impl(MDL_request *mdl_request, MDL_ticket **out_ticket);
   bool fix_pins();
 
-public:
+ public:
   THD *get_thd() const { return m_owner->get_thd(); }
   bool has_explicit_locks();
   void find_deadlock();
@@ -1075,7 +1022,7 @@ public:
   void will_wait_for(MDL_wait_for_subgraph *waiting_for_arg)
   {
     mysql_prlock_wrlock(&m_LOCK_waiting_for);
-    m_waiting_for=  waiting_for_arg;
+    m_waiting_for = waiting_for_arg;
     mysql_prlock_unlock(&m_LOCK_waiting_for);
   }
 
@@ -1083,25 +1030,19 @@ public:
   void done_waiting_for()
   {
     mysql_prlock_wrlock(&m_LOCK_waiting_for);
-    m_waiting_for= NULL;
+    m_waiting_for = NULL;
     mysql_prlock_unlock(&m_LOCK_waiting_for);
   }
-  void lock_deadlock_victim()
-  {
-    mysql_prlock_rdlock(&m_LOCK_waiting_for);
-  }
-  void unlock_deadlock_victim()
-  {
-    mysql_prlock_unlock(&m_LOCK_waiting_for);
-  }
-private:
-  MDL_context(const MDL_context &rhs);          /* not implemented */
-  MDL_context &operator=(MDL_context &rhs);     /* not implemented */
+  void lock_deadlock_victim() { mysql_prlock_rdlock(&m_LOCK_waiting_for); }
+  void unlock_deadlock_victim() { mysql_prlock_unlock(&m_LOCK_waiting_for); }
+
+ private:
+  MDL_context(const MDL_context &rhs);      /* not implemented */
+  MDL_context &operator=(MDL_context &rhs); /* not implemented */
 
   /* metadata_lock_info plugin */
-  friend int i_s_metadata_lock_info_fill_row(MDL_ticket*, void*);
+  friend int i_s_metadata_lock_info_fill_row(MDL_ticket *, void *);
 };
-
 
 void mdl_init();
 void mdl_destroy();
@@ -1118,7 +1059,6 @@ extern "C" unsigned long thd_get_thread_id(const MYSQL_THD thd);
 */
 extern "C" int thd_is_connected(MYSQL_THD thd);
 
-
 /*
   Metadata locking subsystem tries not to grant more than
   max_write_lock_count high-prio, strong locks successively,
@@ -1126,8 +1066,6 @@ extern "C" int thd_is_connected(MYSQL_THD thd);
 */
 extern "C" ulong max_write_lock_count;
 
-typedef int (*mdl_iterator_callback)(MDL_ticket *ticket, void *arg,
-                                     bool granted);
-extern MYSQL_PLUGIN_IMPORT
-int mdl_iterate(mdl_iterator_callback callback, void *arg);
+typedef int (*mdl_iterator_callback)(MDL_ticket *ticket, void *arg, bool granted);
+extern MYSQL_PLUGIN_IMPORT int mdl_iterate(mdl_iterator_callback callback, void *arg);
 #endif /* MDL_H */

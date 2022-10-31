@@ -16,28 +16,29 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1335  USA */
 
-
-#ifdef USE_PRAGMA_INTERFACE 
-#pragma interface			/* gcc class implementation */
+#ifdef USE_PRAGMA_INTERFACE
+#pragma interface /* gcc class implementation */
 #endif
 
-#include "sql_alloc.h"                       /* Sql_alloc */
-#include "my_rnd.h"                          /* rand_struct */
+#include "sql_alloc.h" /* Sql_alloc */
+#include "my_rnd.h"    /* rand_struct */
 
-class SQL_CRYPT :public Sql_alloc
+class SQL_CRYPT : public Sql_alloc
 {
-  struct my_rnd_struct rand,org_rand;
-  char decode_buff[256],encode_buff[256];
+  struct my_rnd_struct rand, org_rand;
+  char decode_buff[256], encode_buff[256];
   uint shift;
+
  public:
   SQL_CRYPT() {}
-  SQL_CRYPT(ulong *seed)
-  {
-    init(seed);
-  }
+  SQL_CRYPT(ulong *seed) { init(seed); }
   ~SQL_CRYPT() {}
   void init(ulong *seed);
-  void reinit() { shift=0; rand=org_rand; }
+  void reinit()
+  {
+    shift = 0;
+    rand = org_rand;
+  }
   void encode(char *str, uint length);
   void decode(char *str, uint length);
 };

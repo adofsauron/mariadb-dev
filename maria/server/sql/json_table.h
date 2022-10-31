@@ -16,7 +16,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1335  USA */
 
-
 #include <json_lib.h>
 
 class Json_table_column;
@@ -50,14 +49,12 @@ class Json_table_column;
 
 class Json_table_nested_path : public Sql_alloc
 {
-public:
-  json_path_t m_path;  /* The JSON Path to get the rows from */
-  bool m_null; // TRUE <=> producing a NULL-complemented row.
+ public:
+  json_path_t m_path; /* The JSON Path to get the rows from */
+  bool m_null;        // TRUE <=> producing a NULL-complemented row.
 
   /*** Construction interface ***/
-  Json_table_nested_path():
-    m_null(TRUE), m_nested(NULL), m_next_nested(NULL)
-  {}
+  Json_table_nested_path() : m_null(TRUE), m_nested(NULL), m_next_nested(NULL) {}
 
   int set_path(THD *thd, const LEX_CSTRING &path);
 
@@ -73,10 +70,10 @@ public:
   /* Counts the rows produced. Used by FOR ORDINALITY columns */
   longlong m_ordinality_counter;
 
-  int print(THD *thd, Field ***f, String *str,
-            List_iterator_fast<Json_table_column> &it,
+  int print(THD *thd, Field ***f, String *str, List_iterator_fast<Json_table_column> &it,
             Json_table_column **last_column);
-private:
+
+ private:
   /* The head of the list of nested NESTED PATH statements. */
   Json_table_nested_path *m_nested;
 
@@ -97,11 +94,9 @@ private:
   /* The child NESTED PATH we're currently scanning */
   Json_table_nested_path *m_cur_nested;
 
-  static bool column_in_this_or_nested(const Json_table_nested_path *p,
-                                       const Json_table_column *jc);
+  static bool column_in_this_or_nested(const Json_table_nested_path *p, const Json_table_column *jc);
   friend class Table_function_json_table;
 };
-
 
 /*
   @brief
@@ -114,7 +109,7 @@ private:
 
 class Json_table_column : public Sql_alloc
 {
-public:
+ public:
   enum enum_type
   {
     FOR_ORDINALITY,
@@ -138,7 +133,7 @@ public:
 
   struct On_response
   {
-  public:
+   public:
     Json_table_column::enum_on_response m_response;
     LEX_CSTRING m_default;
     int respond(Json_table_column *jc, Field *f, uint error_num);
@@ -156,22 +151,16 @@ public:
   CHARSET_INFO *m_explicit_cs;
   CHARSET_INFO *m_defaults_cs;
 
-  void set(enum_type ctype)
-  {
-    m_column_type= ctype;
-  }
+  void set(enum_type ctype) { m_column_type = ctype; }
   int set(THD *thd, enum_type ctype, const LEX_CSTRING &path, CHARSET_INFO *cs);
-  int set(THD *thd, enum_type ctype, const LEX_CSTRING &path,
-          const Lex_column_charset_collation_attrs_st &cl);
-  Json_table_column(Create_field *f, Json_table_nested_path *nest) :
-    m_field(f), m_nest(nest), m_explicit_cs(NULL)
+  int set(THD *thd, enum_type ctype, const LEX_CSTRING &path, const Lex_column_charset_collation_attrs_st &cl);
+  Json_table_column(Create_field *f, Json_table_nested_path *nest) : m_field(f), m_nest(nest), m_explicit_cs(NULL)
   {
-    m_on_error.m_response= RESPONSE_NOT_SPECIFIED;
-    m_on_empty.m_response= RESPONSE_NOT_SPECIFIED;
+    m_on_error.m_response = RESPONSE_NOT_SPECIFIED;
+    m_on_empty.m_response = RESPONSE_NOT_SPECIFIED;
   }
   int print(THD *tnd, Field **f, String *str);
 };
-
 
 /*
   Class represents the table function, the function
@@ -206,7 +195,7 @@ public:
 
 class Table_function_json_table : public Sql_alloc
 {
-public:
+ public:
   /*** Basic properties of the original JSON_TABLE(...) ***/
   Item *m_json; /* The JSON value to be parsed. */
 
@@ -219,12 +208,10 @@ public:
   /*** Name resolution functions ***/
   bool setup(THD *thd, TABLE_LIST *sql_table, SELECT_LEX *s_lex);
 
-  int walk_items(Item_processor processor, bool walk_subquery,
-                 void *argument);
+  int walk_items(Item_processor processor, bool walk_subquery, void *argument);
 
   /*** Functions for interaction with the Query Optimizer ***/
-  void fix_after_pullout(TABLE_LIST *sql_table,
-                         st_select_lex *new_parent, bool merge);
+  void fix_after_pullout(TABLE_LIST *sql_table, st_select_lex *new_parent, bool merge);
   void update_used_tables() { m_json->update_used_tables(); }
 
   table_map used_tables() const { return m_json->used_tables(); }
@@ -237,28 +224,21 @@ public:
     */
     return !(used_tables() & ~OUTER_REF_TABLE_BIT);
   }
-  void get_estimates(ha_rows *out_rows,
-                     double *scan_time, double *startup_cost);
+  void get_estimates(ha_rows *out_rows, double *scan_time, double *startup_cost);
 
-  int print(THD *thd, TABLE_LIST *sql_table,
-            String *str, enum_query_type query_type);
+  int print(THD *thd, TABLE_LIST *sql_table, String *str, enum_query_type query_type);
 
   /*** Construction interface to be used from the parser ***/
-  Table_function_json_table(Item *json):
-    m_json(json),
-    m_context_setup_done(false)
+  Table_function_json_table(Item *json) : m_json(json), m_context_setup_done(false)
   {
-    cur_parent= &m_nested_path;
-    last_sibling_hook= &m_nested_path.m_nested;
+    cur_parent = &m_nested_path;
+    last_sibling_hook = &m_nested_path.m_nested;
   }
 
   void start_nested_path(Json_table_nested_path *np);
   void end_nested_path();
   Json_table_nested_path *get_cur_nested_path() { return cur_parent; }
-  void set_name_resolution_context(Name_resolution_context *arg)
-  {
-    m_context= arg;
-  }
+  void set_name_resolution_context(Name_resolution_context *arg) { m_context = arg; }
 
   /* SQL Parser: current column in JSON_TABLE (...) syntax */
   Json_table_column *m_cur_json_table_column;
@@ -266,7 +246,7 @@ public:
   /* SQL Parser: charset of the current text literal */
   CHARSET_INFO *m_text_literal_cs;
 
-private:
+ private:
   /* Context to be used for resolving the first argument. */
   Name_resolution_context *m_context;
 
@@ -287,8 +267,6 @@ bool push_table_function_arg_context(LEX *lex, MEM_ROOT *alloc);
 
 TABLE *create_table_for_function(THD *thd, TABLE_LIST *sql_table);
 
-table_map add_table_function_dependencies(List<TABLE_LIST> *join_list,
-                                          table_map nest_tables);
+table_map add_table_function_dependencies(List<TABLE_LIST> *join_list, table_map nest_tables);
 
 #endif /* JSON_TABLE_INCLUDED */
-

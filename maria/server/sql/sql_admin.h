@@ -19,107 +19,80 @@
 /* Must be able to hold ALTER TABLE t PARTITION BY ... KEY ALGORITHM = 1 ... */
 #define SQL_ADMIN_MSG_TEXT_SIZE (128 * 1024)
 
-bool mysql_assign_to_keycache(THD* thd, TABLE_LIST* table_list,
-                              const LEX_CSTRING *key_cache_name);
-bool mysql_preload_keys(THD* thd, TABLE_LIST* table_list);
-int reassign_keycache_tables(THD* thd, KEY_CACHE *src_cache,
-                             KEY_CACHE *dst_cache);
-void fill_check_table_metadata_fields(THD *thd, List<Item>* fields);
+bool mysql_assign_to_keycache(THD *thd, TABLE_LIST *table_list, const LEX_CSTRING *key_cache_name);
+bool mysql_preload_keys(THD *thd, TABLE_LIST *table_list);
+int reassign_keycache_tables(THD *thd, KEY_CACHE *src_cache, KEY_CACHE *dst_cache);
+void fill_check_table_metadata_fields(THD *thd, List<Item> *fields);
 /**
   Sql_cmd_analyze_table represents the ANALYZE TABLE statement.
 */
 class Sql_cmd_analyze_table : public Sql_cmd
 {
-public:
+ public:
   /**
     Constructor, used to represent a ANALYZE TABLE statement.
   */
-  Sql_cmd_analyze_table()
-  {}
+  Sql_cmd_analyze_table() {}
 
-  ~Sql_cmd_analyze_table()
-  {}
+  ~Sql_cmd_analyze_table() {}
 
   bool execute(THD *thd);
 
-  virtual enum_sql_command sql_command_code() const
-  {
-    return SQLCOM_ANALYZE;
-  }
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_ANALYZE; }
 };
-
-
 
 /**
   Sql_cmd_check_table represents the CHECK TABLE statement.
 */
 class Sql_cmd_check_table : public Sql_cmd
 {
-public:
+ public:
   /**
     Constructor, used to represent a CHECK TABLE statement.
   */
-  Sql_cmd_check_table()
-  {}
+  Sql_cmd_check_table() {}
 
-  ~Sql_cmd_check_table()
-  {}
+  ~Sql_cmd_check_table() {}
 
   bool execute(THD *thd);
 
-  virtual enum_sql_command sql_command_code() const
-  {
-    return SQLCOM_CHECK;
-  }
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_CHECK; }
 };
-
 
 /**
   Sql_cmd_optimize_table represents the OPTIMIZE TABLE statement.
 */
 class Sql_cmd_optimize_table : public Sql_cmd
 {
-public:
+ public:
   /**
     Constructor, used to represent a OPTIMIZE TABLE statement.
   */
-  Sql_cmd_optimize_table()
-  {}
+  Sql_cmd_optimize_table() {}
 
-  ~Sql_cmd_optimize_table()
-  {}
+  ~Sql_cmd_optimize_table() {}
 
   bool execute(THD *thd);
 
-  virtual enum_sql_command sql_command_code() const
-  {
-    return SQLCOM_OPTIMIZE;
-  }
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_OPTIMIZE; }
 };
-
-
 
 /**
   Sql_cmd_repair_table represents the REPAIR TABLE statement.
 */
 class Sql_cmd_repair_table : public Sql_cmd
 {
-public:
+ public:
   /**
     Constructor, used to represent a REPAIR TABLE statement.
   */
-  Sql_cmd_repair_table()
-  {}
+  Sql_cmd_repair_table() {}
 
-  ~Sql_cmd_repair_table()
-  {}
+  ~Sql_cmd_repair_table() {}
 
   bool execute(THD *thd);
 
-  virtual enum_sql_command sql_command_code() const
-  {
-    return SQLCOM_REPAIR;
-  }
+  virtual enum_sql_command sql_command_code() const { return SQLCOM_REPAIR; }
 };
 
 #endif

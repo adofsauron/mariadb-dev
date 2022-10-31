@@ -27,29 +27,28 @@ struct st_map_errno_to_sqlstate
   const char *jdbc_state;
 };
 
-struct st_map_errno_to_sqlstate sqlstate_map[]=
-{
+struct st_map_errno_to_sqlstate sqlstate_map[] = {
 #include <handler_state.h>
 #include <sql_state.h>
 };
 
 const char *mysql_errno_to_sqlstate(uint mysql_errno)
 {
-  uint first=0, end= array_elements(sqlstate_map)-1;
+  uint first = 0, end = array_elements(sqlstate_map) - 1;
   struct st_map_errno_to_sqlstate *map;
 
   /* Do binary search in the sorted array */
   while (first != end)
   {
-    uint mid= (first+end)/2;
-    map= sqlstate_map+mid;
+    uint mid = (first + end) / 2;
+    map = sqlstate_map + mid;
     if (map->mysql_errno < mysql_errno)
-      first= mid+1;
+      first = mid + 1;
     else
-      end= mid;
+      end = mid;
   }
-  map= sqlstate_map+first;
+  map = sqlstate_map + first;
   if (map->mysql_errno == mysql_errno)
     return map->odbc_state;
-  return "HY000";				/* General error */
+  return "HY000"; /* General error */
 }

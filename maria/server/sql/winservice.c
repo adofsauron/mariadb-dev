@@ -15,7 +15,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335 USA */
 
 /*
-  Get Properties of an existing mysqld Windows service 
+  Get Properties of an existing mysqld Windows service
 */
 
 #include <windows.h>
@@ -32,27 +32,27 @@
 void get_file_version(const char *path, int *major, int *minor, int *patch)
 {
   DWORD version_handle;
-  char *ver= 0;
+  char *ver = 0;
   VS_FIXEDFILEINFO info;
   UINT len;
   DWORD size;
   void *p;
-  *major= *minor= *patch= 0;
+  *major = *minor = *patch = 0;
 
-  size= GetFileVersionInfoSize(path, &version_handle);
+  size = GetFileVersionInfoSize(path, &version_handle);
   if (size == 0)
     return;
-  ver= (char *)malloc(size);
-  if(!GetFileVersionInfo(path, version_handle, size, ver))
+  ver = (char *)malloc(size);
+  if (!GetFileVersionInfo(path, version_handle, size, ver))
     goto end;
 
-  if(!VerQueryValue(ver,"\\",&p,&len))
+  if (!VerQueryValue(ver, "\\", &p, &len))
     goto end;
-  memcpy(&info,p ,sizeof(VS_FIXEDFILEINFO));
+  memcpy(&info, p, sizeof(VS_FIXEDFILEINFO));
 
-  *major= (info.dwFileVersionMS & 0xFFFF0000) >> 16;
-  *minor= (info.dwFileVersionMS & 0x0000FFFF);
-  *patch= (info.dwFileVersionLS & 0xFFFF0000) >> 16;
+  *major = (info.dwFileVersionMS & 0xFFFF0000) >> 16;
+  *minor = (info.dwFileVersionMS & 0x0000FFFF);
+  *patch = (info.dwFileVersionLS & 0xFFFF0000) >> 16;
 end:
   free(ver);
 }
@@ -60,18 +60,18 @@ end:
 void normalize_path(char *path, size_t size)
 {
   char buf[MAX_PATH];
-  if (*path== '"')
+  if (*path == '"')
   {
     char *p;
-    strcpy_s(buf, MAX_PATH, path+1);
-    p= strchr(buf, '"');
+    strcpy_s(buf, MAX_PATH, path + 1);
+    p = strchr(buf, '"');
     if (p)
-      *p=0;
+      *p = 0;
   }
   else
-    strcpy_s(buf, MAX_PATH,  path);
+    strcpy_s(buf, MAX_PATH, path);
   GetFullPathName(buf, MAX_PATH, buf, NULL);
-  strcpy_s(path, size,  buf);
+  strcpy_s(path, size, buf);
 }
 
 /*
@@ -89,11 +89,8 @@ void normalize_path(char *path, size_t size)
 */
 BOOL exclude_service(mysqld_service_properties *props)
 {
-  static const char* exclude_patterns[] =
-  {
-    "common files\\dell\\mysql\\bin\\", /* Dell's private installation */ 
-    NULL
-  };
+  static const char *exclude_patterns[] = {"common files\\dell\\mysql\\bin\\", /* Dell's private installation */
+                                           NULL};
   int i;
   char buf[MAX_PATH];
 
@@ -101,38 +98,33 @@ BOOL exclude_service(mysqld_service_properties *props)
   memcpy(buf, props->mysqld_exe, sizeof(props->mysqld_exe));
   _strlwr(buf);
 
-  for(i= 0; exclude_patterns[i]; i++)
+  for (i = 0; exclude_patterns[i]; i++)
   {
     if (strstr(buf, exclude_patterns[i]))
       return TRUE;
   }
-  if ((props->version_major == 0) ||
-     (props->version_major > 5 && props->version_major < 10) ||
-     (props->version_major == 5 && props->version_minor > 7))
+  if ((props->version_major == 0) || (props->version_major > 5 && props->version_major < 10) ||
+      (props->version_major == 5 && props->version_minor > 7))
   {
     return TRUE;
   }
   return FALSE;
 }
 
-
 static void get_datadir_from_ini(const char *ini, char *service_name, char *datadir, size_t sz)
 {
-  *datadir= 0;
-  const char *sections[]= {service_name, "mysqld", "server", "mariadb",
-                           "mariadbd"};
-  for (int i= 0; i < sizeof(sections) / sizeof(sections[0]); i++)
+  *datadir = 0;
+  const char *sections[] = {service_name, "mysqld", "server", "mariadb", "mariadbd"};
+  for (int i = 0; i < sizeof(sections) / sizeof(sections[0]); i++)
   {
     if (sections[i])
     {
-      GetPrivateProfileStringA(sections[i], "datadir", NULL, datadir,
-                               (DWORD) sz, ini);
+      GetPrivateProfileStringA(sections[i], "datadir", NULL, datadir, (DWORD)sz, ini);
       if (*datadir)
         return;
     }
   }
 }
-
 
 static int fix_and_check_datadir(mysqld_service_properties *props)
 {
@@ -144,7 +136,7 @@ static int fix_and_check_datadir(mysqld_service_properties *props)
     It is possible, that datadir contains some unconvertable character.
     We just pretend not to know what's the data directory
   */
-  props->datadir[0]= 0;
+  props->datadir[0] = 0;
   return 0;
 }
 
@@ -158,26 +150,25 @@ static int fix_and_check_datadir(mysqld_service_properties *props)
   do not have much control over how threads are created and destroyed, so we
   cannot assume MySQL thread initilization here.
 */
-int get_mysql_service_properties(const wchar_t *bin_path,
-  mysqld_service_properties *props)
+int get_mysql_service_properties(const wchar_t *bin_path, mysqld_service_properties *props)
 {
   int numargs;
   wchar_t mysqld_path[MAX_PATH + 4];
   wchar_t *file_part;
-  wchar_t **args= NULL;
-  int retval= 1;
+  wchar_t **args = NULL;
+  int retval = 1;
   BOOL have_inifile;
   char service_name[MAX_PATH];
 
-  props->datadir[0]= 0;
-  props->inifile[0]= 0;
-  props->mysqld_exe[0]= 0;
-  props->version_major= 0;
-  props->version_minor= 0;
-  props->version_patch= 0;
+  props->datadir[0] = 0;
+  props->inifile[0] = 0;
+  props->mysqld_exe[0] = 0;
+  props->version_major = 0;
+  props->version_minor = 0;
+  props->version_patch = 0;
 
-  args= CommandLineToArgvW(bin_path, &numargs);
-  if(numargs == 2)
+  args = CommandLineToArgvW(bin_path, &numargs);
+  if (numargs == 2)
   {
     /*
       There are rare cases where service config does not have
@@ -185,11 +176,11 @@ int get_mysql_service_properties(const wchar_t *bin_path,
       registered with plain mysqld --install, the data directory is
       next to "bin" in this case.
     */
-    have_inifile= FALSE;
+    have_inifile = FALSE;
   }
-  else if(numargs == 3)
+  else if (numargs == 3)
   {
-    have_inifile= TRUE;
+    have_inifile = TRUE;
   }
   else
   {
@@ -197,20 +188,18 @@ int get_mysql_service_properties(const wchar_t *bin_path,
   }
 
   /* Last parameter is the service name*/
-  wcstombs(service_name, args[numargs-1], MAX_PATH);
+  wcstombs(service_name, args[numargs - 1], MAX_PATH);
 
-  if(have_inifile && wcsncmp(args[1], L"--defaults-file=", 16) != 0)
+  if (have_inifile && wcsncmp(args[1], L"--defaults-file=", 16) != 0)
     goto end;
 
   GetFullPathNameW(args[0], MAX_PATH, mysqld_path, &file_part);
 
-  if(wcsstr(mysqld_path, L".exe") == NULL)
+  if (wcsstr(mysqld_path, L".exe") == NULL)
     wcscat(mysqld_path, L".exe");
 
-  if(wcsicmp(file_part, L"mysqld.exe") != 0 &&
-    wcsicmp(file_part, L"mysqld-debug.exe") != 0 &&
-    wcsicmp(file_part, L"mysqld-nt.exe") != 0 &&
-    wcsicmp(file_part, L"mariadbd.exe") != 0)
+  if (wcsicmp(file_part, L"mysqld.exe") != 0 && wcsicmp(file_part, L"mysqld-debug.exe") != 0 &&
+      wcsicmp(file_part, L"mysqld-nt.exe") != 0 && wcsicmp(file_part, L"mariadbd.exe") != 0)
   {
     /* The service executable is not mysqld. */
     goto end;
@@ -220,19 +209,17 @@ int get_mysql_service_properties(const wchar_t *bin_path,
   /* If mysqld.exe exists, try to get its version from executable */
   if (GetFileAttributes(props->mysqld_exe) != INVALID_FILE_ATTRIBUTES)
   {
-     get_file_version(props->mysqld_exe, &props->version_major,
-      &props->version_minor, &props->version_patch);
+    get_file_version(props->mysqld_exe, &props->version_major, &props->version_minor, &props->version_patch);
   }
 
   if (have_inifile)
   {
     /* We have --defaults-file in service definition. */
-    wcstombs(props->inifile, args[1]+16, MAX_PATH);
+    wcstombs(props->inifile, args[1] + 16, MAX_PATH);
     normalize_path(props->inifile, MAX_PATH);
     if (GetFileAttributes(props->inifile) != INVALID_FILE_ATTRIBUTES)
     {
-      get_datadir_from_ini(props->inifile, service_name, props->datadir,
-                           sizeof(props->datadir));
+      get_datadir_from_ini(props->inifile, service_name, props->datadir, sizeof(props->datadir));
     }
     else
     {
@@ -241,12 +228,12 @@ int get_mysql_service_properties(const wchar_t *bin_path,
         datadir relative to mysqld.exe. This is equivalent to the case no ini
         file used.
       */
-      props->inifile[0]= 0;
-      have_inifile= FALSE;
+      props->inifile[0] = 0;
+      have_inifile = FALSE;
     }
   }
 
-  if(!have_inifile || props->datadir[0] == 0)
+  if (!have_inifile || props->datadir[0] == 0)
   {
     /*
       Hard, although a rare case, we're guessing datadir and defaults-file.
@@ -262,12 +249,12 @@ int get_mysql_service_properties(const wchar_t *bin_path,
       is located.
     */
     strcpy_s(install_root, MAX_PATH, props->mysqld_exe);
-    for (i=0; i< 2; i++)
+    for (i = 0; i < 2; i++)
     {
-      p= strrchr(install_root, '\\');
-      if(!p)
+      p = strrchr(install_root, '\\');
+      if (!p)
         goto end;
-      *p= 0;
+      *p = 0;
     }
 
     if (!have_inifile)
@@ -281,13 +268,12 @@ int get_mysql_service_properties(const wchar_t *bin_path,
       if (GetFileAttributes(props->inifile) != INVALID_FILE_ATTRIBUTES)
       {
         /* Ini file found, get datadir from there */
-        get_datadir_from_ini(props->inifile, service_name, props->datadir,
-                             sizeof(props->datadir));
+        get_datadir_from_ini(props->inifile, service_name, props->datadir, sizeof(props->datadir));
       }
       else
       {
         /* No ini file */
-        props->inifile[0]= 0;
+        props->inifile[0] = 0;
       }
     }
 
@@ -308,23 +294,23 @@ int get_mysql_service_properties(const wchar_t *bin_path,
     If version could not be determined so far, try mysql_upgrade_info in
     database directory.
   */
-  if(props->version_major == 0)
+  if (props->version_major == 0)
   {
     char buf[MAX_PATH];
     FILE *mysql_upgrade_info;
 
     sprintf_s(buf, MAX_PATH, "%s\\mysql_upgrade_info", props->datadir);
-    mysql_upgrade_info= fopen(buf, "r");
-    if(mysql_upgrade_info)
+    mysql_upgrade_info = fopen(buf, "r");
+    if (mysql_upgrade_info)
     {
       if (fgets(buf, MAX_PATH, mysql_upgrade_info))
       {
-        int major,minor,patch;
+        int major, minor, patch;
         if (sscanf(buf, "%d.%d.%d", &major, &minor, &patch) == 3)
         {
-          props->version_major= major;
-          props->version_minor= minor;
-          props->version_patch= patch;
+          props->version_major = major;
+          props->version_minor = minor;
+          props->version_patch = patch;
         }
       }
     }

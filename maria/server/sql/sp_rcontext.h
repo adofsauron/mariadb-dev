@@ -18,11 +18,11 @@
 #define _SP_RCONTEXT_H_
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface			/* gcc class implementation */
+#pragma interface /* gcc class implementation */
 #endif
 
-#include "sql_class.h"                    // select_result_interceptor
-#include "sp_pcontext.h"                  // sp_condition_value
+#include "sql_class.h"    // select_result_interceptor
+#include "sp_pcontext.h"  // sp_condition_value
 
 ///////////////////////////////////////////////////////////////////////////
 // sp_rcontext declaration.
@@ -36,7 +36,6 @@ class Query_arena;
 class sp_head;
 class Item_cache;
 class Virtual_tmp_table;
-
 
 /*
   This class is a runtime context of a Stored Routine. It is used in an
@@ -59,7 +58,7 @@ class Virtual_tmp_table;
 
 class sp_rcontext : public Sql_alloc
 {
-public:
+ public:
   /// Construct and properly initialize a new sp_rcontext instance. The static
   /// create-function is needed because we need a way to return an error from
   /// the constructor.
@@ -70,25 +69,19 @@ public:
   ///                         (for stored functions only).
   ///
   /// @return valid sp_rcontext object or NULL in case of OOM-error.
-  static sp_rcontext *create(THD *thd,
-                             const sp_head *owner,
-                             const sp_pcontext *root_parsing_ctx,
-                             Field *return_value_fld,
-                             Row_definition_list &defs);
+  static sp_rcontext *create(THD *thd, const sp_head *owner, const sp_pcontext *root_parsing_ctx,
+                             Field *return_value_fld, Row_definition_list &defs);
 
   ~sp_rcontext();
 
-private:
-  sp_rcontext(const sp_head *owner,
-              const sp_pcontext *root_parsing_ctx,
-              Field *return_value_fld,
-              bool in_sub_stmt);
+ private:
+  sp_rcontext(const sp_head *owner, const sp_pcontext *root_parsing_ctx, Field *return_value_fld, bool in_sub_stmt);
 
   // Prevent use of copying constructor and operator.
   sp_rcontext(const sp_rcontext &);
   void operator=(sp_rcontext &);
 
-public:
+ public:
   /// This class stores basic information about SQL-condition, such as:
   ///   - SQL error code;
   ///   - error level;
@@ -104,10 +97,9 @@ public:
   /// standard SQL-condition processing (Diagnostics_area should contain an
   /// object for active SQL-condition, not just information stored in DA's
   /// fields).
-  class Sql_condition_info : public Sql_alloc,
-                             public Sql_condition_identity
+  class Sql_condition_info : public Sql_alloc, public Sql_condition_identity
   {
-  public:
+   public:
     /// Text message.
     char *message;
 
@@ -119,20 +111,20 @@ public:
     /// @param _sql_condition  The SQL condition.
     /// @param arena           Query arena for SP
     Sql_condition_info(const Sql_condition *_sql_condition, Query_arena *arena)
-      :Sql_condition_identity(*_sql_condition)
+        : Sql_condition_identity(*_sql_condition)
     {
-      message= strdup_root(arena->mem_root, _sql_condition->get_message_text());
-      m_row_number= _sql_condition->m_row_number;
+      message = strdup_root(arena->mem_root, _sql_condition->get_message_text());
+      m_row_number = _sql_condition->m_row_number;
     }
   };
 
-private:
+ private:
   /// This class represents a call frame of SQL-handler (one invocation of a
   /// handler). Basically, it's needed to store continue instruction pointer for
   /// CONTINUE SQL-handlers.
   class Handler_call_frame : public Sql_alloc
   {
-  public:
+   public:
     /// SQL-condition, triggered handler activation.
     const Sql_condition_info *sql_condition;
 
@@ -144,14 +136,13 @@ private:
     ///
     /// @param _sql_condition SQL-condition, triggered handler activation.
     /// @param _continue_ip   Continue instruction pointer.
-    Handler_call_frame(const Sql_condition_info *_sql_condition,
-                       uint _continue_ip)
-     :sql_condition(_sql_condition),
-      continue_ip(_continue_ip)
-    { }
- };
+    Handler_call_frame(const Sql_condition_info *_sql_condition, uint _continue_ip)
+        : sql_condition(_sql_condition), continue_ip(_continue_ip)
+    {
+    }
+  };
 
-public:
+ public:
   /// Arena used to (re) allocate items on. E.g. reallocate INOUT/OUT
   /// SP-variables when they don't fit into prealloced items. This is common
   /// situation with String items. It is used mainly in sp_eval_func_item().
@@ -175,17 +166,11 @@ public:
   // SP-variables.
   /////////////////////////////////////////////////////////////////////////
 
-  uint argument_count() const
-  {
-    return m_root_parsing_ctx->context_var_count();
-  }
+  uint argument_count() const { return m_root_parsing_ctx->context_var_count(); }
 
   int set_variable(THD *thd, uint var_idx, Item **value);
-  int set_variable_row_field(THD *thd, uint var_idx, uint field_idx,
-                             Item **value);
-  int set_variable_row_field_by_name(THD *thd, uint var_idx,
-                                     const LEX_CSTRING &field_name,
-                                     Item **value);
+  int set_variable_row_field(THD *thd, uint var_idx, uint field_idx, Item **value);
+  int set_variable_row_field_by_name(THD *thd, uint var_idx, const LEX_CSTRING &field_name, Item **value);
   int set_variable_row(THD *thd, uint var_idx, List<Item> &items);
 
   int set_parameter(THD *thd, uint var_idx, Item **value)
@@ -194,11 +179,9 @@ public:
     return set_variable(thd, var_idx, value);
   }
 
-  Item_field *get_variable(uint var_idx) const
-  { return m_var_items[var_idx]; }
+  Item_field *get_variable(uint var_idx) const { return m_var_items[var_idx]; }
 
-  Item **get_variable_addr(uint var_idx) const
-  { return ((Item **) m_var_items.array()) + var_idx; }
+  Item **get_variable_addr(uint var_idx) const { return ((Item **)m_var_items.array()) + var_idx; }
 
   Item_field *get_parameter(uint var_idx) const
   {
@@ -206,13 +189,11 @@ public:
     return get_variable(var_idx);
   }
 
-  bool find_row_field_by_name_or_error(uint *field_idx, uint var_idx,
-                                       const LEX_CSTRING &field_name);
+  bool find_row_field_by_name_or_error(uint *field_idx, uint var_idx, const LEX_CSTRING &field_name);
 
   bool set_return_value(THD *thd, Item **return_value_item);
 
-  bool is_return_value_set() const
-  { return m_return_value_set; }
+  bool is_return_value_set() const { return m_return_value_set; }
 
   /////////////////////////////////////////////////////////////////////////
   // SQL-handlers.
@@ -235,8 +216,7 @@ public:
 
   const Sql_condition_info *raised_condition() const
   {
-    return m_handler_call_stack.elements() ?
-      (*m_handler_call_stack.back())->sql_condition : NULL;
+    return m_handler_call_stack.elements() ? (*m_handler_call_stack.back())->sql_condition : NULL;
   }
 
   /// Handle current SQL condition (if any).
@@ -259,9 +239,7 @@ public:
   /// semantics.
   ///
   /// @retval false otherwise.
-  bool handle_sql_condition(THD *thd,
-                            uint *ip,
-                            const sp_instr *cur_spi);
+  bool handle_sql_condition(THD *thd, uint *ip, const sp_instr *cur_spi);
 
   /// Remove latest call frame from the handler call stack.
   ///
@@ -286,11 +264,9 @@ public:
   /// @param count Number of cursors to pop & delete.
   void pop_cursors(THD *thd, size_t count);
 
-  void pop_all_cursors(THD *thd)
-  { pop_cursors(thd, m_ccount); }
+  void pop_all_cursors(THD *thd) { pop_cursors(thd, m_ccount); }
 
-  sp_cursor *get_cursor(uint i) const
-  { return m_cstack[i]; }
+  sp_cursor *get_cursor(uint i) const { return m_cstack[i]; }
 
   /////////////////////////////////////////////////////////////////////////
   // CASE expressions.
@@ -323,13 +299,11 @@ public:
   ///   Item.  This also can (should?) be optimized.
   bool set_case_expr(THD *thd, int case_expr_id, Item **case_expr_item_ptr);
 
-  Item *get_case_expr(int case_expr_id) const
-  { return m_case_expr_holders[case_expr_id]; }
+  Item *get_case_expr(int case_expr_id) const { return m_case_expr_holders[case_expr_id]; }
 
-  Item ** get_case_expr_addr(int case_expr_id) const
-  { return (Item**) m_case_expr_holders.array() + case_expr_id; }
+  Item **get_case_expr_addr(int case_expr_id) const { return (Item **)m_case_expr_holders.array() + case_expr_id; }
 
-private:
+ private:
   /// Internal function to allocate memory for arrays.
   ///
   /// @param thd Thread handle.
@@ -369,7 +343,7 @@ private:
 
   Virtual_tmp_table *virtual_tmp_table_for_row(uint idx);
 
-private:
+ private:
   /// Top-level (root) parsing context for this runtime context.
   const sp_pcontext *m_root_parsing_ctx;
 
@@ -405,6 +379,6 @@ private:
 
   /// Array of CASE expression holders.
   Bounds_checked_array<Item_cache *> m_case_expr_holders;
-}; // class sp_rcontext : public Sql_alloc
+};  // class sp_rcontext : public Sql_alloc
 
 #endif /* _SP_RCONTEXT_H_ */

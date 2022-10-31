@@ -17,7 +17,6 @@
 
 #include "hash.h"
 
-
 /**
   A type-safe wrapper around mysys HASH.
 */
@@ -25,35 +24,33 @@
 template <typename T>
 class Hash_set
 {
-public:
-  enum { START_SIZE= 8 };
+ public:
+  enum
+  {
+    START_SIZE = 8
+  };
   /**
     Constructs an empty hash. Does not allocate memory, it is done upon
     the first insert. Thus does not cause or return errors.
   */
-  Hash_set(PSI_memory_key psi_key, uchar *(*K)(const T *, size_t *, my_bool),
-           CHARSET_INFO *cs= &my_charset_bin)
+  Hash_set(PSI_memory_key psi_key, uchar *(*K)(const T *, size_t *, my_bool), CHARSET_INFO *cs = &my_charset_bin)
   {
     my_hash_clear(&m_hash);
-    m_hash.get_key= (my_hash_get_key)K;
-    m_hash.charset= cs;
-    m_hash.array.m_psi_key= psi_key;
+    m_hash.get_key = (my_hash_get_key)K;
+    m_hash.charset = cs;
+    m_hash.array.m_psi_key = psi_key;
   }
-  Hash_set(PSI_memory_key psi_key, CHARSET_INFO *charset, ulong default_array_elements,
-           size_t key_offset, size_t key_length, my_hash_get_key get_key,
-           void (*free_element)(void*), uint flags)
+  Hash_set(PSI_memory_key psi_key, CHARSET_INFO *charset, ulong default_array_elements, size_t key_offset,
+           size_t key_length, my_hash_get_key get_key, void (*free_element)(void *), uint flags)
   {
-    my_hash_init(psi_key, &m_hash, charset, default_array_elements, key_offset,
-                 key_length, get_key, free_element, flags);
+    my_hash_init(psi_key, &m_hash, charset, default_array_elements, key_offset, key_length, get_key, free_element,
+                 flags);
   }
   /**
     Destroy the hash by freeing the buckets table. Does
     not call destructors for the elements.
   */
-  ~Hash_set()
-  {
-    my_hash_free(&m_hash);
-  }
+  ~Hash_set() { my_hash_free(&m_hash); }
   /**
     Insert a single value into a hash. Does not tell whether
     the value was inserted -- if an identical value existed,
@@ -65,17 +62,13 @@ public:
   */
   bool insert(T *value)
   {
-    my_hash_init_opt(m_hash.array.m_psi_key, &m_hash, m_hash.charset,
-                     START_SIZE, 0, 0, m_hash.get_key, 0, HASH_UNIQUE);
-    return my_hash_insert(&m_hash, reinterpret_cast<const uchar*>(value));
+    my_hash_init_opt(m_hash.array.m_psi_key, &m_hash, m_hash.charset, START_SIZE, 0, 0, m_hash.get_key, 0, HASH_UNIQUE);
+    return my_hash_insert(&m_hash, reinterpret_cast<const uchar *>(value));
   }
-  bool remove(T *value)
-  {
-    return my_hash_delete(&m_hash, reinterpret_cast<uchar*>(value));
-  }
+  bool remove(T *value) { return my_hash_delete(&m_hash, reinterpret_cast<uchar *>(value)); }
   T *find(const void *key, size_t klen) const
   {
-    return (T*)my_hash_search(&m_hash, reinterpret_cast<const uchar *>(key), klen);
+    return (T *)my_hash_search(&m_hash, reinterpret_cast<const uchar *>(key), klen);
   }
   /** Is this hash set empty? */
   bool is_empty() const { return m_hash.records == 0; }
@@ -83,18 +76,12 @@ public:
   size_t size() const { return static_cast<size_t>(m_hash.records); }
   /** Erases all elements from the container */
   void clear() { my_hash_reset(&m_hash); }
-  const T* at(size_t i) const
-  {
-    return reinterpret_cast<T*>(my_hash_element(const_cast<HASH*>(&m_hash), i));
-  }
+  const T *at(size_t i) const { return reinterpret_cast<T *>(my_hash_element(const_cast<HASH *>(&m_hash), i)); }
   /** An iterator over hash elements. Is not insert-stable. */
   class Iterator
   {
-  public:
-    Iterator(Hash_set &hash_set)
-      : m_hash(&hash_set.m_hash),
-        m_idx(0)
-    {}
+   public:
+    Iterator(Hash_set &hash_set) : m_hash(&hash_set.m_hash), m_idx(0) {}
     /**
       Return the current element and reposition the iterator to the next
       element.
@@ -102,16 +89,18 @@ public:
     inline T *operator++(int)
     {
       if (m_idx < m_hash->records)
-        return reinterpret_cast<T*>(my_hash_element(m_hash, m_idx++));
+        return reinterpret_cast<T *>(my_hash_element(m_hash, m_idx++));
       return NULL;
     }
-    void rewind() { m_idx= 0; }
-  private:
+    void rewind() { m_idx = 0; }
+
+   private:
     HASH *m_hash;
     uint m_idx;
   };
-private:
+
+ private:
   HASH m_hash;
 };
 
-#endif // SQL_HSET_INCLUDED
+#endif  // SQL_HSET_INCLUDED

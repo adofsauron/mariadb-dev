@@ -17,7 +17,6 @@
 #ifndef ROWID_FILTER_INCLUDED
 #define ROWID_FILTER_INCLUDED
 
-
 #include "mariadb.h"
 #include "sql_array.h"
 
@@ -144,16 +143,16 @@ class Rowid_filter_container;
 class Range_rowid_filter_cost_info;
 
 /* Cost to write rowid into array */
-#define ARRAY_WRITE_COST      0.005
+#define ARRAY_WRITE_COST 0.005
 /* Factor used to calculate cost of sorting rowids in array */
-#define ARRAY_SORT_C          0.01
+#define ARRAY_SORT_C 0.01
 /* Cost to evaluate condition */
-#define COST_COND_EVAL  0.2
+#define COST_COND_EVAL 0.2
 
 typedef enum
 {
   SORTED_ARRAY_CONTAINER,
-  BLOOM_FILTER_CONTAINER      // Not used yet
+  BLOOM_FILTER_CONTAINER  // Not used yet
 } Rowid_filter_container_type;
 
 /**
@@ -169,8 +168,7 @@ typedef enum
 
 class Rowid_filter_container : public Sql_alloc
 {
-public:
-
+ public:
   virtual Rowid_filter_container_type get_type() = 0;
 
   /* Allocate memory for the container */
@@ -195,7 +193,6 @@ public:
   virtual ~Rowid_filter_container() {}
 };
 
-
 /**
   @class Rowid_filter
 
@@ -206,16 +203,14 @@ public:
 
 class Rowid_filter : public Sql_alloc
 {
-protected:
-
+ protected:
   /* The container to store info the set of elements in the filter */
   Rowid_filter_container *container;
 
   Rowid_filter_tracker *tracker;
 
-public:
-  Rowid_filter(Rowid_filter_container *container_arg)
-    : container(container_arg) {}
+ public:
+  Rowid_filter(Rowid_filter_container *container_arg) : container(container_arg) {}
 
   /*
     Build the filter :
@@ -233,10 +228,9 @@ public:
 
   Rowid_filter_container *get_container() { return container; }
 
-  void set_tracker(Rowid_filter_tracker *track_arg) { tracker= track_arg; }
+  void set_tracker(Rowid_filter_tracker *track_arg) { tracker = track_arg; }
   Rowid_filter_tracker *get_tracker() { return tracker; }
 };
-
 
 /**
   @class Rowid_filter_container
@@ -245,7 +239,7 @@ public:
   that are filled when performing range index scans.
 */
 
-class Range_rowid_filter: public Rowid_filter
+class Range_rowid_filter : public Rowid_filter
 {
   /* The table for which the rowid filter is built */
   TABLE *table;
@@ -254,13 +248,12 @@ class Range_rowid_filter: public Rowid_filter
   /* The cost info on the filter (used for EXPLAIN/ANALYZE) */
   Range_rowid_filter_cost_info *cost_info;
 
-public:
-  Range_rowid_filter(TABLE *tab,
-                     Range_rowid_filter_cost_info *cost_arg,
-                     Rowid_filter_container *container_arg,
+ public:
+  Range_rowid_filter(TABLE *tab, Range_rowid_filter_cost_info *cost_arg, Rowid_filter_container *container_arg,
                      SQL_SELECT *sel)
-    : Rowid_filter(container_arg), table(tab), select(sel), cost_info(cost_arg)
-  {}
+      : Rowid_filter(container_arg), table(tab), select(sel), cost_info(cost_arg)
+  {
+  }
 
   ~Range_rowid_filter();
 
@@ -268,7 +261,7 @@ public:
 
   bool check(char *elem)
   {
-    bool was_checked= container->check(table, elem);
+    bool was_checked = container->check(table, elem);
     tracker->increment_checked_elements_count(was_checked);
     return was_checked;
   }
@@ -277,7 +270,6 @@ public:
 
   SQL_SELECT *get_select() { return select; }
 };
-
 
 /**
   @class Refpos_container_sorted_array
@@ -288,7 +280,7 @@ public:
 
 class Refpos_container_sorted_array : public Sql_alloc
 {
-  /* 
+  /*
     Maximum number of elements in the array
     (Now is used only at the initialization of the dynamic array)
   */
@@ -298,50 +290,41 @@ class Refpos_container_sorted_array : public Sql_alloc
   /* The dynamic array over which the wrapper is built */
   Dynamic_array<char> *array;
 
-public:
-
- Refpos_container_sorted_array(uint max_elems, uint elem_sz)
-    :  max_elements(max_elems), elem_size(elem_sz), array(0) {}
+ public:
+  Refpos_container_sorted_array(uint max_elems, uint elem_sz) : max_elements(max_elems), elem_size(elem_sz), array(0) {}
 
   ~Refpos_container_sorted_array()
   {
     delete array;
-    array= 0;
+    array = 0;
   }
 
   bool alloc()
   {
-    array= new Dynamic_array<char> (PSI_INSTRUMENT_MEM,
-                                    elem_size * max_elements,
-                                    elem_size * max_elements/sizeof(char) + 1);
+    array = new Dynamic_array<char>(PSI_INSTRUMENT_MEM, elem_size * max_elements,
+                                    elem_size * max_elements / sizeof(char) + 1);
     return array == NULL;
   }
 
   bool add(char *elem)
   {
-    for (uint i= 0; i < elem_size; i++)
+    for (uint i = 0; i < elem_size; i++)
     {
       if (array->append(elem[i]))
-	return true;
+        return true;
     }
     return false;
   }
 
-  char *get_pos(uint n)
-  {
-    return array->get_pos(n * elem_size);
-  }
+  char *get_pos(uint n) { return array->get_pos(n * elem_size); }
 
-  uint elements() { return (uint) (array->elements() / elem_size); }
+  uint elements() { return (uint)(array->elements() / elem_size); }
 
-  void sort (int (*cmp) (void *ctxt, const void *el1, const void *el2),
-                         void *cmp_arg)
+  void sort(int (*cmp)(void *ctxt, const void *el1, const void *el2), void *cmp_arg)
   {
-    my_qsort2(array->front(), array->elements()/elem_size,
-              elem_size, (qsort2_cmp) cmp, cmp_arg);
+    my_qsort2(array->front(), array->elements() / elem_size, elem_size, (qsort2_cmp)cmp, cmp_arg);
   }
 };
-
 
 /**
   @class Rowid_filter_sorted_array
@@ -350,19 +333,17 @@ public:
   a sorted array container of rowids / primary keys
 */
 
-class Rowid_filter_sorted_array: public Rowid_filter_container
+class Rowid_filter_sorted_array : public Rowid_filter_container
 {
   /* The dynamic array to store rowids / primary keys */
   Refpos_container_sorted_array refpos_container;
   /* Initially false, becomes true after the first call of (check() */
   bool is_checked;
 
-public:
-  Rowid_filter_sorted_array(uint elems, uint elem_size)
-    : refpos_container(elems, elem_size), is_checked(false) {}
+ public:
+  Rowid_filter_sorted_array(uint elems, uint elem_size) : refpos_container(elems, elem_size), is_checked(false) {}
 
-  Rowid_filter_container_type get_type()
-  { return SORTED_ARRAY_CONTAINER; }
+  Rowid_filter_container_type get_type() { return SORTED_ARRAY_CONTAINER; }
 
   bool alloc() { return refpos_container.alloc(); }
 
@@ -404,7 +385,7 @@ class Range_rowid_filter_cost_info : public Sql_alloc
   double a_adj;
   double cross_x_adj;
 
-public:
+ public:
   /* The type of the container of the range filter */
   Rowid_filter_container_type container_type;
   /* The index whose range scan would be used to build the range filter */
@@ -414,40 +395,29 @@ public:
 
   Range_rowid_filter_cost_info() : table(0), key_no(0) {}
 
-  void init(Rowid_filter_container_type cont_type,
-            TABLE *tab, uint key_no);
+  void init(Rowid_filter_container_type cont_type, TABLE *tab, uint key_no);
 
   double build_cost(Rowid_filter_container_type container_type);
 
   inline double lookup_cost(Rowid_filter_container_type cont_type);
 
-  inline double
-  avg_access_and_eval_gain_per_row(Rowid_filter_container_type cont_type);
+  inline double avg_access_and_eval_gain_per_row(Rowid_filter_container_type cont_type);
 
   inline double avg_adjusted_gain_per_row(double access_cost_factor);
 
   inline void set_adjusted_gain_param(double access_cost_factor);
 
   /* Get the gain that usage of filter promises for r key tuples */
-  inline double get_gain(double r)
-  {
-    return r * a - b;
-  }
+  inline double get_gain(double r) { return r * a - b; }
 
   /* Get the adjusted gain that usage of filter promises for r key tuples */
-  inline double get_adjusted_gain(double r)
-  {
-    return r * a_adj - b;
-  }
+  inline double get_adjusted_gain(double r) { return r * a_adj - b; }
 
   /*
     The gain promised by usage of the filter for r key tuples
     due to less condition evaluations
   */
-  inline double get_cmp_gain(double r)
-  {
-    return r * (1 - selectivity) / TIME_FOR_COMPARE;
-  }
+  inline double get_cmp_gain(double r) { return r * (1 - selectivity) / TIME_FOR_COMPARE; }
 
   Rowid_filter_container *create_container();
 
@@ -455,17 +425,13 @@ public:
 
   void trace_info(THD *thd);
 
-  friend
-  void TABLE::prune_range_rowid_filters();
+  friend void TABLE::prune_range_rowid_filters();
 
-  friend
-  void TABLE::init_cost_info_for_usable_range_rowid_filters(THD *thd);
+  friend void TABLE::init_cost_info_for_usable_range_rowid_filters(THD *thd);
 
-  friend
-  Range_rowid_filter_cost_info *
-  TABLE::best_range_rowid_filter_for_partial_join(uint access_key_no,
-                                                  double records,
-                                                  double access_cost_factor);
+  friend Range_rowid_filter_cost_info *TABLE::best_range_rowid_filter_for_partial_join(uint access_key_no,
+                                                                                       double records,
+                                                                                       double access_cost_factor);
 };
 
 #endif /* ROWID_FILTER_INCLUDED */

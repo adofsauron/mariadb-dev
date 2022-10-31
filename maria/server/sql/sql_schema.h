@@ -22,17 +22,12 @@
 class Schema
 {
   LEX_CSTRING m_name;
-public:
-  Schema(const LEX_CSTRING &name)
-   :m_name(name)
-  { }
-  virtual ~Schema() { }
+
+ public:
+  Schema(const LEX_CSTRING &name) : m_name(name) {}
+  virtual ~Schema() {}
   const LEX_CSTRING &name() const { return m_name; }
-  virtual const Type_handler *map_data_type(THD *thd, const Type_handler *src)
-                                            const
-  {
-    return src;
-  }
+  virtual const Type_handler *map_data_type(THD *thd, const Type_handler *src) const { return src; }
   /*
     For now we have *hard-coded* compatibility schemas:
       schema_mariadb, schema_oracle, schema_maxdb.
@@ -47,14 +42,12 @@ public:
   */
   bool eq_name(const LEX_CSTRING &name) const
   {
-    return !table_alias_charset->strnncoll(m_name.str, m_name.length,
-                                           name.str, name.length);
+    return !table_alias_charset->strnncoll(m_name.str, m_name.length, name.str, name.length);
   }
   static Schema *find_by_name(const LEX_CSTRING &name);
   static Schema *find_implied(THD *thd);
 };
 
-
 extern Schema mariadb_schema;
 
-#endif // SQL_SCHEMA_H_INCLUDED
+#endif  // SQL_SCHEMA_H_INCLUDED

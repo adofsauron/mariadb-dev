@@ -25,12 +25,10 @@
 #include <deque>
 class Wsrep_thd_queue
 {
-public:
-  Wsrep_thd_queue(THD* t) : thd(t)
+ public:
+  Wsrep_thd_queue(THD *t) : thd(t)
   {
-    mysql_mutex_init(key_LOCK_wsrep_thd_queue,
-                     &LOCK_wsrep_thd_queue,
-                     MY_MUTEX_INIT_FAST);
+    mysql_mutex_init(key_LOCK_wsrep_thd_queue, &LOCK_wsrep_thd_queue, MY_MUTEX_INIT_FAST);
     mysql_cond_init(key_COND_wsrep_thd_queue, &COND_wsrep_thd_queue, NULL);
   }
   ~Wsrep_thd_queue()
@@ -38,11 +36,11 @@ public:
     mysql_mutex_destroy(&LOCK_wsrep_thd_queue);
     mysql_cond_destroy(&COND_wsrep_thd_queue);
   }
-  bool push_back(THD* thd)
+  bool push_back(THD *thd)
   {
     DBUG_ASSERT(thd);
     wsp::auto_lock lock(&LOCK_wsrep_thd_queue);
-    std::deque<THD*>::iterator it = queue.begin();
+    std::deque<THD *>::iterator it = queue.begin();
     while (it != queue.end())
     {
       if (*it == thd)
@@ -55,7 +53,7 @@ public:
     mysql_cond_signal(&COND_wsrep_thd_queue);
     return false;
   }
-  THD* pop_front()
+  THD *pop_front()
   {
     wsp::auto_lock lock(&LOCK_wsrep_thd_queue);
     while (queue.empty())
@@ -63,32 +61,32 @@ public:
       if (thd->killed != NOT_KILLED)
         return NULL;
 
-      thd->mysys_var->current_mutex= &LOCK_wsrep_thd_queue;
-      thd->mysys_var->current_cond=  &COND_wsrep_thd_queue;
+      thd->mysys_var->current_mutex = &LOCK_wsrep_thd_queue;
+      thd->mysys_var->current_cond = &COND_wsrep_thd_queue;
 
       mysql_cond_wait(&COND_wsrep_thd_queue, &LOCK_wsrep_thd_queue);
 
-      thd->mysys_var->current_mutex= 0;
-      thd->mysys_var->current_cond=  0;
+      thd->mysys_var->current_mutex = 0;
+      thd->mysys_var->current_cond = 0;
     }
-    THD* ret= queue.front();
+    THD *ret = queue.front();
     queue.pop_front();
     return ret;
   }
-private:
-  THD*             thd;
-  std::deque<THD*> queue;
-  mysql_mutex_t    LOCK_wsrep_thd_queue;
-  mysql_cond_t     COND_wsrep_thd_queue;
+
+ private:
+  THD *thd;
+  std::deque<THD *> queue;
+  mysql_mutex_t LOCK_wsrep_thd_queue;
+  mysql_cond_t COND_wsrep_thd_queue;
 };
 
-int wsrep_show_bf_aborts (THD *thd, SHOW_VAR *var, char *buff,
-                          enum enum_var_type scope);
-bool wsrep_create_appliers(long threads, bool mutex_protected=false);
+int wsrep_show_bf_aborts(THD *thd, SHOW_VAR *var, char *buff, enum enum_var_type scope);
+bool wsrep_create_appliers(long threads, bool mutex_protected = false);
 void wsrep_create_rollbacker();
 
-bool wsrep_bf_abort(THD* bf_thd, THD* victim_thd);
-int  wsrep_abort_thd(THD *bf_thd_ptr, THD *victim_thd_ptr, my_bool signal);
+bool wsrep_bf_abort(THD *bf_thd, THD *victim_thd);
+int wsrep_abort_thd(THD *bf_thd_ptr, THD *victim_thd_ptr, my_bool signal);
 
 /*
   Helper methods to deal with thread local storage.
@@ -143,8 +141,8 @@ void wsrep_assign_from_threadvars(THD *);
  */
 struct Wsrep_threadvars
 {
-  THD* cur_thd;
-  st_my_thread_var* mysys_var;
+  THD *cur_thd;
+  st_my_thread_var *mysys_var;
 };
 
 /**
@@ -155,7 +153,7 @@ Wsrep_threadvars wsrep_save_threadvars();
 /**
    Restore variables into thread local storage from Wsrep_threadvars struct.
 */
-void wsrep_restore_threadvars(const Wsrep_threadvars&);
+void wsrep_restore_threadvars(const Wsrep_threadvars &);
 
 /**
    Store variables into thread local storage.
@@ -182,33 +180,28 @@ void wsrep_reset_threadvars(THD *);
      so don't override those by default
  */
 
-static inline void wsrep_override_error(THD *thd, uint error, const char *format= 0, ...)
+static inline void wsrep_override_error(THD *thd, uint error, const char *format = 0, ...)
 {
-  Diagnostics_area *da= thd->get_stmt_da();
-  if (da->is_ok() ||
-      da->is_eof() ||
-      !da->is_set() ||
-      (da->is_error() &&
-       da->sql_errno() != error &&
-       da->sql_errno() != ER_ERROR_DURING_COMMIT &&
+  Diagnostics_area *da = thd->get_stmt_da();
+  if (da->is_ok() || da->is_eof() || !da->is_set() ||
+      (da->is_error() && da->sql_errno() != error && da->sql_errno() != ER_ERROR_DURING_COMMIT &&
        da->sql_errno() != ER_LOCK_DEADLOCK))
   {
     da->reset_diagnostics_area();
     va_list args;
     va_start(args, format);
-    if (!format) format= ER_THD(thd, error);
+    if (!format)
+      format = ER_THD(thd, error);
     my_printv_error(error, format, MYF(0), args);
     va_end(args);
   }
 }
 
-static inline void wsrep_override_error(THD* thd,
-                                        wsrep::client_error ce,
-                                        enum wsrep::provider::status status)
+static inline void wsrep_override_error(THD *thd, wsrep::client_error ce, enum wsrep::provider::status status)
 {
-    DBUG_ASSERT(ce != wsrep::e_success);
-    switch (ce)
-    {
+  DBUG_ASSERT(ce != wsrep::e_success);
+  switch (ce)
+  {
     case wsrep::e_error_during_commit:
       if (status == wsrep::provider::error_size_exceeded)
         wsrep_override_error(thd, ER_UNKNOWN_ERROR, "Maximum writeset size exceeded");
@@ -237,7 +230,7 @@ static inline void wsrep_override_error(THD* thd,
     default:
       wsrep_override_error(thd, ER_UNKNOWN_ERROR);
       break;
-    }
+  }
 }
 
 /**
@@ -247,39 +240,29 @@ static inline void wsrep_override_error(THD* thd,
    @param message Optional message
    @param function Function where the call was made from
  */
-static inline void wsrep_log_thd(const THD *thd,
-                                 const char *message,
-                                 const char *function)
+static inline void wsrep_log_thd(const THD *thd, const char *message, const char *function)
 {
-  WSREP_DEBUG("%s %s\n"
-              "    thd: %llu thd_ptr: %p client_mode: %s client_state: %s trx_state: %s\n"
-              "    next_trx_id: %lld trx_id: %lld seqno: %lld\n"
-              "    is_streaming: %d fragments: %zu\n"
-              "    sql_errno: %u message: %s\n"
+  WSREP_DEBUG(
+      "%s %s\n"
+      "    thd: %llu thd_ptr: %p client_mode: %s client_state: %s trx_state: %s\n"
+      "    next_trx_id: %lld trx_id: %lld seqno: %lld\n"
+      "    is_streaming: %d fragments: %zu\n"
+      "    sql_errno: %u message: %s\n"
 #define WSREP_THD_LOG_QUERIES
 #ifdef WSREP_THD_LOG_QUERIES
-              "    command: %d query: %.72s"
+      "    command: %d query: %.72s"
 #endif /* WSREP_OBSERVER_LOG_QUERIES */
-              ,
-              function,
-              message ? message : "",
-              thd->thread_id,
-              thd,
-              wsrep_thd_client_mode_str(thd),
-              wsrep_thd_client_state_str(thd),
-              wsrep_thd_transaction_state_str(thd),
-              (long long)thd->wsrep_next_trx_id(),
-              (long long)thd->wsrep_trx_id(),
-              (long long)wsrep_thd_trx_seqno(thd),
-              thd->wsrep_trx().is_streaming(),
-              thd->wsrep_sr().fragments().size(),
-              (thd->get_stmt_da()->is_error() ? thd->get_stmt_da()->sql_errno() : 0),
-              (thd->get_stmt_da()->is_error() ? thd->get_stmt_da()->message() : "")
+      ,
+      function, message ? message : "", thd->thread_id, thd, wsrep_thd_client_mode_str(thd),
+      wsrep_thd_client_state_str(thd), wsrep_thd_transaction_state_str(thd), (long long)thd->wsrep_next_trx_id(),
+      (long long)thd->wsrep_trx_id(), (long long)wsrep_thd_trx_seqno(thd), thd->wsrep_trx().is_streaming(),
+      thd->wsrep_sr().fragments().size(), (thd->get_stmt_da()->is_error() ? thd->get_stmt_da()->sql_errno() : 0),
+      (thd->get_stmt_da()->is_error() ? thd->get_stmt_da()->message() : "")
 #ifdef WSREP_THD_LOG_QUERIES
-              , thd->lex->sql_command,
-              wsrep_thd_query(thd)
+          ,
+      thd->lex->sql_command, wsrep_thd_query(thd)
 #endif /* WSREP_OBSERVER_LOG_QUERIES */
-              );
+  );
 }
 
 #define WSREP_LOG_THD(thd_, message_) wsrep_log_thd(thd_, message_, __FUNCTION__)

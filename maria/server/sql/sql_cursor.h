@@ -17,10 +17,10 @@
 #define _sql_cursor_h_
 
 #ifdef USE_PRAGMA_INTERFACE
-#pragma interface                              /* gcc class interface */
+#pragma interface /* gcc class interface */
 #endif
 
-#include "sql_class.h"                          /* Query_arena */
+#include "sql_class.h" /* Query_arena */
 
 class JOIN;
 
@@ -39,21 +39,23 @@ class JOIN;
   its base class.
 */
 
-class Server_side_cursor: protected Query_arena
+class Server_side_cursor : protected Query_arena
 {
-protected:
+ protected:
   /** Row destination used for fetch */
   select_result *result;
-public:
+
+ public:
   Server_side_cursor(MEM_ROOT *mem_root_arg, select_result *result_arg)
-    :Query_arena(mem_root_arg, STMT_INITIALIZED), result(result_arg)
-  {}
+      : Query_arena(mem_root_arg, STMT_INITIALIZED), result(result_arg)
+  {
+  }
 
-  virtual bool is_open() const= 0;
+  virtual bool is_open() const = 0;
 
-  virtual int open(JOIN *top_level_join)= 0;
-  virtual void fetch(ulong num_rows)= 0;
-  virtual void close()= 0;
+  virtual int open(JOIN *top_level_join) = 0;
+  virtual void fetch(ulong num_rows) = 0;
+  virtual void close() = 0;
   virtual bool export_structure(THD *thd, Row_definition_list *defs)
   {
     DBUG_ASSERT(0);
@@ -61,14 +63,11 @@ public:
   }
   virtual ~Server_side_cursor();
 
-  static void *operator new(size_t size, MEM_ROOT *mem_root)
-  { return alloc_root(mem_root, size); }
+  static void *operator new(size_t size, MEM_ROOT *mem_root) { return alloc_root(mem_root, size); }
   static void operator delete(void *ptr, size_t size);
-  static void operator delete(void *, MEM_ROOT *){}
+  static void operator delete(void *, MEM_ROOT *) {}
 };
 
-
-int mysql_open_cursor(THD *thd, select_result *result,
-                      Server_side_cursor **res);
+int mysql_open_cursor(THD *thd, select_result *result, Server_side_cursor **res);
 
 #endif /* _sql_cusor_h_ */

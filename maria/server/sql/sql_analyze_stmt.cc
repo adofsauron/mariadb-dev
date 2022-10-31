@@ -15,7 +15,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335 USA */
 
 #ifdef USE_PRAGMA_IMPLEMENTATION
-#pragma implementation				// gcc: Class implementation
+#pragma implementation  // gcc: Class implementation
 #endif
 
 #include "mariadb.h"
@@ -25,18 +25,17 @@
 
 void Filesort_tracker::print_json_members(Json_writer *writer)
 {
-  const char *varied_str= "(varied across executions)";
+  const char *varied_str = "(varied across executions)";
   String str;
 
   if (!get_r_loops())
     writer->add_member("r_loops").add_null();
   else
     writer->add_member("r_loops").add_ll(get_r_loops());
-  
+
   if (time_tracker.has_timed_statistics())
   {
-    writer->add_member("r_total_time_ms").
-            add_double(time_tracker.get_time_ms());
+    writer->add_member("r_total_time_ms").add_double(time_tracker.get_time_ms());
   }
   if (r_limit != HA_POS_ERROR)
   {
@@ -49,7 +48,7 @@ void Filesort_tracker::print_json_members(Json_writer *writer)
       writer->add_ll(r_limit);
   }
 
-  writer->add_member("r_used_priority_queue"); 
+  writer->add_member("r_used_priority_queue");
   if (!get_r_loops())
     writer->add_null();
   else if (r_used_pq == get_r_loops())
@@ -62,13 +61,11 @@ void Filesort_tracker::print_json_members(Json_writer *writer)
   if (!get_r_loops())
     writer->add_member("r_output_rows").add_null();
   else
-    writer->add_member("r_output_rows").add_ll(
-                        (longlong) rint((double)r_output_rows / get_r_loops()));
+    writer->add_member("r_output_rows").add_ll((longlong)rint((double)r_output_rows / get_r_loops()));
 
   if (sort_passes)
   {
-    writer->add_member("r_sort_passes").add_ll(
-                        (longlong) rint((double)sort_passes / get_r_loops()));
+    writer->add_member("r_sort_passes").add_ll((longlong)rint((double)sort_passes / get_r_loops()));
   }
 
   if (sort_buffer_size != 0)
@@ -103,20 +100,17 @@ void Filesort_tracker::get_data_format(String *str)
     str->append(STRING_WITH_LEN("rowid"));
 }
 
-void attach_gap_time_tracker(THD *thd, Gap_time_tracker *gap_tracker,
-                             ulonglong timeval)
+void attach_gap_time_tracker(THD *thd, Gap_time_tracker *gap_tracker, ulonglong timeval)
 {
-  thd->gap_tracker_data.bill_to= gap_tracker;
-  thd->gap_tracker_data.start_time= timeval;
+  thd->gap_tracker_data.bill_to = gap_tracker;
+  thd->gap_tracker_data.start_time = timeval;
 }
 
 void process_gap_time_tracker(THD *thd, ulonglong timeval)
 {
   if (thd->gap_tracker_data.bill_to)
   {
-    thd->gap_tracker_data.bill_to->log_time(thd->gap_tracker_data.start_time,
-                                            timeval);
-    thd->gap_tracker_data.bill_to= NULL;
+    thd->gap_tracker_data.bill_to->log_time(thd->gap_tracker_data.start_time, timeval);
+    thd->gap_tracker_data.bill_to = NULL;
   }
 }
-

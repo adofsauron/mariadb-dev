@@ -24,7 +24,6 @@
 #include "sql_cte.h"
 #include "my_json_writer.h"
 
-
 /**
   @brief
     Walk through all VALUES items.
@@ -36,23 +35,20 @@
     true   on error
     false  on success
 */
-bool table_value_constr::walk_values(Item_processor processor,
-                                     bool walk_subquery,
-                                     void *argument)
+bool table_value_constr::walk_values(Item_processor processor, bool walk_subquery, void *argument)
 {
   List_iterator_fast<List_item> list_item_it(lists_of_values);
-  while (List_item *list= list_item_it++)
+  while (List_item *list = list_item_it++)
   {
     List_iterator_fast<Item> item_it(*list);
-    while (Item *item= item_it++)
+    while (Item *item = item_it++)
     {
-       if (item->walk(&Item::unknown_splocal_processor, false, argument))
-         return true;
+      if (item->walk(&Item::unknown_splocal_processor, false, argument))
+        return true;
     }
   }
   return false;
 }
-
 
 /**
   @brief
@@ -76,12 +72,12 @@ bool fix_fields_for_tvc(THD *thd, List_iterator_fast<List_item> &li)
   List_item *lst;
   li.rewind();
 
-  while ((lst= li++))
+  while ((lst = li++))
   {
     List_iterator<Item> it(*lst);
     Item *item;
 
-    while ((item= it++))
+    while ((item = it++))
     {
       /*
         Some items have already been fixed.
@@ -90,14 +86,12 @@ bool fix_fields_for_tvc(THD *thd, List_iterator_fast<List_item> &li)
         while replacing their values to NAME_CONST()s.
         So fix only those that have not been.
       */
-      if (item->fix_fields_if_needed_for_scalar(thd, it.ref()) ||
-          item->check_is_evaluable_expression_or_error())
-	DBUG_RETURN(true);
+      if (item->fix_fields_if_needed_for_scalar(thd, it.ref()) || item->check_is_evaluable_expression_or_error())
+        DBUG_RETURN(true);
     }
   }
   DBUG_RETURN(false);
 }
-
 
 /**
   @brief
@@ -110,7 +104,7 @@ bool fix_fields_for_tvc(THD *thd, List_iterator_fast<List_item> &li)
     @param holders   	 The structure where types of matrix columns are stored
     @param first_list_el_count  Count of the list values. It should be the same
                                 for each list of lists elements. It contains
-			        number of elements of the first list from list of
+                                number of elements of the first list from list of
                                 lists.
 
   @details
@@ -126,45 +120,40 @@ bool fix_fields_for_tvc(THD *thd, List_iterator_fast<List_item> &li)
     false   otherwise
 */
 
-bool join_type_handlers_for_tvc(THD *thd, List_iterator_fast<List_item> &li,
-			        Type_holder *holders, uint first_list_el_count)
+bool join_type_handlers_for_tvc(THD *thd, List_iterator_fast<List_item> &li, Type_holder *holders,
+                                uint first_list_el_count)
 {
   DBUG_ENTER("join_type_handlers_for_tvc");
   List_item *lst;
   li.rewind();
-  bool first= true;
-  
-  while ((lst= li++))
+  bool first = true;
+
+  while ((lst = li++))
   {
     List_iterator_fast<Item> it(*lst);
     Item *item;
-  
+
     if (first_list_el_count != lst->elements)
     {
-      my_message(ER_WRONG_NUMBER_OF_VALUES_IN_TVC,
-                 ER_THD(thd, ER_WRONG_NUMBER_OF_VALUES_IN_TVC),
-                 MYF(0));
+      my_message(ER_WRONG_NUMBER_OF_VALUES_IN_TVC, ER_THD(thd, ER_WRONG_NUMBER_OF_VALUES_IN_TVC), MYF(0));
       DBUG_RETURN(true);
     }
-    for (uint pos= 0; (item=it++); pos++)
+    for (uint pos = 0; (item = it++); pos++)
     {
-      const Type_handler *item_type_handler= item->real_type_handler();
+      const Type_handler *item_type_handler = item->real_type_handler();
       if (first)
         holders[pos].set_handler(item_type_handler);
       else if (holders[pos].aggregate_for_result(item_type_handler))
       {
-        my_error(ER_ILLEGAL_PARAMETER_DATA_TYPES2_FOR_OPERATION, MYF(0),
-                 holders[pos].type_handler()->name().ptr(),
-                 item_type_handler->name().ptr(),
-                 "TABLE VALUE CONSTRUCTOR");
+        my_error(ER_ILLEGAL_PARAMETER_DATA_TYPES2_FOR_OPERATION, MYF(0), holders[pos].type_handler()->name().ptr(),
+                 item_type_handler->name().ptr(), "TABLE VALUE CONSTRUCTOR");
         DBUG_RETURN(true);
       }
     }
-    first= false;
+    first = false;
   }
   DBUG_RETURN(false);
 }
-
 
 /**
   @brief
@@ -178,7 +167,7 @@ bool join_type_handlers_for_tvc(THD *thd, List_iterator_fast<List_item> &li,
     @param count_of_lists Count of list of lists elements
     @param first_list_el_count  Count of the list values. It should be the same
                                 for each list of lists elements. It contains
-				number of elements of the first list from list
+                                number of elements of the first list from list
                                 of lists.
 
   @details
@@ -191,40 +180,37 @@ bool join_type_handlers_for_tvc(THD *thd, List_iterator_fast<List_item> &li,
     false    otherwise
 */
 
-bool get_type_attributes_for_tvc(THD *thd,
-			         List_iterator_fast<List_item> &li, 
-                                 Type_holder *holders, uint count_of_lists,
-				 uint first_list_el_count)
+bool get_type_attributes_for_tvc(THD *thd, List_iterator_fast<List_item> &li, Type_holder *holders, uint count_of_lists,
+                                 uint first_list_el_count)
 {
   DBUG_ENTER("get_type_attributes_for_tvc");
   List_item *lst;
   li.rewind();
-  
-  for (uint pos= 0; pos < first_list_el_count; pos++)
+
+  for (uint pos = 0; pos < first_list_el_count; pos++)
   {
     if (holders[pos].alloc_arguments(thd, count_of_lists))
       DBUG_RETURN(true);
   }
-  
-  while ((lst= li++))
+
+  while ((lst = li++))
   {
     List_iterator_fast<Item> it(*lst);
     Item *item;
-    for (uint holder_pos= 0 ; (item= it++); holder_pos++)
+    for (uint holder_pos = 0; (item = it++); holder_pos++)
     {
       DBUG_ASSERT(item->fixed());
       holders[holder_pos].add_argument(item);
     }
   }
-  
-  for (uint pos= 0; pos < first_list_el_count; pos++)
+
+  for (uint pos = 0; pos < first_list_el_count; pos++)
   {
     if (holders[pos].aggregate_attributes(thd))
       DBUG_RETURN(true);
   }
   DBUG_RETURN(false);
 }
-
 
 /**
   @brief
@@ -234,7 +220,7 @@ bool get_type_attributes_for_tvc(THD *thd,
     @param thd	        The context of the statement
     @param sl	     	The select where this TVC is defined
     @param tmp_result	Structure that contains the information
-			about where to send the result of the query
+                        about where to send the result of the query
     @param unit_arg  	The union where sl is defined
 
   @details
@@ -248,18 +234,16 @@ bool get_type_attributes_for_tvc(THD *thd,
     false    otherwise
 */
 
-bool table_value_constr::prepare(THD *thd, SELECT_LEX *sl,
-				 select_result *tmp_result,
-				 st_select_lex_unit *unit_arg)
+bool table_value_constr::prepare(THD *thd, SELECT_LEX *sl, select_result *tmp_result, st_select_lex_unit *unit_arg)
 {
   DBUG_ENTER("table_value_constr::prepare");
-  select_lex->in_tvc= true;
+  select_lex->in_tvc = true;
   List_iterator_fast<List_item> li(lists_of_values);
-  
-  List_item *first_elem= li++;
-  uint cnt= first_elem->elements;
+
+  List_item *first_elem = li++;
+  uint cnt = first_elem->elements;
   Type_holder *holders;
-  
+
   if (cnt == 0)
   {
     my_error(ER_EMPTY_ROW_IN_TVC, MYF(0));
@@ -269,35 +253,32 @@ bool table_value_constr::prepare(THD *thd, SELECT_LEX *sl,
   if (fix_fields_for_tvc(thd, li))
     DBUG_RETURN(true);
 
-  if (!(holders= new (thd->stmt_arena->mem_root) Type_holder[cnt]) ||
-       join_type_handlers_for_tvc(thd, li, holders, cnt) ||
-       get_type_attributes_for_tvc(thd, li, holders,
-				   lists_of_values.elements, cnt))
+  if (!(holders = new (thd->stmt_arena->mem_root) Type_holder[cnt]) ||
+      join_type_handlers_for_tvc(thd, li, holders, cnt) ||
+      get_type_attributes_for_tvc(thd, li, holders, lists_of_values.elements, cnt))
     DBUG_RETURN(true);
-  
+
   List_iterator_fast<Item> it(*first_elem);
   Item *item;
   Query_arena *arena, backup;
-  arena=thd->activate_stmt_arena_if_needed(&backup);
-  
+  arena = thd->activate_stmt_arena_if_needed(&backup);
+
   sl->item_list.empty();
-  for (uint pos= 0; (item= it++); pos++)
+  for (uint pos = 0; (item = it++); pos++)
   {
     /* Error's in 'new' will be detected after loop */
-    Item_type_holder *new_holder= new (thd->mem_root)
-                      Item_type_holder(thd, item, holders[pos].type_handler(),
-                                       &holders[pos]/*Type_all_attributes*/,
-                                       holders[pos].get_maybe_null());
+    Item_type_holder *new_holder = new (thd->mem_root) Item_type_holder(
+        thd, item, holders[pos].type_handler(), &holders[pos] /*Type_all_attributes*/, holders[pos].get_maybe_null());
     sl->item_list.push_back(new_holder);
   }
   if (arena)
     thd->restore_active_arena(arena, &backup);
-  
+
   if (unlikely(thd->is_fatal_error))
-    DBUG_RETURN(true); // out of memory
-    
-  result= tmp_result;
-  
+    DBUG_RETURN(true);  // out of memory
+
+  result = tmp_result;
+
   if (result && result->prepare(sl->item_list, unit_arg))
     DBUG_RETURN(true);
 
@@ -306,75 +287,66 @@ bool table_value_constr::prepare(THD *thd, SELECT_LEX *sl,
     (thd->lex->context_analysis_only & CONTEXT_ANALYSIS_ONLY_VIEW)
   */
 
-  thd->where="order clause";
-  ORDER *order= sl->order_list.first;
-  for (; order; order=order->next)
+  thd->where = "order clause";
+  ORDER *order = sl->order_list.first;
+  for (; order; order = order->next)
   {
-    Item *order_item= *order->item;
+    Item *order_item = *order->item;
     if (order_item->is_order_clause_position())
     {
-      uint count= 0;
+      uint count = 0;
       if (order->counter_used)
-        count= order->counter; // counter was once resolved
+        count = order->counter;  // counter was once resolved
       else
-        count= (uint) order_item->val_int();
+        count = (uint)order_item->val_int();
       if (!count || count > first_elem->elements)
       {
-        my_error(ER_BAD_FIELD_ERROR, MYF(0),
-                 order_item->full_name(), thd->where);
+        my_error(ER_BAD_FIELD_ERROR, MYF(0), order_item->full_name(), thd->where);
         DBUG_RETURN(true);
       }
-      order->in_field_list= 1;
-      order->counter= count;
-      order->counter_used= 1;
+      order->in_field_list = 1;
+      order->counter = count;
+      order->counter_used = 1;
     }
   }
 
-  select_lex->in_tvc= false;
+  select_lex->in_tvc = false;
   DBUG_RETURN(false);
 }
-
 
 /**
     Save Query Plan Footprint
 */
 
-int table_value_constr::save_explain_data_intern(THD *thd,
-						 Explain_query *output)
+int table_value_constr::save_explain_data_intern(THD *thd, Explain_query *output)
 {
-  const char *message= "No tables used";
+  const char *message = "No tables used";
   DBUG_ENTER("table_value_constr::save_explain_data_intern");
-  DBUG_PRINT("info", ("Select %p, type %s, message %s",
-		      select_lex, select_lex->type,
-		      message));
+  DBUG_PRINT("info", ("Select %p, type %s, message %s", select_lex, select_lex->type, message));
   DBUG_ASSERT(have_query_plan == QEP_AVAILABLE);
 
   /* There should be no attempts to save query plans for merged selects */
-  DBUG_ASSERT(!select_lex->master_unit()->derived ||
-               select_lex->master_unit()->derived->is_materialized_derived() ||
-               select_lex->master_unit()->derived->is_with_table());
+  DBUG_ASSERT(!select_lex->master_unit()->derived || select_lex->master_unit()->derived->is_materialized_derived() ||
+              select_lex->master_unit()->derived->is_with_table());
 
-  explain= new (output->mem_root) Explain_select(output->mem_root,
-                                                 thd->lex->analyze_stmt);
+  explain = new (output->mem_root) Explain_select(output->mem_root, thd->lex->analyze_stmt);
   if (!explain)
     DBUG_RETURN(1);
 
   select_lex->set_explain_type(true);
 
-  explain->select_id= select_lex->select_number;
-  explain->select_type= select_lex->type;
-  explain->linkage= select_lex->get_linkage();
-  explain->using_temporary= false;
-  explain->using_filesort= false;
+  explain->select_id = select_lex->select_number;
+  explain->select_type = select_lex->type;
+  explain->linkage = select_lex->get_linkage();
+  explain->using_temporary = false;
+  explain->using_filesort = false;
   /* Setting explain->message means that all other members are invalid */
-  explain->message= message;
+  explain->message = message;
 
   if (select_lex->master_unit()->derived)
-    explain->connection_type= Explain_node::EXPLAIN_NODE_DERIVED;
+    explain->connection_type = Explain_node::EXPLAIN_NODE_DERIVED;
 
-  for (SELECT_LEX_UNIT *unit= select_lex->first_inner_unit();
-       unit;
-       unit= unit->next_unit())
+  for (SELECT_LEX_UNIT *unit = select_lex->first_inner_unit(); unit; unit = unit->next_unit())
   {
     explain->add_child(unit->first_select()->select_number);
   }
@@ -387,7 +359,6 @@ int table_value_constr::save_explain_data_intern(THD *thd,
   DBUG_RETURN(0);
 }
 
-
 /**
   Optimization of TVC
 */
@@ -395,11 +366,10 @@ int table_value_constr::save_explain_data_intern(THD *thd,
 bool table_value_constr::optimize(THD *thd)
 {
   create_explain_query_if_not_exists(thd->lex, thd->mem_root);
-  have_query_plan= QEP_AVAILABLE;
+  have_query_plan = QEP_AVAILABLE;
 
-  if (select_lex->select_number != FAKE_SELECT_LEX_ID &&
-      have_query_plan != QEP_NOT_PRESENT_YET &&
-      thd->lex->explain && // for "SET" command in SPs.
+  if (select_lex->select_number != FAKE_SELECT_LEX_ID && have_query_plan != QEP_NOT_PRESENT_YET &&
+      thd->lex->explain &&  // for "SET" command in SPs.
       (!thd->lex->explain->get_select(select_lex->select_number)))
   {
     if (save_explain_data_intern(thd, thd->lex->explain))
@@ -412,7 +382,6 @@ bool table_value_constr::optimize(THD *thd)
   return false;
 }
 
-
 /**
   Execute of TVC
 */
@@ -422,28 +391,26 @@ bool table_value_constr::exec(SELECT_LEX *sl)
   DBUG_ENTER("table_value_constr::exec");
   List_iterator_fast<List_item> li(lists_of_values);
   List_item *elem;
-  THD *cur_thd= sl->parent_lex->thd;
-  ha_rows send_records= 0;
-  int rc=0;
-  
+  THD *cur_thd = sl->parent_lex->thd;
+  ha_rows send_records = 0;
+  int rc = 0;
+
   if (select_options & SELECT_DESCRIBE)
     DBUG_RETURN(false);
 
-  if (result->send_result_set_metadata(sl->item_list,
-                                       Protocol::SEND_NUM_ROWS |
-                                       Protocol::SEND_EOF))
+  if (result->send_result_set_metadata(sl->item_list, Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
   {
     DBUG_RETURN(true);
   }
 
   fix_rownum_pointers(sl->parent_lex->thd, sl, &send_records);
 
-  while ((elem= li++))
+  while ((elem = li++))
   {
     cur_thd->get_stmt_da()->inc_current_row_for_warning();
     if (send_records >= sl->master_unit()->lim.get_select_limit())
       break;
-    rc= result->send_data_with_check(*elem, sl->master_unit(), send_records);
+    rc = result->send_data_with_check(*elem, sl->master_unit(), send_records);
     if (!rc)
       send_records++;
     else if (rc > 0)
@@ -455,7 +422,6 @@ bool table_value_constr::exec(SELECT_LEX *sl)
 
   DBUG_RETURN(false);
 }
-
 
 /**
   @brief
@@ -470,19 +436,18 @@ bool table_value_constr::exec(SELECT_LEX *sl)
     string str.
 */
 
-void print_list_item(String *str, List_item *list,
-		     enum_query_type query_type)
+void print_list_item(String *str, List_item *list, enum_query_type query_type)
 {
-  bool is_first_elem= true;
+  bool is_first_elem = true;
   List_iterator_fast<Item> it(*list);
   Item *item;
 
   str->append('(');
 
-  while ((item= it++))
+  while ((item = it++))
   {
     if (is_first_elem)
-      is_first_elem= false;
+      is_first_elem = false;
     else
       str->append(',');
 
@@ -491,7 +456,6 @@ void print_list_item(String *str, List_item *list,
 
   str->append(')');
 }
-
 
 /**
   @brief
@@ -506,21 +470,20 @@ void print_list_item(String *str, List_item *list,
     string str.
 */
 
-void table_value_constr::print(THD *thd, String *str,
-			       enum_query_type query_type)
+void table_value_constr::print(THD *thd, String *str, enum_query_type query_type)
 {
   DBUG_ASSERT(thd);
 
   str->append(STRING_WITH_LEN("values "));
 
-  bool is_first_elem= true;
+  bool is_first_elem = true;
   List_iterator_fast<List_item> li(lists_of_values);
   List_item *list;
 
-  while ((list= li++))
+  while ((list = li++))
   {
     if (is_first_elem)
-      is_first_elem= false;
+      is_first_elem = false;
     else
       str->append(',');
 
@@ -533,7 +496,6 @@ void table_value_constr::print(THD *thd, String *str,
   }
   select_lex->print_limit(thd, str, query_type);
 }
-
 
 /**
   @brief
@@ -559,36 +521,33 @@ void table_value_constr::print(THD *thd, String *str,
     true      otherwise
 */
 
-bool Item_func_in::create_value_list_for_tvc(THD *thd,
-				             List< List<Item> > *values)
+bool Item_func_in::create_value_list_for_tvc(THD *thd, List<List<Item>> *values)
 {
-  bool is_list_of_rows= args[1]->type() == Item::ROW_ITEM;
+  bool is_list_of_rows = args[1]->type() == Item::ROW_ITEM;
 
-  for (uint i=1; i < arg_count; i++)
+  for (uint i = 1; i < arg_count; i++)
   {
     char col_name[8];
     List<Item> *tvc_value;
-    if (!(tvc_value= new (thd->mem_root) List<Item>()))
+    if (!(tvc_value = new (thd->mem_root) List<Item>()))
       return true;
 
     if (is_list_of_rows)
     {
-      Item_row *row_list= (Item_row *)(args[i]->build_clone(thd));
+      Item_row *row_list = (Item_row *)(args[i]->build_clone(thd));
 
       if (!row_list)
         return true;
 
-      for (uint j=0; j < row_list->cols(); j++)
+      for (uint j = 0; j < row_list->cols(); j++)
       {
         if (i == 1)
-	{
-          sprintf(col_name, "_col_%i", j+1);
-          row_list->element_index(j)->set_name(thd, col_name, strlen(col_name),
-                                               thd->charset());
+        {
+          sprintf(col_name, "_col_%i", j + 1);
+          row_list->element_index(j)->set_name(thd, col_name, strlen(col_name), thd->charset());
         }
-	if (tvc_value->push_back(row_list->element_index(j),
-				 thd->mem_root))
-	  return true;
+        if (tvc_value->push_back(row_list->element_index(j), thd->mem_root))
+          return true;
       }
     }
     else
@@ -598,7 +557,7 @@ bool Item_func_in::create_value_list_for_tvc(THD *thd,
         sprintf(col_name, "_col_%i", 1);
         args[i]->set_name(thd, col_name, strlen(col_name), thd->charset());
       }
-      Item *arg_clone= args[i]->build_clone(thd);
+      Item *arg_clone = args[i]->build_clone(thd);
       if (!arg_clone || tvc_value->push_back(arg_clone))
         return true;
     }
@@ -608,7 +567,6 @@ bool Item_func_in::create_value_list_for_tvc(THD *thd,
   }
   return false;
 }
-
 
 /**
   @brief
@@ -627,21 +585,17 @@ bool Item_func_in::create_value_list_for_tvc(THD *thd,
     false    otherwise
 */
 
-static bool create_tvc_name(THD *thd, st_select_lex *parent_select,
-			    LEX_CSTRING *alias)
+static bool create_tvc_name(THD *thd, st_select_lex *parent_select, LEX_CSTRING *alias)
 {
   char buff[6];
 
-  alias->length= my_snprintf(buff, sizeof(buff),
-                            "tvc_%u",
-			     parent_select ? parent_select->curr_tvc_name : 0);
-  alias->str= thd->strmake(buff, alias->length);
+  alias->length = my_snprintf(buff, sizeof(buff), "tvc_%u", parent_select ? parent_select->curr_tvc_name : 0);
+  alias->str = thd->strmake(buff, alias->length);
   if (!alias->str)
     return true;
 
   return false;
 }
-
 
 /**
   @brief
@@ -658,11 +612,9 @@ static bool create_tvc_name(THD *thd, st_select_lex *parent_select,
 
 bool table_value_constr::to_be_wrapped_as_with_tail()
 {
-  return  select_lex->master_unit()->first_select()->next_select() &&
-          select_lex->order_list.elements &&
-          select_lex->limit_params.explicit_limit;
+  return select_lex->master_unit()->first_select()->next_select() && select_lex->order_list.elements &&
+         select_lex->limit_params.explicit_limit;
 }
-
 
 /**
   @brief
@@ -682,17 +634,15 @@ bool table_value_constr::to_be_wrapped_as_with_tail()
           NULL - otherwise
 */
 
-static
-st_select_lex *wrap_tvc(THD *thd, st_select_lex *tvc_sl,
-                        st_select_lex *parent_select)
+static st_select_lex *wrap_tvc(THD *thd, st_select_lex *tvc_sl, st_select_lex *parent_select)
 {
-  LEX *lex= thd->lex;
-  select_result *save_result= lex->result;
-  uint8 save_derived_tables= lex->derived_tables;
-  thd->lex->result= NULL;
+  LEX *lex = thd->lex;
+  select_result *save_result = lex->result;
+  uint8 save_derived_tables = lex->derived_tables;
+  thd->lex->result = NULL;
 
   Query_arena backup;
-  Query_arena *arena= thd->activate_stmt_arena_if_needed(&backup);
+  Query_arena *arena = thd->activate_stmt_arena_if_needed(&backup);
 
   Item *item;
   SELECT_LEX *wrapper_sl;
@@ -702,28 +652,26 @@ st_select_lex *wrap_tvc(THD *thd, st_select_lex *tvc_sl,
     Create SELECT_LEX wrapper_sl of the select used in the result
     of the transformation
   */
-  if (!(wrapper_sl= new (thd->mem_root) SELECT_LEX()))
+  if (!(wrapper_sl = new (thd->mem_root) SELECT_LEX()))
     goto err;
-  wrapper_sl->select_number= ++thd->lex->stmt_lex->current_select_number;
-  wrapper_sl->parent_lex= lex; /* Used in init_query. */
+  wrapper_sl->select_number = ++thd->lex->stmt_lex->current_select_number;
+  wrapper_sl->parent_lex = lex; /* Used in init_query. */
   wrapper_sl->init_query();
   wrapper_sl->init_select();
 
-  wrapper_sl->nest_level= tvc_sl->nest_level;
-  wrapper_sl->parsing_place= tvc_sl->parsing_place;
+  wrapper_sl->nest_level = tvc_sl->nest_level;
+  wrapper_sl->parsing_place = tvc_sl->parsing_place;
   wrapper_sl->set_linkage(tvc_sl->get_linkage());
-  wrapper_sl->exclude_from_table_unique_test=
-                                 tvc_sl->exclude_from_table_unique_test;
+  wrapper_sl->exclude_from_table_unique_test = tvc_sl->exclude_from_table_unique_test;
 
-  lex->current_select= wrapper_sl;
-  item= new (thd->mem_root) Item_field(thd, &wrapper_sl->context,
-                                       star_clex_str);
+  lex->current_select = wrapper_sl;
+  item = new (thd->mem_root) Item_field(thd, &wrapper_sl->context, star_clex_str);
   if (item == NULL || add_item_to_list(thd, item))
     goto err;
   (wrapper_sl->with_wild)++;
 
   /* Include the newly created select into the global list of selects */
-  wrapper_sl->include_global((st_select_lex_node**)&lex->all_selects_list);
+  wrapper_sl->include_global((st_select_lex_node **)&lex->all_selects_list);
 
   /* Substitute select node used of TVC for the newly created select */
   tvc_sl->substitute_in_tree(wrapper_sl);
@@ -733,10 +681,10 @@ st_select_lex *wrap_tvc(THD *thd, st_select_lex *tvc_sl,
     to the the wrapper select wrapper_sl as the only unit. The created
     unit is the unit for the derived table tvc_x of the transformation.
   */
-  if (!(derived_unit= new (thd->mem_root) SELECT_LEX_UNIT()))
+  if (!(derived_unit = new (thd->mem_root) SELECT_LEX_UNIT()))
     goto err;
   derived_unit->init_query();
-  derived_unit->thd= thd;
+  derived_unit->thd = thd;
   derived_unit->include_down(wrapper_sl);
 
   /*
@@ -753,34 +701,29 @@ st_select_lex *wrap_tvc(THD *thd, st_select_lex *tvc_sl,
   Table_ident *ti;
   LEX_CSTRING alias;
   TABLE_LIST *derived_tab;
-  if (!(ti= new (thd->mem_root) Table_ident(derived_unit)) ||
-      create_tvc_name(thd, parent_select, &alias))
+  if (!(ti = new (thd->mem_root) Table_ident(derived_unit)) || create_tvc_name(thd, parent_select, &alias))
     goto err;
-  if (!(derived_tab=
-          wrapper_sl->add_table_to_list(thd,
-				        ti, &alias, 0,
-                                        TL_READ, MDL_SHARED_READ)))
+  if (!(derived_tab = wrapper_sl->add_table_to_list(thd, ti, &alias, 0, TL_READ, MDL_SHARED_READ)))
     goto err;
   wrapper_sl->add_joined_table(derived_tab);
   wrapper_sl->add_where_field(derived_unit->first_select());
-  wrapper_sl->context.table_list= wrapper_sl->table_list.first;
-  wrapper_sl->context.first_name_resolution_table= wrapper_sl->table_list.first;
-  wrapper_sl->table_list.first->derived_type= DTYPE_TABLE | DTYPE_MATERIALIZE;
-  lex->derived_tables|= DERIVED_SUBQUERY;
+  wrapper_sl->context.table_list = wrapper_sl->table_list.first;
+  wrapper_sl->context.first_name_resolution_table = wrapper_sl->table_list.first;
+  wrapper_sl->table_list.first->derived_type = DTYPE_TABLE | DTYPE_MATERIALIZE;
+  lex->derived_tables |= DERIVED_SUBQUERY;
 
   if (arena)
     thd->restore_active_arena(arena, &backup);
-  lex->result= save_result;
+  lex->result = save_result;
   return wrapper_sl;
 
 err:
   if (arena)
     thd->restore_active_arena(arena, &backup);
-  lex->result= save_result;
-  lex->derived_tables= save_derived_tables;
+  lex->result = save_result;
+  lex->derived_tables = save_derived_tables;
   return 0;
 }
-
 
 /**
   @brief
@@ -803,30 +746,29 @@ err:
 
 st_select_lex *wrap_tvc_with_tail(THD *thd, st_select_lex *tvc_sl)
 {
-  st_select_lex *wrapper_sl= wrap_tvc(thd, tvc_sl, NULL);
+  st_select_lex *wrapper_sl = wrap_tvc(thd, tvc_sl, NULL);
   if (!wrapper_sl)
     return NULL;
 
-  wrapper_sl->order_list= tvc_sl->order_list;
-  wrapper_sl->limit_params= tvc_sl->limit_params;
-  wrapper_sl->braces= tvc_sl->braces;
+  wrapper_sl->order_list = tvc_sl->order_list;
+  wrapper_sl->limit_params = tvc_sl->limit_params;
+  wrapper_sl->braces = tvc_sl->braces;
   tvc_sl->order_list.empty();
   tvc_sl->limit_params.clear();
-  tvc_sl->braces= 0;
+  tvc_sl->braces = 0;
   if (tvc_sl->select_number == 1)
   {
-    tvc_sl->select_number= wrapper_sl->select_number;
-    wrapper_sl->select_number= 1;
+    tvc_sl->select_number = wrapper_sl->select_number;
+    wrapper_sl->select_number = 1;
   }
   if (tvc_sl->master_unit()->union_distinct == tvc_sl)
   {
-    wrapper_sl->master_unit()->union_distinct= wrapper_sl;
+    wrapper_sl->master_unit()->union_distinct = wrapper_sl;
   }
-  wrapper_sl->distinct= tvc_sl->distinct;
-  thd->lex->current_select= wrapper_sl;
+  wrapper_sl->distinct = tvc_sl->distinct;
+  thd->lex->current_select = wrapper_sl;
   return wrapper_sl;
 }
-
 
 /**
   @brief
@@ -846,22 +788,20 @@ st_select_lex *wrap_tvc_with_tail(THD *thd, st_select_lex *tvc_sl)
           0  otherwise
 */
 
-st_select_lex *
-Item_subselect::wrap_tvc_into_select(THD *thd, st_select_lex *tvc_sl)
+st_select_lex *Item_subselect::wrap_tvc_into_select(THD *thd, st_select_lex *tvc_sl)
 {
-  LEX *lex= thd->lex;
+  LEX *lex = thd->lex;
   /* SELECT_LEX object where the transformation is performed */
-  SELECT_LEX *parent_select= lex->current_select;
-  SELECT_LEX *wrapper_sl= wrap_tvc(thd, tvc_sl, parent_select);
+  SELECT_LEX *parent_select = lex->current_select;
+  SELECT_LEX *wrapper_sl = wrap_tvc(thd, tvc_sl, parent_select);
   if (wrapper_sl)
   {
     if (engine->engine_type() == subselect_engine::SINGLE_SELECT_ENGINE)
-      ((subselect_single_select_engine *) engine)->change_select(wrapper_sl);
+      ((subselect_single_select_engine *)engine)->change_select(wrapper_sl);
   }
-  lex->current_select= parent_select;
+  lex->current_select = parent_select;
   return wrapper_sl;
 }
-
 
 /*
   @brief
@@ -877,24 +817,21 @@ Item_subselect::wrap_tvc_into_select(THD *thd, st_select_lex *tvc_sl)
    1 not comparable
 */
 
-static bool cmp_row_types(Item* item1, Item* item2)
+static bool cmp_row_types(Item *item1, Item *item2)
 {
-  uint n= item1->cols();
+  uint n = item1->cols();
   if (item2->check_cols(n))
     return true;
 
-  for (uint i=0; i < n; i++)
+  for (uint i = 0; i < n; i++)
   {
-    Item *inner= item1->element_index(i);
-    Item *outer= item2->element_index(i);
-    if (!inner->type_handler()->subquery_type_allows_materialization(inner,
-                                                                     outer,
-                                                                     true))
+    Item *inner = item1->element_index(i);
+    Item *outer = item2->element_index(i);
+    if (!inner->type_handler()->subquery_type_allows_materialization(inner, outer, true))
       return true;
   }
   return false;
 }
-
 
 /**
   @brief
@@ -926,8 +863,7 @@ static bool cmp_row_types(Item* item1, Item* item2)
     pointer to this IN predicate otherwise
 */
 
-Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
-							uchar *arg)
+Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd, uchar *arg)
 {
   if (!transform_into_subq)
     return this;
@@ -938,10 +874,10 @@ Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
 
   List<List_item> values;
 
-  LEX *lex= thd->lex;
+  LEX *lex = thd->lex;
   /* SELECT_LEX object where the transformation is performed */
-  SELECT_LEX *parent_select= lex->current_select;
-  uint8 save_derived_tables= lex->derived_tables;
+  SELECT_LEX *parent_select = lex->current_select;
+  uint8 save_derived_tables = lex->derived_tables;
 
   /*
     Make sure that create_tmp_table will not fail due to too long keys.
@@ -950,16 +886,15 @@ Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
 
     The checks here are the same as in subquery_type_allows_materialization()
   */
-  uint32 length= max_length_of_left_expr();
-  if (!length  || length > tmp_table_max_key_length() ||
-      args[0]->cols() > tmp_table_max_key_parts())
+  uint32 length = max_length_of_left_expr();
+  if (!length || length > tmp_table_max_key_length() || args[0]->cols() > tmp_table_max_key_parts())
   {
     trace_conv.add("done", false);
     trace_conv.add("reason", "key is too long");
     return this;
   }
 
-  for (uint i=1; i < arg_count; i++)
+  for (uint i = 1; i < arg_count; i++)
   {
     if (!args[i]->const_item())
     {
@@ -978,7 +913,7 @@ Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
   Json_writer_array trace_nested_obj(thd, "conversion");
 
   Query_arena backup;
-  Query_arena *arena= thd->activate_stmt_arena_if_needed(&backup);
+  Query_arena *arena = thd->activate_stmt_arena_if_needed(&backup);
 
   /*
     Create SELECT_LEX of the subquery SQ used in the result of transformation
@@ -988,37 +923,32 @@ Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
   lex->init_select();
   /* Create item list as '*' for the subquery SQ */
   Item *item;
-  SELECT_LEX *sq_select; // select for IN subquery;
-  sq_select= lex->current_select;
-  sq_select->parsing_place= SELECT_LIST;
-  item= new (thd->mem_root) Item_field(thd, &sq_select->context,
-                                       star_clex_str);
+  SELECT_LEX *sq_select;  // select for IN subquery;
+  sq_select = lex->current_select;
+  sq_select->parsing_place = SELECT_LIST;
+  item = new (thd->mem_root) Item_field(thd, &sq_select->context, star_clex_str);
   if (item == NULL || add_item_to_list(thd, item))
     goto err;
   (sq_select->with_wild)++;
   /*
     Create derived table DT that will wrap TVC in the result of transformation
   */
-  SELECT_LEX *tvc_select; // select for tvc
-  SELECT_LEX_UNIT *derived_unit; // unit for tvc_select
+  SELECT_LEX *tvc_select;         // select for tvc
+  SELECT_LEX_UNIT *derived_unit;  // unit for tvc_select
   if (mysql_new_select(lex, 1, NULL))
     goto err;
   lex->init_select();
-  tvc_select= lex->current_select;
-  derived_unit= tvc_select->master_unit();
+  tvc_select = lex->current_select;
+  derived_unit = tvc_select->master_unit();
   tvc_select->set_linkage(DERIVED_TABLE_TYPE);
 
   /* Create TVC used in the transformation */
   if (create_value_list_for_tvc(thd, &values))
     goto err;
-  if (!(tvc_select->tvc=
-          new (thd->mem_root)
-	    table_value_constr(values,
-                               tvc_select,
-                               tvc_select->options)))
+  if (!(tvc_select->tvc = new (thd->mem_root) table_value_constr(values, tvc_select, tvc_select->options)))
     goto err;
 
-  lex->current_select= sq_select;
+  lex->current_select = sq_select;
 
   /*
     Create the name of the wrapping derived table and
@@ -1027,42 +957,37 @@ Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
   Table_ident *ti;
   LEX_CSTRING alias;
   TABLE_LIST *derived_tab;
-  if (!(ti= new (thd->mem_root) Table_ident(derived_unit)) ||
-      create_tvc_name(thd, parent_select, &alias))
+  if (!(ti = new (thd->mem_root) Table_ident(derived_unit)) || create_tvc_name(thd, parent_select, &alias))
     goto err;
-  if (!(derived_tab=
-          sq_select->add_table_to_list(thd,
-				       ti, &alias, 0,
-                                       TL_READ, MDL_SHARED_READ)))
+  if (!(derived_tab = sq_select->add_table_to_list(thd, ti, &alias, 0, TL_READ, MDL_SHARED_READ)))
     goto err;
   sq_select->add_joined_table(derived_tab);
   sq_select->add_where_field(derived_unit->first_select());
-  sq_select->context.table_list= sq_select->table_list.first;
-  sq_select->context.first_name_resolution_table= sq_select->table_list.first;
-  sq_select->table_list.first->derived_type= DTYPE_TABLE | DTYPE_MATERIALIZE;
-  lex->derived_tables|= DERIVED_SUBQUERY;
+  sq_select->context.table_list = sq_select->table_list.first;
+  sq_select->context.first_name_resolution_table = sq_select->table_list.first;
+  sq_select->table_list.first->derived_type = DTYPE_TABLE | DTYPE_MATERIALIZE;
+  lex->derived_tables |= DERIVED_SUBQUERY;
 
-  sq_select->where= 0;
+  sq_select->where = 0;
   sq_select->set_braces(false);
   derived_unit->set_with_clause(0);
 
   /* Create IN subquery predicate */
-  sq_select->parsing_place= parent_select->parsing_place;
+  sq_select->parsing_place = parent_select->parsing_place;
   Item_in_subselect *in_subs;
   Item *sq;
-  if (!(in_subs=
-          new (thd->mem_root) Item_in_subselect(thd, args[0], sq_select)))
+  if (!(in_subs = new (thd->mem_root) Item_in_subselect(thd, args[0], sq_select)))
     goto err;
-  in_subs->converted_from_in_predicate= TRUE;
-  sq= in_subs;
+  in_subs->converted_from_in_predicate = TRUE;
+  sq = in_subs;
   if (negated)
-    sq= negate_expression(thd, in_subs);
+    sq = negate_expression(thd, in_subs);
   else
-    in_subs->emb_on_expr_nest= emb_on_expr_nest;
-  
+    in_subs->emb_on_expr_nest = emb_on_expr_nest;
+
   if (arena)
     thd->restore_active_arena(arena, &backup);
-  thd->lex->current_select= parent_select;
+  thd->lex->current_select = parent_select;
 
   if (sq->fix_fields(thd, (Item **)&sq))
     goto err;
@@ -1074,21 +999,18 @@ Item *Item_func_in::in_predicate_to_in_subs_transformer(THD *thd,
 err:
   if (arena)
     thd->restore_active_arena(arena, &backup);
-  lex->derived_tables= save_derived_tables;
-  thd->lex->current_select= parent_select;
+  lex->derived_tables = save_derived_tables;
+  thd->lex->current_select = parent_select;
   return NULL;
 }
 
-
 uint32 Item_func_in::max_length_of_left_expr()
 {
-  uint n= args[0]->cols();
-  uint32 length= 0;
-  for (uint i=0; i < n; i++)
-    length+= args[0]->element_index(i)->max_length;
+  uint n = args[0]->cols();
+  uint32 length = 0;
+  for (uint i = 0; i < n; i++) length += args[0]->element_index(i)->max_length;
   return length;
 }
-
 
 /**
   @brief
@@ -1109,11 +1031,11 @@ uint32 Item_func_in::max_length_of_left_expr()
 
 bool Item_func_in::to_be_transformed_into_in_subq(THD *thd)
 {
-  bool is_row_list= args[1]->type() == Item::ROW_ITEM;
-  uint values_count= arg_count-1;
+  bool is_row_list = args[1]->type() == Item::ROW_ITEM;
+  uint values_count = arg_count - 1;
 
   if (is_row_list)
-    values_count*= ((Item_row *)(args[1]))->cols();
+    values_count *= ((Item_row *)(args[1]))->cols();
 
   if (thd->variables.in_subquery_conversion_threshold == 0 ||
       thd->variables.in_subquery_conversion_threshold > values_count)
@@ -1123,7 +1045,7 @@ bool Item_func_in::to_be_transformed_into_in_subq(THD *thd)
     return true;
 
   /* Occurence of '?' in IN list is checked only for PREPARE <stmt> commands */
-  for (uint i=1; i < arg_count; i++)
+  for (uint i = 1; i < arg_count; i++)
   {
     if (!is_row_list)
     {
@@ -1132,8 +1054,8 @@ bool Item_func_in::to_be_transformed_into_in_subq(THD *thd)
     }
     else
     {
-      Item_row *row_list= (Item_row *)(args[i]);
-      for (uint j=0; j < row_list->cols(); j++)
+      Item_row *row_list = (Item_row *)(args[i]);
+      for (uint j = 0; j < row_list->cols(); j++)
       {
         if (row_list->element_index(j)->type() == Item::PARAM_ITEM)
           return false;
@@ -1143,7 +1065,6 @@ bool Item_func_in::to_be_transformed_into_in_subq(THD *thd)
 
   return true;
 }
-
 
 /**
   @brief
@@ -1166,46 +1087,39 @@ bool JOIN::transform_in_predicates_into_in_subq(THD *thd)
   if (!select_lex->in_funcs.elements)
     DBUG_RETURN(false);
 
-  SELECT_LEX *save_current_select= thd->lex->current_select;
-  enum_parsing_place save_parsing_place= select_lex->parsing_place;
-  thd->lex->current_select= select_lex;
+  SELECT_LEX *save_current_select = thd->lex->current_select;
+  enum_parsing_place save_parsing_place = select_lex->parsing_place;
+  thd->lex->current_select = select_lex;
   if (conds)
   {
-    select_lex->parsing_place= IN_WHERE;
-    conds=
-      conds->transform(thd,
-		       &Item::in_predicate_to_in_subs_transformer,
-                       (uchar*) 0);
+    select_lex->parsing_place = IN_WHERE;
+    conds = conds->transform(thd, &Item::in_predicate_to_in_subs_transformer, (uchar *)0);
     if (!conds)
       DBUG_RETURN(true);
-    select_lex->prep_where= conds ? conds->copy_andor_structure(thd) : 0;
-    select_lex->where= conds;
+    select_lex->prep_where = conds ? conds->copy_andor_structure(thd) : 0;
+    select_lex->where = conds;
   }
 
   if (join_list)
   {
     TABLE_LIST *table;
     List_iterator<TABLE_LIST> li(*join_list);
-    select_lex->parsing_place= IN_ON;
+    select_lex->parsing_place = IN_ON;
 
-    while ((table= li++))
+    while ((table = li++))
     {
       if (table->on_expr)
       {
-        table->on_expr=
-          table->on_expr->transform(thd,
-		                    &Item::in_predicate_to_in_subs_transformer,
-                                    (uchar*) 0);
-	if (!table->on_expr)
-	  DBUG_RETURN(true);
-	table->prep_on_expr= table->on_expr ?
-                             table->on_expr->copy_andor_structure(thd) : 0;
+        table->on_expr = table->on_expr->transform(thd, &Item::in_predicate_to_in_subs_transformer, (uchar *)0);
+        if (!table->on_expr)
+          DBUG_RETURN(true);
+        table->prep_on_expr = table->on_expr ? table->on_expr->copy_andor_structure(thd) : 0;
       }
     }
   }
 
   select_lex->in_funcs.empty();
-  select_lex->parsing_place= save_parsing_place;
-  thd->lex->current_select= save_current_select;
+  select_lex->parsing_place = save_parsing_place;
+  thd->lex->current_select = save_current_select;
   DBUG_RETURN(false);
 }

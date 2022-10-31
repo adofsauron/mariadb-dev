@@ -18,7 +18,6 @@
 
 #include "sql_error.h"
 
-
 #define LAST_STMT_ID 0xFFFFFFFF
 #define STMT_ID_MASK 0x7FFFFFFF
 
@@ -47,7 +46,7 @@ struct LEX;
   case THD::m_reprepare_observer is not NULL.
 
   @sa check_and_update_table_version() for details of the
-  version tracking algorithm 
+  version tracking algorithm
 
   @sa Open_tables_state::m_reprepare_observer for the life cycle
   of metadata observers.
@@ -55,7 +54,7 @@ struct LEX;
 
 class Reprepare_observer
 {
-public:
+ public:
   /**
     Check if a change of metadata is OK. In future
     the signature of this method may be extended to accept the old
@@ -64,11 +63,11 @@ public:
   */
   bool report_error(THD *thd);
   bool is_invalidated() const { return m_invalidated; }
-  void reset_reprepare_observer() { m_invalidated= FALSE; }
-private:
+  void reset_reprepare_observer() { m_invalidated = FALSE; }
+
+ private:
   bool m_invalidated;
 };
-
 
 void mysqld_stmt_prepare(THD *thd, const char *packet, uint packet_length);
 void mysqld_stmt_execute(THD *thd, char *packet, uint packet_length);
@@ -95,11 +94,10 @@ my_bool bulk_parameters_set(THD *thd);
 
 class Server_runnable
 {
-public:
-  virtual bool execute_server_code(THD *thd)= 0;
+ public:
+  virtual bool execute_server_code(THD *thd) = 0;
   virtual ~Server_runnable();
 };
-
 
 /**
   Execute direct interface.
@@ -117,26 +115,25 @@ class Ed_row;
 
 class Ed_result_set
 {
-public:
-  operator List<Ed_row>&() { return *m_rows; }
+ public:
+  operator List<Ed_row> &() { return *m_rows; }
   unsigned int size() const { return m_rows->elements; }
 
-  Ed_result_set(List<Ed_row> *rows_arg, size_t column_count,
-                MEM_ROOT *mem_root_arg);
+  Ed_result_set(List<Ed_row> *rows_arg, size_t column_count, MEM_ROOT *mem_root_arg);
 
   /** We don't call member destructors, they all are POD types. */
   ~Ed_result_set() {}
 
   size_t get_field_count() const { return m_column_count; }
 
-  static void *operator new(size_t size, MEM_ROOT *mem_root)
-  { return alloc_root(mem_root, size); }
-  static void operator delete(void *ptr, size_t size) throw ();
-  static void operator delete(void *, MEM_ROOT *){}
-private:
-  Ed_result_set(const Ed_result_set &);        /* not implemented */
-  Ed_result_set &operator=(Ed_result_set &);   /* not implemented */
-private:
+  static void *operator new(size_t size, MEM_ROOT *mem_root) { return alloc_root(mem_root, size); }
+  static void operator delete(void *ptr, size_t size) throw();
+  static void operator delete(void *, MEM_ROOT *) {}
+
+ private:
+  Ed_result_set(const Ed_result_set &);      /* not implemented */
+  Ed_result_set &operator=(Ed_result_set &); /* not implemented */
+ private:
   MEM_ROOT m_mem_root;
   size_t m_column_count;
   List<Ed_row> *m_rows;
@@ -144,10 +141,9 @@ private:
   friend class Ed_connection;
 };
 
-
 class Ed_connection
 {
-public:
+ public:
   /**
     Construct a new "execute direct" connection.
 
@@ -209,8 +205,8 @@ public:
     instead of SQL statement text.
 
     @return execution status
-      
-    @retval  FALSE  success, use get_field_count() 
+
+    @retval  FALSE  success, use get_field_count()
                     if your code fragment is supposed to
                     return a result set
     @retval  TRUE   failure
@@ -225,20 +221,14 @@ public:
     @sa Documentation for C API function
     mysql_affected_rows().
   */
-  ulonglong get_affected_rows() const
-  {
-    return m_diagnostics_area.affected_rows();
-  }
+  ulonglong get_affected_rows() const { return m_diagnostics_area.affected_rows(); }
 
   /**
     Get the last insert id, if any.
 
     @sa Documentation for mysql_insert_id().
   */
-  ulonglong get_last_insert_id() const
-  {
-    return m_diagnostics_area.last_insert_id();
-  }
+  ulonglong get_last_insert_id() const { return m_diagnostics_area.last_insert_id(); }
 
   /**
     Get the total number of warnings for the last executed
@@ -248,10 +238,7 @@ public:
     @sa Documentation for C API function
     mysql_num_warnings().
   */
-  ulong get_warn_count() const
-  {
-    return m_diagnostics_area.warn_count();
-  }
+  ulong get_warn_count() const { return m_diagnostics_area.warn_count(); }
 
   /**
     The following members are only valid if execute_direct()
@@ -294,12 +281,13 @@ public:
   */
   bool move_to_next_result()
   {
-    m_current_rset= m_current_rset->m_next_rset;
+    m_current_rset = m_current_rset->m_next_rset;
     return MY_TEST(m_current_rset);
   }
 
   ~Ed_connection() { free_old_result(); }
-private:
+
+ private:
   Diagnostics_area m_diagnostics_area;
   /**
     Execute direct interface does not support multi-statements, only
@@ -311,32 +299,29 @@ private:
   THD *m_thd;
   Ed_result_set *m_rsets;
   Ed_result_set *m_current_rset;
-private:
+
+ private:
   void free_old_result();
   void add_result_set(Ed_result_set *ed_result_set);
-private:
-  Ed_connection(const Ed_connection &);        /* not implemented */
-  Ed_connection &operator=(Ed_connection &);   /* not implemented */
-};
 
+ private:
+  Ed_connection(const Ed_connection &);      /* not implemented */
+  Ed_connection &operator=(Ed_connection &); /* not implemented */
+};
 
 /** One result set column. */
 
-struct Ed_column: public LEX_STRING
+struct Ed_column : public LEX_STRING
 {
   /** Implementation note: destructor for this class is never called. */
 };
 
-
 /** One result set record. */
 
-class Ed_row: public Sql_alloc
+class Ed_row : public Sql_alloc
 {
-public:
-  const Ed_column &operator[](const unsigned int column_index) const
-  {
-    return *get_column(column_index);
-  }
+ public:
+  const Ed_column &operator[](const unsigned int column_index) const { return *get_column(column_index); }
   const Ed_column *get_column(const unsigned int column_index) const
   {
     DBUG_ASSERT(column_index < size());
@@ -345,14 +330,15 @@ public:
   size_t size() const { return m_column_count; }
 
   Ed_row(Ed_column *column_array_arg, size_t column_count_arg)
-    :m_column_array(column_array_arg),
-    m_column_count(column_count_arg)
-  {}
-private:
+      : m_column_array(column_array_arg), m_column_count(column_count_arg)
+  {
+  }
+
+ private:
   Ed_column *m_column_array;
   size_t m_column_count; /* TODO: change to point to metadata */
 };
 
 extern Atomic_counter<uint32_t> local_connection_thread_count;
 
-#endif // SQL_PREPARE_H
+#endif  // SQL_PREPARE_H

@@ -22,25 +22,24 @@ class THD;
 class ST_FIELD_INFO;
 typedef struct st_schema_table ST_SCHEMA_TABLE;
 
-namespace Show {
+namespace Show
+{
 extern ST_FIELD_INFO query_profile_statistics_info[];
-} // namespace Show
+}  // namespace Show
 
 int fill_query_profile_statistics_info(THD *thd, TABLE_LIST *tables, Item *cond);
 int make_profile_table_for_show(THD *thd, ST_SCHEMA_TABLE *schema_table);
 
-
-#define PROFILE_NONE         (uint)0
-#define PROFILE_CPU          (uint)(1<<0)
-#define PROFILE_MEMORY       (uint)(1<<1)
-#define PROFILE_BLOCK_IO     (uint)(1<<2)
-#define PROFILE_CONTEXT      (uint)(1<<3)
-#define PROFILE_PAGE_FAULTS  (uint)(1<<4)
-#define PROFILE_IPC          (uint)(1<<5)
-#define PROFILE_SWAPS        (uint)(1<<6)
-#define PROFILE_SOURCE       (uint)(1<<16)
-#define PROFILE_ALL          (uint)(~0)
-
+#define PROFILE_NONE (uint)0
+#define PROFILE_CPU (uint)(1 << 0)
+#define PROFILE_MEMORY (uint)(1 << 1)
+#define PROFILE_BLOCK_IO (uint)(1 << 2)
+#define PROFILE_CONTEXT (uint)(1 << 3)
+#define PROFILE_PAGE_FAULTS (uint)(1 << 4)
+#define PROFILE_IPC (uint)(1 << 5)
+#define PROFILE_SWAPS (uint)(1 << 6)
+#define PROFILE_SOURCE (uint)(1 << 16)
+#define PROFILE_ALL (uint)(~0)
 
 #if defined(ENABLED_PROFILING)
 #include "sql_priv.h"
@@ -60,15 +59,14 @@ class PROF_MEASUREMENT;
 class QUERY_PROFILE;
 class PROFILING;
 
-
 /**
   Implements a persistent FIFO using server List method names.  Not
-  thread-safe.  Intended to be used on thread-local data only.  
+  thread-safe.  Intended to be used on thread-local data only.
 */
-template <class T> class Queue
+template <class T>
+class Queue
 {
-private:
-
+ private:
   struct queue_item
   {
     T *payload;
@@ -77,53 +75,52 @@ private:
 
   struct queue_item *first, *last;
 
-public:
+ public:
   Queue()
   {
-    elements= 0;
-    first= last= NULL;
+    elements = 0;
+    first = last = NULL;
   }
 
   void empty()
   {
     struct queue_item *i, *after_i;
-    for (i= first; i != NULL; i= after_i)
+    for (i = first; i != NULL; i = after_i)
     {
-      after_i= i->next;
+      after_i = i->next;
       my_free(i);
     }
-    elements= 0;
+    elements = 0;
   }
 
-  ulong elements;                       /* The count of items in the Queue */
+  ulong elements; /* The count of items in the Queue */
 
   void push_back(T *payload)
   {
     struct queue_item *new_item;
 
-    new_item= (struct queue_item *) my_malloc(key_memory_queue_item,
-                                              sizeof(struct queue_item), MYF(0));
+    new_item = (struct queue_item *)my_malloc(key_memory_queue_item, sizeof(struct queue_item), MYF(0));
 
-    new_item->payload= payload;
+    new_item->payload = payload;
 
     if (first == NULL)
-      first= new_item;
+      first = new_item;
     if (last != NULL)
     {
       DBUG_ASSERT(last->next == NULL);
-      last->next= new_item;
+      last->next = new_item;
     }
-    new_item->previous= last;
-    new_item->next= NULL;
-    last= new_item;
+    new_item->previous = last;
+    new_item->next = NULL;
+    last = new_item;
 
     elements++;
   }
 
   T *pop()
   {
-    struct queue_item *old_item= first;
-    T *ret= NULL;
+    struct queue_item *old_item = first;
+    T *ret = NULL;
 
     if (first == NULL)
     {
@@ -131,12 +128,12 @@ public:
       return NULL;
     }
 
-    ret= old_item->payload;
+    ret = old_item->payload;
     if (first->next != NULL)
-      first->next->previous= NULL;
+      first->next->previous = NULL;
     else
-      last= NULL;
-    first= first->next;
+      last = NULL;
+    first = first->next;
 
     my_free(old_item);
     elements--;
@@ -150,30 +147,19 @@ public:
     return (elements == 0);
   }
 
-  void *new_iterator()
-  {
-    return first;
-  }
+  void *new_iterator() { return first; }
 
-  void *iterator_next(void *current)
-  {
-    return ((struct queue_item *) current)->next;
-  }
+  void *iterator_next(void *current) { return ((struct queue_item *)current)->next; }
 
-  T *iterator_value(void *current)
-  {
-    return ((struct queue_item *) current)->payload;
-  }
-
+  T *iterator_value(void *current) { return ((struct queue_item *)current)->payload; }
 };
-
 
 /**
   A single entry in a single profile.
 */
 class PROF_MEASUREMENT
 {
-private:
+ private:
   friend class QUERY_PROFILE;
   friend class PROFILING;
 
@@ -195,19 +181,16 @@ private:
   double time_usecs;
   char *allocated_status_memory;
 
-  void set_label(const char *status_arg, const char *function_arg, 
-                  const char *file_arg, unsigned int line_arg);
+  void set_label(const char *status_arg, const char *function_arg, const char *file_arg, unsigned int line_arg);
   void clean_up();
-  
+
   PROF_MEASUREMENT();
   PROF_MEASUREMENT(QUERY_PROFILE *profile_arg, const char *status_arg);
-  PROF_MEASUREMENT(QUERY_PROFILE *profile_arg, const char *status_arg,
-                const char *function_arg,
-                const char *file_arg, unsigned int line_arg);
+  PROF_MEASUREMENT(QUERY_PROFILE *profile_arg, const char *status_arg, const char *function_arg, const char *file_arg,
+                   unsigned int line_arg);
   ~PROF_MEASUREMENT();
   void collect();
 };
-
 
 /**
   The full profile for a single query, and includes multiple PROF_MEASUREMENT
@@ -215,12 +198,12 @@ private:
 */
 class QUERY_PROFILE
 {
-private:
+ private:
   friend class PROFILING;
 
   PROFILING *profiling;
 
-  query_id_t profiling_query_id;        /* Session-specific id. */
+  query_id_t profiling_query_id; /* Session-specific id. */
   char *query_source;
 
   double m_start_time_usecs;
@@ -228,16 +211,13 @@ private:
   ulong m_seq_counter;
   Queue<PROF_MEASUREMENT> entries;
 
-
   QUERY_PROFILE(PROFILING *profiling_arg, const char *status_arg);
   ~QUERY_PROFILE();
 
   void set_query_source(char *query_source_arg, size_t query_length_arg);
 
   /* Add a profile status change to the current profile. */
-  void new_status(const char *status_arg,
-              const char *function_arg,
-              const char *file_arg, unsigned int line_arg);
+  void new_status(const char *status_arg, const char *function_arg, const char *file_arg, unsigned int line_arg);
 
   /* Reset the contents of this profile entry. */
   void reset();
@@ -246,20 +226,19 @@ private:
   bool show(uint options);
 };
 
-
 /**
   Profiling state for a single THD; contains multiple QUERY_PROFILE objects.
 */
 class PROFILING
 {
-private:
+ private:
   friend class PROF_MEASUREMENT;
   friend class QUERY_PROFILE;
 
-  /* 
-    Not the system query_id, but a counter unique to profiling. 
+  /*
+    Not the system query_id, but a counter unique to profiling.
   */
-  query_id_t profile_id_counter;     
+  query_id_t profile_id_counter;
   THD *thd;
   bool keeping;
   bool enabled;
@@ -267,10 +246,10 @@ private:
   QUERY_PROFILE *current;
   QUERY_PROFILE *last;
   Queue<QUERY_PROFILE> history;
- 
-  query_id_t next_profile_id() { return(profile_id_counter++); }
 
-public:
+  query_id_t next_profile_id() { return (profile_id_counter++); }
+
+ public:
   PROFILING();
   ~PROFILING();
 
@@ -292,11 +271,11 @@ public:
 
     @param  initial_state  (optional) name of period before first state change
   */
-  void start_new_query(const char *initial_state= "Starting")
+  void start_new_query(const char *initial_state = "Starting")
   {
     DBUG_ASSERT(!current);
     if (unlikely(enabled))
-      current= new QUERY_PROFILE(this, initial_state);
+      current = new QUERY_PROFILE(this, initial_state);
   }
 
   void discard_current_query();
@@ -309,9 +288,7 @@ public:
 
   void finish_current_query_impl();
 
-  void status_change(const char *status_arg,
-                     const char *function_arg,
-                     const char *file_arg, unsigned int line_arg)
+  void status_change(const char *status_arg, const char *function_arg, const char *file_arg, unsigned int line_arg)
   {
     if (unlikely(current))
       current->new_status(status_arg, function_arg, file_arg, line_arg);
@@ -319,7 +296,7 @@ public:
 
   inline void set_thd(THD *thd_arg)
   {
-    thd= thd_arg;
+    thd = thd_arg;
     reset();
   }
 
@@ -332,5 +309,5 @@ public:
   void restart();
 };
 
-#  endif /* ENABLED_PROFILING */
+#endif /* ENABLED_PROFILING */
 #endif /* _SQL_PROFILE_H */

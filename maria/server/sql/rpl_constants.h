@@ -23,7 +23,8 @@
 /**
    Enumeration of the incidents that can occur for the server.
  */
-enum Incident {
+enum Incident
+{
   /** No incident */
   INCIDENT_NONE = 0,
 
@@ -34,23 +35,23 @@ enum Incident {
   INCIDENT_COUNT
 };
 
-
 /**
    Enumeration of the reserved formats of Binlog extra row information
 */
-enum ExtraRowInfoFormat {
+enum ExtraRowInfoFormat
+{
 
   /** Reserved formats  0 -> 63 inclusive */
-  ERIF_LASTRESERVED =  63,
+  ERIF_LASTRESERVED = 63,
 
   /**
       Available / uncontrolled formats
       64 -> 254 inclusive
   */
-  ERIF_OPEN1        =  64,
-  ERIF_OPEN2        =  65,
+  ERIF_OPEN1 = 64,
+  ERIF_OPEN2 = 65,
 
-  ERIF_LASTOPEN     =  254,
+  ERIF_LASTOPEN = 254,
 
   /**
      Multi-payload format 255
@@ -59,7 +60,7 @@ enum ExtraRowInfoFormat {
       sub-payloads with their own headers containing
       length + format.
   */
-  ERIF_MULTI        =  255
+  ERIF_MULTI = 255
 };
 
 /*
@@ -72,37 +73,39 @@ enum ExtraRowInfoFormat {
 #define EXTRA_ROW_INFO_HDR_BYTES 2
 #define EXTRA_ROW_INFO_MAX_PAYLOAD (255 - EXTRA_ROW_INFO_HDR_BYTES)
 
-enum enum_binlog_checksum_alg {
-  BINLOG_CHECKSUM_ALG_OFF= 0,    // Events are without checksum though its generator
-                                 // is checksum-capable New Master (NM).
-  BINLOG_CHECKSUM_ALG_CRC32= 1,  // CRC32 of zlib algorithm.
-  BINLOG_CHECKSUM_ALG_ENUM_END,  // the cut line: valid alg range is [1, 0x7f].
-  BINLOG_CHECKSUM_ALG_UNDEF= 255 // special value to tag undetermined yet checksum
-                                 // or events from checksum-unaware servers
+enum enum_binlog_checksum_alg
+{
+  BINLOG_CHECKSUM_ALG_OFF = 0,     // Events are without checksum though its generator
+                                   // is checksum-capable New Master (NM).
+  BINLOG_CHECKSUM_ALG_CRC32 = 1,   // CRC32 of zlib algorithm.
+  BINLOG_CHECKSUM_ALG_ENUM_END,    // the cut line: valid alg range is [1, 0x7f].
+  BINLOG_CHECKSUM_ALG_UNDEF = 255  // special value to tag undetermined yet checksum
+                                   // or events from checksum-unaware servers
 };
 
 #define BINLOG_CRYPTO_SCHEME_LENGTH 1
-#define BINLOG_KEY_VERSION_LENGTH   4
-#define BINLOG_IV_LENGTH            MY_AES_BLOCK_SIZE
-#define BINLOG_IV_OFFS_LENGTH       4
-#define BINLOG_NONCE_LENGTH         (BINLOG_IV_LENGTH - BINLOG_IV_OFFS_LENGTH)
+#define BINLOG_KEY_VERSION_LENGTH 4
+#define BINLOG_IV_LENGTH MY_AES_BLOCK_SIZE
+#define BINLOG_IV_OFFS_LENGTH 4
+#define BINLOG_NONCE_LENGTH (BINLOG_IV_LENGTH - BINLOG_IV_OFFS_LENGTH)
 
-struct Binlog_crypt_data {
-  uint  scheme;
-  uint  key_version, key_length, ctx_size;
+struct Binlog_crypt_data
+{
+  uint scheme;
+  uint key_version, key_length, ctx_size;
   uchar key[MY_AES_MAX_KEY_LENGTH];
   uchar nonce[BINLOG_NONCE_LENGTH];
 
   int init(uint sch, uint kv)
   {
-    scheme= sch;
-    ctx_size= encryption_ctx_size(ENCRYPTION_KEY_SYSTEM_DATA, kv);
-    key_version= kv;
-    key_length= sizeof(key);
+    scheme = sch;
+    ctx_size = encryption_ctx_size(ENCRYPTION_KEY_SYSTEM_DATA, kv);
+    key_version = kv;
+    key_length = sizeof(key);
     return encryption_key_get(ENCRYPTION_KEY_SYSTEM_DATA, kv, key, &key_length);
   }
 
-  void set_iv(uchar* iv, uint32 offs) const
+  void set_iv(uchar *iv, uint32 offs) const
   {
     memcpy(iv, nonce, BINLOG_NONCE_LENGTH);
     int4store(iv + BINLOG_NONCE_LENGTH, offs);

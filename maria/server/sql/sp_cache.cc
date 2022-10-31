@@ -23,8 +23,7 @@
 #include "sp_head.h"
 
 static mysql_mutex_t Cversion_lock;
-static ulong volatile Cversion= 1;
-
+static ulong volatile Cversion = 1;
 
 /*
   Cache of stored routines.
@@ -32,7 +31,7 @@ static ulong volatile Cversion= 1;
 
 class sp_cache
 {
-public:
+ public:
   sp_cache();
   ~sp_cache();
 
@@ -43,21 +42,14 @@ public:
      @return TRUE Failure
      @return FALSE Success
   */
-  inline bool insert(sp_head *sp)
-  {
-    return my_hash_insert(&m_hashtable, (const uchar *)sp);
-  }
+  inline bool insert(sp_head *sp) { return my_hash_insert(&m_hashtable, (const uchar *)sp); }
 
   inline sp_head *lookup(char *name, size_t namelen)
   {
-    return (sp_head *) my_hash_search(&m_hashtable, (const uchar *)name,
-                                      namelen);
+    return (sp_head *)my_hash_search(&m_hashtable, (const uchar *)name, namelen);
   }
 
-  inline void remove(sp_head *sp)
-  {
-    my_hash_delete(&m_hashtable, (uchar *)sp);
-  }
+  inline void remove(sp_head *sp) { my_hash_delete(&m_hashtable, (uchar *)sp); }
 
   /**
     Remove all elements from a stored routine cache if the current
@@ -72,31 +64,28 @@ public:
       my_hash_reset(&m_hashtable);
   }
 
-private:
+ private:
   void init();
   void cleanup();
 
   /* All routines in this cache */
   HASH m_hashtable;
-}; // class sp_cache
+};  // class sp_cache
 
 #ifdef HAVE_PSI_INTERFACE
 static PSI_mutex_key key_Cversion_lock;
 
-static PSI_mutex_info all_sp_cache_mutexes[]=
-{
-  { &key_Cversion_lock, "Cversion_lock", PSI_FLAG_GLOBAL}
-};
+static PSI_mutex_info all_sp_cache_mutexes[] = {{&key_Cversion_lock, "Cversion_lock", PSI_FLAG_GLOBAL}};
 
 static void init_sp_cache_psi_keys(void)
 {
-  const char* category= "sql";
+  const char *category = "sql";
   int count;
 
   if (PSI_server == NULL)
     return;
 
-  count= array_elements(all_sp_cache_mutexes);
+  count = array_elements(all_sp_cache_mutexes);
   PSI_server->register_mutex(category, all_sp_cache_mutexes, count);
 }
 #endif
@@ -112,7 +101,6 @@ void sp_cache_init()
   mysql_mutex_init(key_Cversion_lock, &Cversion_lock, MY_MUTEX_INIT_FAST);
 }
 
-
 /*
   Clear the cache *cp and set *cp to NULL.
 
@@ -126,21 +114,16 @@ void sp_cache_init()
 
 void sp_cache_clear(sp_cache **cp)
 {
-  sp_cache *c= *cp;
+  sp_cache *c = *cp;
 
   if (c)
   {
     delete c;
-    *cp= NULL;
+    *cp = NULL;
   }
 }
 
-
-void sp_cache_end()
-{
-  mysql_mutex_destroy(&Cversion_lock);
-}
-
+void sp_cache_end() { mysql_mutex_destroy(&Cversion_lock); }
 
 /*
   Insert a routine into the cache.
@@ -160,18 +143,17 @@ void sp_cache_insert(sp_cache **cp, sp_head *sp)
 {
   sp_cache *c;
 
-  if (!(c= *cp))
+  if (!(c = *cp))
   {
-    if (!(c= new sp_cache()))
-      return;                                   // End of memory error
+    if (!(c = new sp_cache()))
+      return;  // End of memory error
   }
   /* Reading a ulong variable with no lock. */
   sp->set_sp_cache_version(Cversion);
-  DBUG_PRINT("info",("sp_cache: inserting: %s", ErrConvDQName(sp).ptr()));
+  DBUG_PRINT("info", ("sp_cache: inserting: %s", ErrConvDQName(sp).ptr()));
   c->insert(sp);
-  *cp= c;                                       // Update *cp if it was NULL
+  *cp = c;  // Update *cp if it was NULL
 }
-
 
 /*
   Look up a routine in the cache.
@@ -192,12 +174,11 @@ void sp_cache_insert(sp_cache **cp, sp_head *sp)
 sp_head *sp_cache_lookup(sp_cache **cp, const Database_qualified_name *name)
 {
   char buf[NAME_LEN * 2 + 2];
-  sp_cache *c= *cp;
-  if (! c)
+  sp_cache *c = *cp;
+  if (!c)
     return NULL;
   return c->lookup(buf, name->make_qname(buf, sizeof(buf)));
 }
-
 
 /*
   Invalidate all routines in all caches.
@@ -213,10 +194,9 @@ sp_head *sp_cache_lookup(sp_cache **cp, const Database_qualified_name *name)
 
 void sp_cache_invalidate()
 {
-  DBUG_PRINT("info",("sp_cache: invalidating"));
+  DBUG_PRINT("info", ("sp_cache: invalidating"));
   thread_safe_increment(Cversion, &Cversion_lock);
 }
-
 
 /**
   Remove an out-of-date SP from the cache.
@@ -234,7 +214,7 @@ void sp_cache_flush_obsolete(sp_cache **cp, sp_head **sp)
   if ((*sp)->sp_cache_version() < Cversion && !(*sp)->is_invoked())
   {
     (*cp)->remove(*sp);
-    *sp= NULL;
+    *sp = NULL;
   }
 }
 
@@ -242,11 +222,7 @@ void sp_cache_flush_obsolete(sp_cache **cp, sp_head **sp)
   Return the current global version of the cache.
 */
 
-ulong sp_cache_version()
-{
-  return Cversion;
-}
-
+ulong sp_cache_version() { return Cversion; }
 
 /**
   Enforce that the current number of elements in the cache don't exceed
@@ -256,63 +232,43 @@ ulong sp_cache_version()
   @param[in] upper_limit_for_elements  Soft upper limit for number of sp_head
                                        objects that can be stored in the cache.
 */
-void
-sp_cache_enforce_limit(sp_cache *c, ulong upper_limit_for_elements)
+void sp_cache_enforce_limit(sp_cache *c, ulong upper_limit_for_elements)
 {
- if (c)
-   c->enforce_limit(upper_limit_for_elements);
+  if (c)
+    c->enforce_limit(upper_limit_for_elements);
 }
 
 /*************************************************************************
   Internal functions
  *************************************************************************/
 
-extern "C" uchar *hash_get_key_for_sp_head(const uchar *ptr, size_t *plen,
-                                           my_bool first);
+extern "C" uchar *hash_get_key_for_sp_head(const uchar *ptr, size_t *plen, my_bool first);
 extern "C" void hash_free_sp_head(void *p);
 
-uchar *hash_get_key_for_sp_head(const uchar *ptr, size_t *plen,
-                                my_bool first)
+uchar *hash_get_key_for_sp_head(const uchar *ptr, size_t *plen, my_bool first)
 {
-  sp_head *sp= (sp_head *)ptr;
-  *plen= sp->m_qname.length;
-  return (uchar*) sp->m_qname.str;
+  sp_head *sp = (sp_head *)ptr;
+  *plen = sp->m_qname.length;
+  return (uchar *)sp->m_qname.str;
 }
-
 
 void hash_free_sp_head(void *p)
 {
-  sp_head *sp= (sp_head *)p;
+  sp_head *sp = (sp_head *)p;
   sp_head::destroy(sp);
 }
 
+sp_cache::sp_cache() { init(); }
 
-sp_cache::sp_cache()
+sp_cache::~sp_cache() { my_hash_free(&m_hashtable); }
+
+void sp_cache::init()
 {
-  init();
+  my_hash_init(key_memory_sp_cache, &m_hashtable, system_charset_info, 0, 0, 0, hash_get_key_for_sp_head,
+               hash_free_sp_head, 0);
 }
 
-
-sp_cache::~sp_cache()
-{
-  my_hash_free(&m_hashtable);
-}
-
-
-void
-sp_cache::init()
-{
-  my_hash_init(key_memory_sp_cache, &m_hashtable, system_charset_info, 0, 0, 0,
-               hash_get_key_for_sp_head, hash_free_sp_head, 0);
-}
-
-
-void
-sp_cache::cleanup()
-{
-  my_hash_free(&m_hashtable);
-}
-
+void sp_cache::cleanup() { my_hash_free(&m_hashtable); }
 
 void Sp_caches::sp_caches_clear()
 {

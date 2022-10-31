@@ -25,7 +25,7 @@
 enum Table_type
 {
   TABLE_TYPE_UNKNOWN,
-  TABLE_TYPE_NORMAL,                            /* Normal table */
+  TABLE_TYPE_NORMAL, /* Normal table */
   TABLE_TYPE_SEQUENCE,
   TABLE_TYPE_VIEW
 };
@@ -38,8 +38,7 @@ enum Table_type
   To check whether it's an frm of a view, use dd_frm_is_view().
 */
 
-enum Table_type dd_frm_type(THD *thd, char *path, LEX_CSTRING *engine_name,
-                            LEX_CSTRING *partition_engine_name,
+enum Table_type dd_frm_type(THD *thd, char *path, LEX_CSTRING *engine_name, LEX_CSTRING *partition_engine_name,
                             LEX_CUSTRING *table_version);
 
 static inline bool dd_frm_is_view(THD *thd, char *path)
@@ -49,4 +48,4 @@ static inline bool dd_frm_is_view(THD *thd, char *path)
 
 bool dd_recreate_table(THD *thd, const char *db, const char *table_name);
 
-#endif // DATADICT_INCLUDED
+#endif  // DATADICT_INCLUDED

@@ -30,24 +30,20 @@ static int wsrep_plugin_deinit(void *p)
   return 0;
 }
 
-struct Mysql_replication wsrep_plugin= {
-  MYSQL_REPLICATION_INTERFACE_VERSION
-};
+struct Mysql_replication wsrep_plugin = {MYSQL_REPLICATION_INTERFACE_VERSION};
 
-maria_declare_plugin(wsrep)
-{
-  MYSQL_REPLICATION_PLUGIN,
-  &wsrep_plugin,
-  "wsrep",
-  "Codership Oy",
-  "Wsrep replication plugin",
-  PLUGIN_LICENSE_GPL,
-  wsrep_plugin_init,
-  wsrep_plugin_deinit,
-  0x0100,
-  NULL, /* Status variables */
-  NULL, /* System variables */
-  "1.0", /* Version (string) */
-  MariaDB_PLUGIN_MATURITY_STABLE     /* Maturity */
-}
-maria_declare_plugin_end;
+maria_declare_plugin(wsrep){
+    MYSQL_REPLICATION_PLUGIN,
+    &wsrep_plugin,
+    "wsrep",
+    "Codership Oy",
+    "Wsrep replication plugin",
+    PLUGIN_LICENSE_GPL,
+    wsrep_plugin_init,
+    wsrep_plugin_deinit,
+    0x0100,
+    NULL,                          /* Status variables */
+    NULL,                          /* System variables */
+    "1.0",                         /* Version (string) */
+    MariaDB_PLUGIN_MATURITY_STABLE /* Maturity */
+} maria_declare_plugin_end;

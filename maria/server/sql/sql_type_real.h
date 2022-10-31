@@ -21,27 +21,22 @@
 class Float
 {
   float m_value;
-public:
-  Float(float nr)
-   :m_value(nr)
+
+ public:
+  Float(float nr) : m_value(nr)
   {
     DBUG_ASSERT(!std::isnan(nr));
     DBUG_ASSERT(!std::isinf(nr));
   }
-  Float(double nr)
-   :m_value((float) nr)
+  Float(double nr) : m_value((float)nr)
   {
     DBUG_ASSERT(!std::isnan(nr));
     DBUG_ASSERT(!std::isinf(nr));
     DBUG_ASSERT(nr <= FLT_MAX);
     DBUG_ASSERT(nr >= -FLT_MAX);
   }
-  Float(const uchar *ptr)
-  {
-    float4get(m_value, ptr);
-  }
+  Float(const uchar *ptr) { float4get(m_value, ptr); }
   bool to_string(String *to, uint dec) const;
 };
 
-
-#endif // SQL_TYPE_REAL_INCLUDED
+#endif  // SQL_TYPE_REAL_INCLUDED

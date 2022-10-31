@@ -32,7 +32,10 @@
 void debug_crash_here(const char *keyword);
 bool debug_simulate_error(const char *keyword, uint error);
 #else
-#define debug_crash_here(A) do { } while(0)
+#define debug_crash_here(A) \
+  do                        \
+  {                         \
+  } while (0)
 #define debug_simulate_error(A, B) 0
 #endif
 
