@@ -1,5 +1,4 @@
 #!/bin/bash
 
-cd /usr/local/mysql
+cd /usr/local/mysql; /usr/local/mysql/bin/mysql_safe --datadir=/usr/local/mysql/var &
 
- /usr/local/mysql/bin/mysql_safe --datadir=/usr/local/mysql/var &

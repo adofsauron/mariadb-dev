@@ -1,6 +1,8 @@
 #!/bin/bash
 
-cd server/build
+cd server
+mkdir -p build
+cd build
 
 rm ./* -rf
 
