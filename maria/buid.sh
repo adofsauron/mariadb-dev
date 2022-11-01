@@ -4,7 +4,7 @@ cd server/build
 
 rm ./* -rf
 
-cmake .. 
+cmake3 .. 
 
 make -j`nproc`
 
